@@ -1,0 +1,239 @@
+:root {
+  /* ── Background Colors ── */
+  --color-bg: #ffffff;
+  --color-bg-secondary: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f8f9fa;
+  --color-border: #e2e8f0;
+  --color-border-hover: rgba(102, 8, 16, 0.3);
+
+  /* ── Accent: Deep Red ── */
+  --color-accent: #660810;
+  --color-accent-light: #8c101a;
+  --color-accent-hover: #9b111b; /* New lighter red for hover */
+  --color-accent-dim: rgba(102, 8, 16, 0.04);
+  --color-accent-glow: rgba(102, 8, 16, 0.15);
+
+  /* ── Text ── */
+  --color-text-primary: #660810;
+  --color-text-secondary: #7a1d25;
+  --color-text-muted: #914d53;
+
+  /* ── Semantic ── */
+  --color-success: #28a745;
+  --color-warning: #ffc107;
+  --color-error: #dc3545;
+  --color-info: #17a2b8;
+
+  /* ── Gradients ── */
+  --gradient-accent: linear-gradient(135deg, #660810, #8c101a);
+  --gradient-accent-soft: linear-gradient(135deg, rgba(102, 8, 16, 0.8), rgba(140, 16, 26, 0.8));
+  --gradient-hero: radial-gradient(ellipse at 60% 0%, rgba(102, 8, 16, 0.05) 0%, transparent 65%);
+  --gradient-card: linear-gradient(145deg, #ffffff, #fcfcfc);
+  --gradient-dark: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+
+  /* ── Typography ── */
+  --font-sans: 'Synonym', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Chillax', 'Synonym', sans-serif;
+
+  --text-xs: 1rem;
+  --text-sm: 1rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+
+  /* ── Spacing ── */
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  --touch-target: 44px;
+  --control-height: 48px;
+  --chip-height: 32px;
+
+  /* ── Borders ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 3px rgba(102, 8, 16, 0.1);
+  --shadow-md: 0 4px 12px rgba(102, 8, 16, 0.08);
+  --shadow-lg: 0 8px 24px rgba(102, 8, 16, 0.06);
+  --shadow-glow: 0 0 20px rgba(102, 8, 16, 0.15);
+
+  /* ── Transitions ── */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+  --transition-slow: 0.4s ease;
+
+  /* ── Layout ── */
+  --container-width: 1280px;
+  --navbar-height: 60px;
+  --sidebar-width: 264px;
+  --sidebar-collapsed-width: 88px;
+}
+
+/* ── Guest Theme Overrides (Red and White) ── */
+.guest-theme, .auth-page {
+  --color-bg: #ffffff;
+  --color-bg-secondary: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-hover: rgba(102, 8, 16, 0.4);
+
+  --color-accent: #660810;
+  --color-accent-light: #8c101a;
+  --color-accent-dim: rgba(102, 8, 16, 0.1);
+  --color-accent-glow: rgba(102, 8, 16, 0.2);
+
+  --color-text-primary: #660810;
+  --color-text-secondary: #7a1d25;
+  --color-text-muted: #914d53;
+
+  --gradient-accent: linear-gradient(135deg, #660810, #8c101a);
+  --gradient-accent-soft: linear-gradient(135deg, rgba(102, 8, 16, 0.8), rgba(140, 16, 26, 0.8));
+  --gradient-hero: radial-gradient(ellipse at 60% 0%, rgba(102, 8, 16, 0.15) 0%, transparent 65%);
+  --gradient-card: linear-gradient(145deg, #ffffff, #fcfcfc);
+  --gradient-dark: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+
+  --shadow-sm: 0 1px 3px rgba(102, 8, 16, 0.1);
+  --shadow-md: 0 4px 12px rgba(102, 8, 16, 0.08);
+  --shadow-lg: 0 8px 24px rgba(102, 8, 16, 0.06);
+  --shadow-glow: 0 0 20px rgba(102, 8, 16, 0.15);
+
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+}
+
+/* ── Specific Dark Section Override (Now White Background for Hero) ── */
+.section-dark {
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f1f5f9;
+  --color-text-card: #660810;
+  --color-border: #e2e8f0;
+  --color-border-hover: rgba(102, 8, 16, 0.4);
+
+  --color-text-primary: #660810;
+  --color-text-secondary: #7a1d25;
+  --color-text-muted: #914d53;
+
+  --color-accent: #660810;
+  --color-accent-light: #8c101a;
+  --color-accent-dim: rgba(102, 8, 16, 0.1);
+  --color-accent-glow: rgba(102, 8, 16, 0.2);
+
+  --gradient-card: linear-gradient(145deg, #ffffff, #fcfcfc);
+  --gradient-dark: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+
+  --shadow-sm: 0 1px 3px rgba(102, 8, 16, 0.1);
+  --shadow-md: 0 4px 12px rgba(102, 8, 16, 0.08);
+  --shadow-lg: 0 8px 24px rgba(102, 8, 16, 0.06);
+
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+}
+
+/* ── Light Red Section (Deep Red for Zebra Striping) ── */
+.section-light-red {
+  --color-bg: #660810;
+  --color-bg-secondary: #8c101a;
+  --color-bg-card: rgba(255, 255, 255, 0.05);
+  --color-bg-card-hover: rgba(255, 255, 255, 0.1);
+  --color-border: rgba(255, 255, 255, 0.15);
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.85);
+  --color-text-muted: rgba(255, 255, 255, 0.7);
+
+  /* Overrides for visibility on dark background */
+  --color-accent-light: rgba(255, 255, 255, 0.8);
+  --gradient-accent: linear-gradient(135deg, #ffffff, #f1f5f9);
+
+  color: #ffffff;
+  background-color: var(--color-bg);
+}
+/* ── Card Red Utility ── */
+.card-red {
+  --color-bg-card: #660810;
+  --color-bg-card-hover: #9b111b; /* Vibrant lighter red */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #f1f5f9;
+  --color-text-muted: #cbd5e1;
+  --color-border: rgba(255, 255, 255, 0.15);
+  --color-border-hover: rgba(255, 255, 255, 0.4);
+
+  /* Overrides for visibility on dark background */
+  --color-accent-light: rgba(255, 255, 255, 0.85);
+  --gradient-accent: linear-gradient(135deg, #ffffff, #f1f5f9);
+
+  --shadow-glow: 0 0 25px rgba(102, 8, 16, 0.3);
+
+  background-color: var(--color-bg-card);
+  color: var(--color-text-primary);
+  transition: var(--transition-base);
+}
+
+.card-red:hover {
+  background-color: var(--color-bg-card-hover);
+}
+
+
+.card-red .product-card__title,
+.card-red .product-card__desc,
+.card-red .product-card__price .price-current,
+.card-red .category-card__title,
+.card-red .category-card__desc,
+.card-red .cta-title,
+.card-red .cta-desc {
+  color: var(--color-text-primary) !important;
+}
+
+.card-red .product-card__category,
+.card-red .product-card__meta,
+.card-red .price-original,
+.card-red .category-card__count {
+  color: var(--color-text-secondary) !important;
+}
+
+.card-red .product-card__btn-detail {
+  background: #ffffff !important;
+  color: #660810 !important;
+}
+
+.card-red .product-card__btn-detail:hover {
+  background: #f8fafc !important;
+  color: #660810 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.card-red .overlay-text {
+  background: #ffffff !important;
+  color: #660810 !important;
+}

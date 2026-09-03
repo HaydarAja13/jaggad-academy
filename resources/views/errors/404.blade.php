@@ -1,0 +1,1 @@
+@include('errors.error', ['code' => '404', 'title' => 'Halaman tidak ditemukan.', 'message' => 'Tautan yang Anda buka mungkin sudah berubah, salah alamat, atau tidak lagi tersedia.', 'type' => 'not-found'])

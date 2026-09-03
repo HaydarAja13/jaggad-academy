@@ -1,0 +1,1 @@
+@include('errors.error', ['code' => '403', 'title' => 'Akses tidak diizinkan.', 'message' => 'Halaman ini membutuhkan izin yang belum Anda miliki. Kembali ke area yang dapat Anda akses atau jelajahi produk kami.', 'type' => 'forbidden'])

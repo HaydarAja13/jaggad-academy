@@ -1,0 +1,1 @@
+@include('errors.error', ['code' => '500', 'title' => 'Ada gangguan di sisi kami.', 'message' => 'Kami sedang menangani masalah ini. Silakan coba lagi beberapa saat lagi atau kembali ke beranda.', 'type' => 'server'])

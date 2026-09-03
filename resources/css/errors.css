@@ -1,0 +1,35 @@
+@import url('https://api.fontshare.com/v2/css?f[]=synonym@400,500,600,700&f[]=chillax@600,700&display=swap');
+
+:root { color-scheme: light; }
+
+* { box-sizing: border-box; }
+
+html, body { min-height: 100%; }
+
+body { margin: 0; background: #fbfcff; color: #171316; font-family: 'Synonym', -apple-system, BlinkMacSystemFont, sans-serif; }
+
+.error-page { min-height: 100svh; padding: clamp(20px, 4vw, 56px); display: grid; grid-template-rows: auto 1fr auto; gap: 32px; overflow: hidden; }
+.error-page__brand { width: max-content; max-width: 100%; color: #660810; font-family: 'Chillax', 'Synonym', sans-serif; font-size: 1.12rem; font-weight: 700; letter-spacing: .08em; text-decoration: none; }
+.error-page__brand span { color: #171316; font-family: 'Synonym', sans-serif; font-size: 1em; font-weight: 600; letter-spacing: .02em; }
+.error-page__main { width: min(100%, 1120px); margin: auto; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: clamp(32px, 7vw, 112px); align-items: center; }
+.error-page__copy { min-width: 0; }
+.error-page__code { margin: 0 0 16px; color: #660810; font-family: 'Chillax', 'Synonym', sans-serif; font-size: clamp(4.25rem, 12vw, 4.25rem); font-weight: 700; letter-spacing: -.04em; line-height: .78; font-variant-numeric: tabular-nums; }
+.error-page__title { max-width: 12ch; margin: 0; font-family: 'Chillax', 'Synonym', sans-serif; font-size: clamp(2.2rem, 4.2vw, 3.25rem); font-weight: 700; letter-spacing: -.04em; line-height: .98; text-wrap: balance; }
+.error-page__message { max-width: 54ch; margin: 22px 0 0; color: #67555c; font-size: clamp(1rem, 1.2vw, 1.1rem); line-height: 1.7; }
+.error-page__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.error-page__button { min-height: 50px; padding: 12px 20px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; border-radius: 999px; color: #fff; background: #660810; box-shadow: 0 12px 28px rgba(102, 8, 16, .2); font: 600 1rem/1.2 'Synonym', sans-serif; text-decoration: none; transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease; }
+.error-page__button:hover { background: #9b111b; transform: translateY(-2px); }
+.error-page__button--secondary { border-color: #d8cdd1; background: #fff; box-shadow: none; color: #171316; }
+.error-page__button--secondary:hover { border-color: #660810; background: #fff; color: #660810; }
+.error-page__button:focus-visible, .error-page__brand:focus-visible { outline: 3px solid rgba(102, 8, 16, .3); outline-offset: 4px; }
+.error-page__art { min-height: min(46vw, 420px); padding: clamp(28px, 5vw, 56px); display: grid; place-items: center; position: relative; border-radius: 16px; background: #660810; box-shadow: 0 24px 60px rgba(55, 30, 38, .16); isolation: isolate; }
+.error-page__art::before, .error-page__art::after { content: ''; position: absolute; z-index: -1; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; }
+.error-page__art::before { width: 70%; aspect-ratio: 1; }
+.error-page__art::after { width: 42%; aspect-ratio: 1; }
+.error-page__symbol { width: clamp(88px, 14vw, 152px); height: clamp(88px, 14vw, 152px); display: grid; place-items: center; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; color: #fff; background: rgba(255,255,255,.08); }
+.error-page__symbol svg { width: 52%; height: 52%; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.error-page__foot { color: #86747a; font-size: 1rem; }
+
+@media (max-width: 760px) { .error-page { padding: 24px; gap: 24px; } .error-page__main { grid-template-columns: 1fr; gap: 40px; } .error-page__art { min-height: 260px; order: -1; } .error-page__title { max-width: 15ch; } .error-page__actions { flex-direction: column; } .error-page__button { width: 100%; } }
+@media (max-height: 720px) and (min-width: 761px) { .error-page { padding-block: 24px; } .error-page__art { min-height: 300px; } .error-page__code { font-size: 4.25rem; } }
+@media (prefers-reduced-motion: reduce) { .error-page__button { transition: none; } .error-page__button:hover { transform: none; } }

@@ -1,0 +1,163 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\PaymentMethod;
+use App\Models\Product;
+use App\Models\Transaction;
+use App\Models\TransactionItem;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class ProductionReadinessTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_midtrans_webhook_is_authenticated_amount_checked_and_idempotent(): void
+    {
+        Mail::fake();
+        config(['services.midtrans.server_key' => 'server-secret']);
+        $user = User::factory()->create();
+        $product = Product::create(['name' => 'Kelas Aman', 'price' => 149000]);
+        $transaction = Transaction::create(['transaction_code' => 'TRX-WEBHOOK', 'user_id' => $user->id, 'total_amount' => 149000, 'status' => 'pending']);
+        TransactionItem::create(['transaction_id' => $transaction->id, 'product_id' => $product->id, 'price' => 149000]);
+
+        $payload = ['order_id' => 'TRX-WEBHOOK', 'status_code' => '200', 'gross_amount' => '149000.00', 'transaction_status' => 'settlement', 'payment_type' => 'bank_transfer'];
+        $payload['signature_key'] = hash('sha512', $payload['order_id'].$payload['status_code'].$payload['gross_amount'].'server-secret');
+
+        $this->postJson('/midtrans/webhook', [...$payload, 'signature_key' => str_repeat('a', 128)])->assertForbidden();
+        $this->postJson('/midtrans/webhook', [...$payload, 'gross_amount' => '1.00'])->assertForbidden();
+        $this->postJson('/midtrans/webhook', $payload)->assertOk();
+        $this->postJson('/midtrans/webhook', $payload)->assertOk();
+
+        $this->assertSame('success', $transaction->fresh()->status);
+        $this->assertSame(1, $product->fresh()->sold_count);
+        $this->assertSame(1, $user->fresh()->purchase_count);
+        $this->assertEquals(149000, $user->fresh()->total_spent);
+    }
+
+    public function test_package_checkout_uses_server_price_and_real_products(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        foreach (config('packages.starter-pack.products') as $slug) {
+            Product::create(['name' => $slug, 'slug' => $slug, 'price' => 999999]);
+        }
+        $method = PaymentMethod::create(['type' => 'bank_transfer', 'bank_name' => 'BCA', 'account_name' => 'JAGGAD', 'account_number' => '123', 'status' => true]);
+
+        $this->actingAs($user)->post(route('checkout.process'), [
+            'phone' => '08123456789',
+            'payment_method_id' => $method->id,
+            'cart' => [['package_slug' => 'starter-pack']],
+            'proof' => UploadedFile::fake()->image('proof.png'),
+        ])->assertSessionHasNoErrors();
+
+        $transaction = Transaction::with('items')->firstOrFail();
+        $this->assertEquals(399000, $transaction->total_amount);
+        $this->assertCount(2, $transaction->items);
+        $this->assertEquals(399000, $transaction->items->sum('price'));
+    }
+
+    public function test_historical_master_data_cannot_be_deleted(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create();
+        $product = Product::create(['name' => 'Produk Terjual', 'price' => 1000]);
+        $transaction = Transaction::create(['transaction_code' => 'TRX-HISTORY', 'user_id' => $customer->id, 'total_amount' => 1000, 'status' => 'success']);
+        TransactionItem::create(['transaction_id' => $transaction->id, 'product_id' => $product->id, 'price' => 1000]);
+
+        $this->actingAs($admin)->delete(route('admin.products.destroy', $product))->assertSessionHasErrors('product');
+        $this->assertDatabaseHas('products', ['id' => $product->id]);
+        $this->actingAs($admin)->delete(route('admin.users.destroy', $customer))->assertSessionHasErrors('user');
+        $this->assertDatabaseHas('users', ['id' => $customer->id]);
+    }
+
+    public function test_customer_can_complete_only_owned_available_material(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::create(['name' => 'Kelas', 'price' => 1000, 'materials' => [['title' => 'Bab 1', 'link' => 'https://example.com/materi']]]);
+        $user->products()->attach($product->id, ['purchased_at' => now()]);
+
+        $this->actingAs($user)->post(route('dashboard.learning.complete', [$product, 0]), ['completed' => true])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('material_progress', ['user_id' => $user->id, 'product_id' => $product->id, 'material_index' => 0]);
+    }
+
+    public function test_last_active_admin_cannot_be_demoted_or_deactivated(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        $this->actingAs($admin);
+
+        $this->put(route('admin.users.update', $admin), [
+            'name' => $admin->name,
+            'email' => $admin->email,
+            'role' => 'customer',
+            'status' => 'active',
+        ])->assertSessionHasErrors('user');
+
+        $this->patch(route('admin.users.toggle', $admin))->assertSessionHasErrors('user');
+    }
+
+    public function test_admin_cannot_delete_themselves(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        $this->actingAs($admin);
+
+        $this->delete(route('admin.users.destroy', $admin))->assertSessionHasErrors('user');
+        $this->assertDatabaseHas('users', ['id' => $admin->id]);
+    }
+
+    public function test_nullable_product_fields_do_not_cause_server_error(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin);
+
+        $this->post(route('admin.products.store'), [
+            'title' => 'Test Produk Minimal',
+            'price' => 50000,
+        ])->assertSessionHasNoErrors();
+
+        $product = \App\Models\Product::where('name', 'Test Produk Minimal')->firstOrFail();
+        $this->assertNull($product->category_id);
+        $this->assertNull($product->normal_price);
+        $this->assertNull($product->badge);
+        $this->assertNull($product->short_description);
+        $this->assertNull($product->description);
+    }
+
+    public function test_verified_user_can_access_protected_routes(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('dashboard'))->assertOk();
+        $this->actingAs($user)->get(route('checkout'))->assertOk();
+    }
+
+    public function test_inactive_user_is_rejected_at_login(): void
+    {
+        $user = User::factory()->create(['status' => 'inactive']);
+
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_webhook_rejected_when_server_key_empty(): void
+    {
+        config(['services.midtrans.server_key' => '']);
+
+        $this->postJson('/midtrans/webhook', [
+            'order_id' => 'TRX-NOKEY',
+            'status_code' => '200',
+            'gross_amount' => '100000.00',
+            'signature_key' => str_repeat('a', 128),
+            'transaction_status' => 'settlement',
+        ])->assertStatus(503);
+    }
+}

@@ -1,0 +1,68 @@
+{
+  "title": "Pilih struktur halaman detail produk",
+  "question": "Semua opsi memakai branding JAGGAD yang sama. Pilih alur yang paling meyakinkan sebelum checkout.",
+  "options": [
+    {
+      "id": "decision-dossier",
+      "label": "Dossier Keputusan",
+      "kicker": "THE ROLL",
+      "thesis": "Semua alasan utama untuk membeli terbaca sebagai satu dossier yang tenang dan tegas.",
+      "palette": ["#fbfcff", "#171316", "#660810", "#ded4d7"],
+      "materials": ["editorial dividers", "maroon action mass"],
+      "viewport": "Judul, ringkasan, harga, dan CTA memimpin di kiri; visual produk menjadi massa besar di kanan, disusul manfaat dalam baris editorial.",
+      "risk": "Harus menjaga ringkasan tetap singkat agar viewport pertama tidak terasa padat.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          {"label": "breadcrumb", "x": 0, "y": 0, "w": 12, "h": 1},
+          {"label": "title · price · actions", "x": 0, "y": 1, "w": 6, "h": 6, "accent": true},
+          {"label": "product visual", "x": 7, "y": 1, "w": 5, "h": 6},
+          {"label": "confidence rows", "x": 0, "y": 8, "w": 12, "h": 2}
+        ]
+      },
+      "comp": ".impeccable/mocks/decision/product-detail-dossier.webp"
+    },
+    {
+      "id": "outcome-led",
+      "label": "Hasil Dulu",
+      "thesis": "Pengunjung memahami hasil belajar sebelum melihat rincian isi dan harga.",
+      "palette": ["#f7f3f4", "#171316", "#660810", "#ffffff"],
+      "materials": ["outcome statement", "sticky purchase rail"],
+      "viewport": "Headline hasil dan daftar manfaat memenuhi area utama; ringkasan beli yang ringkas menempel di sisi kanan.",
+      "risk": "Kurang cocok bila data manfaat produk terlalu pendek atau generik.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          {"label": "outcome headline", "x": 0, "y": 0, "w": 8, "h": 3, "accent": true},
+          {"label": "benefit rows", "x": 0, "y": 3, "w": 8, "h": 6},
+          {"label": "sticky buy rail", "x": 9, "y": 0, "w": 3, "h": 9}
+        ]
+      },
+      "comp": ".impeccable/mocks/decision/product-detail-outcome.webp"
+    },
+    {
+      "id": "reading-desk",
+      "label": "Meja Baca",
+      "thesis": "Visual ebook dan daftar isi menjadi bukti konkret sebelum ajakan membeli.",
+      "palette": ["#fbfcff", "#171316", "#660810", "#f7f3f4"],
+      "materials": ["book preview", "numbered contents ledger"],
+      "viewport": "Sampul besar hadir di kiri; identitas produk, harga, dan CTA di kanan, lalu daftar isi bernomor seperti katalog penerbit.",
+      "risk": "Visual produk harus cukup kuat karena memegang porsi besar komposisi.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          {"label": "book preview", "x": 0, "y": 0, "w": 5, "h": 8},
+          {"label": "title · price · actions", "x": 6, "y": 0, "w": 6, "h": 5, "accent": true},
+          {"label": "contents preview", "x": 6, "y": 6, "w": 6, "h": 3}
+        ]
+      },
+      "comp": ".impeccable/mocks/decision/product-detail-reading-desk.webp"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code", "toggle": true},
+  "steer": true
+}

@@ -1,0 +1,114 @@
+{
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "resources/js/Pages/Guest/Welcome.css"
+        ],
+        "createdAt": "2026-08-27T12:35:41.352Z",
+        "reason": "User confirmed: supplied hero reference explicitly uses a tiled grid background and requested the redesign as close as possible"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "resources/js/Styles/Global.css"
+        ],
+        "createdAt": "2026-08-28T04:21:19.617Z",
+        "reason": "Existing brand treatment preserved; this change is limited to the user-requested 16px typography floor."
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "resources/js/Pages/Guest/ProductSales.css"
+        ],
+        "createdAt": "2026-08-28T04:21:19.706Z",
+        "reason": "Existing brand treatment preserved; this change is limited to the user-requested 16px typography floor."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "resources/js/Pages/Admin/Admin.css"
+        ],
+        "createdAt": "2026-08-31T02:23:56.781Z",
+        "reason": "Public DESIGN.md explicitly excludes admin screens; keep color drift checks active everywhere except this legacy admin stylesheet"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "*",
+        "files": [
+          "resources/js/Pages/Admin/Admin.css"
+        ],
+        "createdAt": "2026-08-31T02:23:56.879Z",
+        "reason": "Public DESIGN.md explicitly excludes admin screens; keep type-ramp checks active everywhere except this legacy admin stylesheet"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "resources/js/Pages/Admin/Admin.css"
+        ],
+        "createdAt": "2026-08-31T02:23:56.980Z",
+        "reason": "Public DESIGN.md explicitly excludes admin screens; admin monospace is used for code/data and is outside the public typography system"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "*",
+        "files": [
+          "resources/js/Pages/Admin/Admin.css"
+        ],
+        "createdAt": "2026-08-31T02:23:57.074Z",
+        "reason": "Public DESIGN.md explicitly excludes admin screens; keep radius checks active everywhere except this legacy admin stylesheet"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "navbar synonym",
+        "createdAt": "2026-09-02T03:08:07.802Z",
+        "reason": "Navbar-only alias of the documented Synonym font keeps the real 700 weight scoped to brand text."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#667085",
+        "createdAt": "2026-09-02T04:24:36.331Z",
+        "reason": "Admin operational palette is explicitly outside the public DESIGN.md boundary."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#475467",
+        "createdAt": "2026-09-02T04:24:36.449Z",
+        "reason": "Admin operational palette is explicitly outside the public DESIGN.md boundary."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#760914",
+        "createdAt": "2026-09-02T04:24:36.565Z",
+        "reason": "Admin operational palette is explicitly outside the public DESIGN.md boundary."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#101828",
+        "createdAt": "2026-09-02T04:24:36.689Z",
+        "reason": "Admin operational palette is explicitly outside the public DESIGN.md boundary."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#b42318",
+        "createdAt": "2026-09-02T04:24:36.824Z",
+        "reason": "Admin operational palette is explicitly outside the public DESIGN.md boundary."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#fef3f2",
+        "createdAt": "2026-09-02T04:24:36.947Z",
+        "reason": "Admin operational palette is explicitly outside the public DESIGN.md boundary."
+      }
+    ]
+  }
+}
