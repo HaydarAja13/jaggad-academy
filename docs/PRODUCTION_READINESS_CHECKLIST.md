@@ -202,8 +202,8 @@ GOOGLE_REDIRECT_URL=https://domain-anda.com/auth/google/callback
 ```
 
 Ketentuan:
-- [ ] Jangan commit `.env`.
-- [ ] Jangan menyimpan Server Key, SMTP password, atau Google Client Secret di repository.
+- [x] Jangan commit `.env` (dilindungi oleh `.gitignore`).
+- [x] Jangan menyimpan Server Key, SMTP password, atau Google Client Secret di repository (bersih dari repo, dikelola via database CMS / runtime).
 - [ ] Gunakan secret manager dari hosting bila tersedia.
 - [ ] Pastikan `APP_KEY` production dibuat sekali dan ikut dibackup. Jangan menggantinya setelah data terenkripsi digunakan.
 
@@ -212,14 +212,17 @@ Referensi: [Laravel Environment Configuration](https://laravel.com/framework/doc
 ### 15. Amankan server
 
 - [ ] Gunakan sertifikat HTTPS valid.
-- [ ] Redirect seluruh HTTP ke HTTPS.
+- [x] Redirect seluruh HTTP ke HTTPS (`URL::forceScheme('https')` di `AppServiceProvider` & template Nginx).
 - [ ] Buka hanya port `80`, `443`, dan SSH yang dibatasi.
-- [ ] Nonaktifkan directory listing.
-- [ ] Batasi ukuran upload sesuai batas aplikasi.
-- [ ] Pasang header `X-Content-Type-Options`, `X-Frame-Options`, Referrer Policy, dan Content Security Policy yang sesuai.
+- [x] Nonaktifkan directory listing (`Options -Indexes` di `public/.htaccess` + `autoindex off` di Nginx).
+- [x] Batasi ukuran upload sesuai batas aplikasi (validasi 5MB di Laravel, 10MB di template server).
+- [x] Pasang header `X-Content-Type-Options`, `X-Frame-Options`, Referrer Policy, dan Permissions Policy (`app/Http/Middleware/SecurityHeaders.php` terdaftar di `bootstrap/app.php` & diuji).
 - [ ] Gunakan database user khusus aplikasi dengan permission minimum.
 - [ ] Pastikan `storage` dan `bootstrap/cache` writable oleh user web server.
-- [ ] Pastikan `.env`, log, source map sensitif, dan file backup tidak dapat diakses dari web.
+- [x] Pastikan `.env`, log, source map sensitif, dan file backup tidak dapat diakses dari web (di luar root `public` + aturan Nginx).
+- [x] Lindungi rute privat dan dashboard dari crawler web (`public/robots.txt`).
+
+Template Nginx siap pakai: `docs/nginx-jaggad.conf.example`.
 
 ### 16. Siapkan storage dan backup
 
@@ -227,20 +230,20 @@ Referensi: [Laravel Environment Configuration](https://laravel.com/framework/doc
 php artisan storage:link
 ```
 
-- [ ] Backup database setiap hari.
-- [ ] Backup `storage/app/public` setiap hari.
-- [ ] Simpan backup pada server atau provider yang berbeda.
+- [x] Skrip backup otomatis database & storage (`scripts/backup.sh` dengan kompresi gzip & retention 30 hari).
+- [ ] Jadwalkan cron backup harian di server (`0 2 * * * /path/to/scripts/backup.sh`).
+- [ ] Simpan backup pada server atau provider yang berbeda (S3/R2/offsite).
 - [ ] Terapkan retention harian, mingguan, dan bulanan.
 - [ ] Lakukan satu restore test sebelum go-live.
-- [ ] Pastikan bukti pembayaran tidak dapat didaftar melalui directory listing.
+- [x] Pastikan bukti pembayaran tidak dapat didaftar melalui directory listing.
 
 ### 17. Konfigurasi email nyata
 
-- [ ] Ganti mail driver `log` menjadi SMTP yang valid.
+- [ ] Ganti mail driver `log` menjadi SMTP yang valid (dapat diisi via Admin Settings `/admin/settings` atau `.env`).
 - [ ] Konfigurasikan SPF, DKIM, dan DMARC domain.
 - [ ] Uji receipt pembelian, penolakan bukti, reset password, dan verifikasi email.
 - [ ] Uji pengiriman ke lebih dari satu provider email.
-- [ ] Pastikan kegagalan SMTP tercatat dan admin dapat mengirim ulang receipt.
+- [x] Pastikan kegagalan SMTP tercatat dan admin dapat mengirim ulang receipt (`AdminTransactionController::resendAccessEmail`).
 
 ### 18. Konfigurasi Midtrans
 
@@ -249,28 +252,31 @@ Uji dahulu menggunakan sandbox:
 - [ ] Pembayaran pending.
 - [ ] Settlement atau capture.
 - [ ] Deny, cancel, dan expire.
-- [ ] Webhook duplikat.
+- [x] Webhook duplikat (idempotensi diuji di test suite).
 - [ ] Browser ditutup sebelum callback.
 - [ ] Customer menekan verifikasi berkali-kali.
-- [ ] Nominal dan signature yang dimanipulasi.
+- [x] Nominal dan signature yang dimanipulasi (ditolak & diverifikasi otomatis).
 
 Setelah seluruh pengujian lolos:
-- [ ] Masukkan production Server Key dan Client Key.
+- [ ] Masukkan production Server Key dan Client Key di Admin Settings / `.env`.
 - [ ] Aktifkan `MIDTRANS_IS_PRODUCTION=true`.
-- [ ] Atur notification URL HTTPS ke `/midtrans/webhook`.
+- [ ] Atur notification URL HTTPS ke `/midtrans/webhook` di Midtrans Dashboard.
 - [ ] Jangan aktifkan metode Midtrans sebelum production credentials terverifikasi.
 
-### 19. Gunakan satu package manager
+### 19. Gunakan satu package manager ✅
 
-- [ ] Pilih npm bila `package-lock.json` menjadi lockfile resmi.
-- [ ] Gunakan `npm ci` pada CI dan production build.
-- [ ] Jangan bergantian antara npm dan pnpm pada release yang sama.
-- [ ] Commit lockfile yang dipilih.
+- [x] Pilih npm bila `package-lock.json` menjadi lockfile resmi.
+- [x] Gunakan `npm ci` pada CI dan production build.
+- [x] Jangan bergantian antara npm dan pnpm pada release yang sama (`pnpm-lock.yaml` dihapus dan diabaikan).
+- [x] Commit lockfile yang dipilih (`package-lock.json`).
 
-### 20. Jalankan deployment terkontrol
+### 20. Jalankan deployment terkontrol ✅
 
-Idealnya build dan test dilakukan sebelum maintenance mode.
-
+Pipeline deployment otomatis disiapkan di `scripts/deploy.sh` dan dapat dijalankan via:
+```bash
+composer deploy
+```
+atau manual:
 ```bash
 composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 npm ci
@@ -284,9 +290,12 @@ php artisan queue:restart
 php artisan up
 ```
 
+- [x] Skrip deployment terkontrol otomatis tersedia (`scripts/deploy.sh`).
+
 ### 21. Jalankan queue worker bila memakai queue
 
 Gunakan Supervisor atau systemd untuk menjalankan worker secara permanen.
+Template konfigurasi Supervisor siap pakai tersedia di `docs/supervisor-jaggad.conf.example`.
 
 Contoh command worker:
 
@@ -295,9 +304,9 @@ php artisan queue:work --sleep=3 --tries=3 --timeout=60 --max-time=3600
 ```
 
 - [ ] Pastikan process manager menghidupkan kembali worker bila crash.
-- [ ] Jalankan `php artisan queue:restart` setiap deployment.
+- [x] Jalankan `php artisan queue:restart` setiap deployment (sudah ada di `scripts/deploy.sh`).
 - [ ] Pantau tabel `failed_jobs`.
-- [ ] Nilai `--timeout` harus lebih kecil daripada `retry_after`.
+- [x] Nilai `--timeout` (60s) harus lebih kecil daripada `retry_after` (90s).
 
 ---
 
@@ -420,13 +429,13 @@ Jika smoke test gagal:
 
 Production hanya dinyatakan **GO** bila seluruh kondisi berikut terpenuhi:
 
-- [ ] Semua temuan P0 dan P1 telah diperbaiki.
-- [ ] Semua automated test lulus (50 test, 204 assertion — lolos ✅).
-- [ ] Build production berhasil (`npm run build` — lolos ✅).
-- [ ] Error page mengembalikan status yang benar (lolos ✅).
-- [ ] Midtrans sandbox lulus seluruh skenario.
-- [ ] SMTP nyata berhasil mengirim seluruh jenis email.
-- [ ] Backup berhasil direstore.
+- [x] Semua temuan P0 dan P1 telah diperbaiki.
+- [x] Semua automated test lulus (51 test, 214 assertion — lolos ✅).
+- [x] Build production berhasil (`npm run build` — lolos ✅).
+- [x] Error page mengembalikan status yang benar (lolos ✅).
+- [ ] Midtrans sandbox lulus seluruh skenario (butuh akun sandbox).
+- [ ] SMTP nyata berhasil mengirim seluruh jenis email (butuh kredensial email).
+- [ ] Backup berhasil direstore (butuh verifikasi manual di server).
 - [ ] Satu transaksi transfer manual staging berhasil end-to-end.
 - [ ] Satu transaksi Midtrans staging berhasil end-to-end.
 - [ ] Akses produk dan progres customer tetap benar setelah login ulang.
@@ -436,10 +445,10 @@ Production hanya dinyatakan **GO** bila seluruh kondisi berikut terpenuhi:
 
 ## Ringkasan Status
 
-### ✅ Selesai di Repository (Kode + Test)
+### ✅ Selesai di Repository (Kode + Test + Konfigurasi)
 
-| Item | Status | Test |
-|------|--------|------|
+| Item | Status | Test / Bukti |
+|------|--------|--------------|
 | Error page production | ✅ | `ErrorPagesTest` |
 | Webhook Midtrans | ✅ | `ProductionReadinessTest::test_midtrans_webhook_...` |
 | Finalisasi transaksi (TransactionFinalizer) | ✅ | `ManualBankTransferTest` (6 tests) |
@@ -451,19 +460,29 @@ Production hanya dinyatakan **GO** bila seluruh kondisi berikut terpenuhi:
 | Status user normalisasi | ✅ | `ProductionReadinessTest::test_inactive_user_...` |
 | Verifikasi email | Dinonaktifkan (sesuai permintaan) | - |
 | Kredensial demo hanya di local | ✅ | Seeder guard |
-| Regression test suite | ✅ | 50 test, 204 assertion |
-| Build Vite | ✅ | `npm run build` |
+| Security Headers Middleware | ✅ | `ProductionReadinessTest::test_security_headers_...` |
+| Robots.txt Crawler Protection | ✅ | Disallow `/admin/`, `/dashboard/`, `/checkout/` |
+| Pre-build font-size check | ✅ | `scripts/check-font-size.mjs` lolos tanpa pelanggaran |
+| Build Vite | ✅ | `npm run build` berhasil |
+| Standar Package Manager (npm) | ✅ | `pnpm-lock.yaml` dihapus, `npm ci` diverifikasi |
+| Skrip Deployment Terkontrol | ✅ | `scripts/deploy.sh` + `composer deploy` |
+| Skrip Backup & Retention 30 Hari | ✅ | `scripts/backup.sh` (MySQL & SQLite) |
+| Template Nginx Production | ✅ | `docs/nginx-jaggad.conf.example` |
+| Template Supervisor Queue Worker | ✅ | `docs/supervisor-jaggad.conf.example` |
+| Regression test suite | ✅ | 51 test, 214 assertion |
 
-### ⚠️ Butuh Aksi Anda
+### ⚠️ Butuh Aksi Anda (Manual Verifikasi / Infrastruktur Luar)
 
-| Item | Alasan |
-|------|--------|
-| Server production | Butuh VPS/hosting + domain |
-| .env production | Butuh credential SMTP, Midtrans, Google, Meta |
-| SMTP real | Butuh provider email (SendGrid, Mailgun, dll.) |
-| Midtrans production | Butuh Server Key & Client Key production |
-| Google OAuth | Butuh Client ID & Secret dari Google Console |
-| Backup & monitoring | Butuh konfigurasi di server |
-| QA manual | Butuh akses staging/production |
-| Materi produk | Isi link materi melalui admin panel |
-| Master paket CRUD (opsional) | Jika ingin admin UI untuk paket bundling |
+| Item | Alasan | Langkah Aksi Anda |
+|------|--------|-------------------|
+| Server & Domain Production | Butuh VPS/hosting & DNS domain | Arahkan domain ke IP server, atur document root ke `/var/www/jaggad/public` |
+| SSL / HTTPS | Butuh sertifikat domain | Pasang Certbot Let's Encrypt (`certbot --nginx -d domain.com`) |
+| Firewall Server | Butuh akses root server | Jalankan `ufw allow 80`, `ufw allow 443`, `ufw allow OpenSSH` |
+| .env Production | Butuh secret production | Buat file `.env` di server, jalankan `php artisan key:generate` sekali saja |
+| SMTP Real | Butuh akun provider email | Masukkan SMTP Host, Port, Username, Password di `/admin/settings` atau `.env` |
+| Midtrans Production | Butuh akun bisnis Midtrans | Masukkan Server Key & Client Key production, set notification URL ke `https://domain.com/midtrans/webhook` |
+| Google OAuth (opsional) | Butuh Google Cloud Console | Masukkan Client ID & Secret di `/admin/settings` jika ingin login Google |
+| Backup Cron di Server | Butuh jadwal cron VPS | Tambahkan `0 2 * * * /var/www/jaggad/scripts/backup.sh` di crontab server |
+| Supervisor Worker (opsional) | Butuh queue asynchronous | Pasang `docs/supervisor-jaggad.conf.example` ke `/etc/supervisor/conf.d/` |
+| Isi Link Materi Produk | Data materi riil | Masukkan link materi (Google Drive/YouTube/Loom) via CMS admin sebelum buka jualan |
+| Smoke Test & QA Staging | Verifikasi end-to-end riil | Uji 1 transaksi Midtrans dan 1 transfer manual di web setelah domain aktif |

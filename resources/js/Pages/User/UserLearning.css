@@ -185,8 +185,14 @@
 }
 
 .learning-material-link { display: contents; color: inherit; }
-.learning-complete-button { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--learning-line); border-radius: 999px; background: #fff; color: var(--learning-maroon); font: inherit; font-weight: 700; cursor: pointer; }
+.learning-complete-button { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--learning-line); border-radius: 999px; background: #fff; color: var(--learning-maroon); font: inherit; font-weight: 700; cursor: pointer; transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease; }
 .learning-complete-button:hover, .learning-complete-button:focus-visible { border-color: var(--learning-maroon); }
+
+.learning-complete-button[data-state="completed"] { background: #0f7663; color: #fff; border-color: #0f7663; }
+.learning-complete-button[data-state="completed"]:hover, .learning-complete-button[data-state="completed"]:focus-visible { background: #0c5f52; border-color: #0c5f52; color: #fff; }
+.learning-complete-button[data-state="pending"] { background: #fbfcff; color: #67555c; border-color: #ded4d7; }
+.learning-complete-button[data-state="pending"]:hover { border-color: #9b111b; color: #660810; }
+
 .learning-material-row.is-complete { background: var(--learning-rose); }
 
 .learning-material-list { margin: 0; padding: 0; border-top: 1px solid var(--learning-line); list-style: none; }

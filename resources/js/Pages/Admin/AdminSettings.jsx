@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Save, Loader2, Settings, ShieldCheck, Link2, AlertCircle, CreditCard, Activity, Mail } from 'lucide-react';
+import { Save, Loader2, ShieldCheck, CreditCard, Activity, Mail, Info } from 'lucide-react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import toast from 'react-hot-toast';
 import './Admin.css';
@@ -46,273 +46,272 @@ export default function AdminSettings({ dbSettings }) {
     return (
         <AdminLayout>
             <Head title="Pengaturan Sistem - JAGGAD ACADEMY" />
-            
-            <div className="admin-page">
-                <div className="admin-page-header">
-                    <h1>Pengaturan Sistem</h1>
-                    <p className="admin-page-subtitle">Kelola kredensial API dan konfigurasi eksternal</p>
-                </div>
 
-                <div className="admin-table-card" style={{ padding: 'var(--space-8)' }}>
-                    <form onSubmit={handleSave} className="modal-form">
-                        {/* Google Auth Section */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--space-4)', color: 'var(--color-accent-light)' }}>
-                            <ShieldCheck size={20} />
-                            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>Google Auth Credentials</h3>
+            <main className="admin-page settings-page">
+                <header className="settings-header">
+                    <div>
+                        <h1>Pengaturan Sistem</h1>
+                        <p>Kelola kredensial API, integrasi eksternal, dan konfigurasi email.</p>
+                    </div>
+                    <button type="button" className="products-primary" onClick={handleSave} disabled={isSaving}>
+                        {isSaving ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <Save size={18} aria-hidden="true" />}
+                        {isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                    </button>
+                </header>
+
+                <form onSubmit={handleSave}>
+                    {/* Google Auth Section */}
+                    <section className="settings-section" aria-labelledby="settings-google-title">
+                        <div className="settings-section-header">
+                            <div className="settings-section-heading">
+                                <span className="settings-section-icon settings-section-icon--google"><ShieldCheck size={20} /></span>
+                                <div>
+                                    <h2 id="settings-google-title">Google Auth Credentials</h2>
+                                    <p>Konfigurasi OAuth untuk login dengan Google.</p>
+                                </div>
+                            </div>
                         </div>
-
-                        <div className="form-group">
-                            <label>Google Client ID</label>
-                            <input 
-                                type="text"
-                                value={data.google_client_id}
-                                onChange={e => setData({...data, google_client_id: e.target.value})}
-                                placeholder="Contoh: 123456789-abc.apps.googleusercontent.com"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Google Client Secret</label>
-                            <input 
-                                type="password"
-                                value={data.google_client_secret}
-                                onChange={e => setData({...data, google_client_secret: e.target.value})}
-                                placeholder="••••••••••••••••••••••••"
-                            />
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 'var(--space-8)' }}>
-                            <label>Google Redirect URL (Callback)</label>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <input 
+                        <div className="settings-section-body">
+                            <div className="settings-form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="google_client_id">Google Client ID</label>
+                                    <input
+                                        id="google_client_id"
+                                        type="text"
+                                        value={data.google_client_id}
+                                        onChange={e => setData({...data, google_client_id: e.target.value})}
+                                        placeholder="Contoh: 123456789-abc.apps.googleusercontent.com"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="google_client_secret">Google Client Secret</label>
+                                    <input
+                                        id="google_client_secret"
+                                        type="password"
+                                        value={data.google_client_secret}
+                                        onChange={e => setData({...data, google_client_secret: e.target.value})}
+                                        placeholder="••••••••••••••••••••••••"
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="google_redirect_url">Google Redirect URL (Callback)</label>
+                                <input
+                                    id="google_redirect_url"
                                     type="text"
                                     value={data.google_redirect_url}
                                     onChange={e => setData({...data, google_redirect_url: e.target.value})}
                                 />
-                                <button 
-                                    type="button" 
-                                    className="btn-icon" 
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(data.google_redirect_url);
-                                        toast.success('URL berhasil disalin!');
-                                    }}
-                                >
-                                    <Link2 size={18} />
-                                </button>
+                                <p className="settings-field-hint">Salahkan URL ini ke Google Cloud Console untuk redirect URI.</p>
                             </div>
                         </div>
+                    </section>
 
-                        <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: 'var(--space-8) 0' }} />
-
-                        {/* Midtrans Section */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--space-4)', color: '#10b981' }}>
-                            <CreditCard size={20} />
-                            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>Midtrans Payment Gateway</h3>
-                        </div>
-
-                        <div style={{ 
-                            padding: 'var(--space-6)', 
-                            background: 'var(--color-bg-secondary)', 
-                            borderRadius: 'var(--radius-xl)',
-                            border: '1px solid var(--color-border)',
-                            marginBottom: 'var(--space-6)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                        }}>
-                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                                    Production Mode {data.midtrans_is_production ? '🚀' : '🛠️'}
-                                </span>
-                                <span style={{ fontSize: '16px', color: 'var(--color-text-muted)' }}>
-                                    {data.midtrans_is_production 
-                                        ? 'Sistem menggunakan akun Midtrans LIVE untuk transaksi asli.' 
-                                        : 'Sistem menggunakan akun Midtrans Sandbox untuk simulasi.'}
-                                </span>
-                             </div>
-
-                             <label className="toggle-switch">
-                                <input 
-                                    type="checkbox" 
+                    {/* Midtrans Section */}
+                    <section className="settings-section" aria-labelledby="settings-midtrans-title">
+                        <div className="settings-section-header">
+                            <div className="settings-section-heading">
+                                <span className="settings-section-icon settings-section-icon--midtrans"><CreditCard size={20} /></span>
+                                <div>
+                                    <h2 id="settings-midtrans-title">Midtrans Payment Gateway</h2>
+                                    <p>QRIS, Virtual Account, dan kartu kredit secara otomatis.</p>
+                                </div>
+                            </div>
+                            <label className="toggle-switch" title={data.midtrans_is_production ? 'Mode Live aktif' : 'Mode Sandbox aktif'}>
+                                <input
+                                    type="checkbox"
                                     checked={data.midtrans_is_production}
                                     onChange={e => setData({...data, midtrans_is_production: e.target.checked})}
                                 />
                                 <span className="toggle-slider"></span>
-                             </label>
+                            </label>
                         </div>
-
-                        <div className="form-group">
-                            <label>Midtrans Server Key</label>
-                            <input 
-                                type="password"
-                                value={data.midtrans_server_key}
-                                onChange={e => setData({...data, midtrans_server_key: e.target.value})}
-                                placeholder="SB-Mid-server-..."
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Midtrans Client Key</label>
-                            <input 
-                                type="text"
-                                value={data.midtrans_client_key}
-                                onChange={e => setData({...data, midtrans_client_key: e.target.value})}
-                                placeholder="SB-Mid-client-..."
-                            />
-                        </div>
-
-                        <div style={{ marginTop: 'var(--space-8)' }}>
-                            <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 0 var(--space-8) 0' }} />
-
-                            {/* Meta Pixel Section */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--space-4)', color: '#3b82f6' }}>
-                                <Activity size={20} />
-                                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>Meta Pixel (Facebook Ads)</h3>
+                        <div className="settings-section-body">
+                            <div className={`settings-mode-banner ${data.midtrans_is_production ? 'live' : 'sandbox'}`}>
+                                <div className="settings-mode-banner__content">
+                                    <strong>{data.midtrans_is_production ? 'Mode Live' : 'Mode Sandbox'}</strong>
+                                    <span>{data.midtrans_is_production
+                                        ? 'Menggunakan akun Midtrans LIVE untuk transaksi asli.'
+                                        : 'Menggunakan akun Midtrans Sandbox untuk simulasi.'}
+                                    </span>
+                                </div>
+                                <span className="settings-mode-banner__icon">{data.midtrans_is_production ? '🚀' : '🛠️'}</span>
                             </div>
-
-                            <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-                                <label>Meta Pixel ID</label>
-                                <input
-                                    type="text"
-                                    value={data.meta_pixel_id}
-                                    onChange={e => setData({...data, meta_pixel_id: e.target.value})}
-                                    placeholder="Contoh: 1234567890123456"
-                                />
-                                <p style={{ fontSize: '16px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                                    Temukan Pixel ID di <strong>Meta Business Manager → Events Manager → Data Sources</strong>.
-                                    Kosongkan untuk menonaktifkan tracking.
-                                </p>
-                            </div>
-
-                            <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-                                <label>Meta Conversions API Token</label>
-                                <input
-                                    type="password"
-                                    value={data.meta_access_token}
-                                    onChange={e => setData({...data, meta_access_token: e.target.value})}
-                                    placeholder="EAABxxxxx..."
-                                />
-                                <p style={{ fontSize: '16px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                                    Digunakan untuk Server-Side Tracking. Generate token ini dari tab <strong>Settings</strong> di Meta Events Manager.
-                                </p>
-                            </div>
-
-                            <div style={{ 
-                                padding: 'var(--space-4)', 
-                                background: 'rgba(59,130,246,0.1)', 
-                                border: '1px solid rgba(59,130,246,0.2)', 
-                                borderRadius: 'var(--radius-md)',
-                                fontSize: '16px',
-                                color: 'var(--color-text-secondary)',
-                                lineHeight: 1.6
-                            }}>
-                                📊 <strong>Event yang dilacak otomatis:</strong><br/>
-                                • <code>PageView</code> — setiap halaman dibuka<br/>
-                                • <code>ViewContent</code> — halaman detail produk (dengan harga & nama produk)<br/>
-                                • <code>InitiateCheckout</code> — saat user memulai checkout (dengan total nilai keranjang)<br/>
-                                • <code>Purchase</code> — setelah pembayaran berhasil (dengan revenue & item data asli)
+                            <div className="settings-form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="midtrans_server_key">Midtrans Server Key</label>
+                                    <input
+                                        id="midtrans_server_key"
+                                        type="password"
+                                        value={data.midtrans_server_key}
+                                        onChange={e => setData({...data, midtrans_server_key: e.target.value})}
+                                        placeholder="SB-Mid-server-..."
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="midtrans_client_key">Midtrans Client Key</label>
+                                    <input
+                                        id="midtrans_client_key"
+                                        type="text"
+                                        value={data.midtrans_client_key}
+                                        onChange={e => setData({...data, midtrans_client_key: e.target.value})}
+                                        placeholder="SB-Mid-client-..."
+                                    />
+                                </div>
                             </div>
                         </div>
+                    </section>
 
-                        <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: 'var(--space-8) 0' }} />
-
-                        {/* Mail / SMTP Section */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--space-4)', color: '#f59e0b' }}>
-                            <Mail size={20} />
-                            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>Pengaturan Email (SMTP)</h3>
+                    {/* Meta Pixel Section */}
+                    <section className="settings-section" aria-labelledby="settings-meta-title">
+                        <div className="settings-section-header">
+                            <div className="settings-section-heading">
+                                <span className="settings-section-icon settings-section-icon--meta"><Activity size={20} /></span>
+                                <div>
+                                    <h2 id="settings-meta-title">Meta Pixel (Facebook Ads)</h2>
+                                    <p>Server-side tracking untuk konversi iklan.</p>
+                                </div>
+                            </div>
                         </div>
-                        <p style={{ fontSize: '16px', color: 'var(--color-text-muted)', marginBottom: 'var(--space-5)', lineHeight: 1.6 }}>
-                            Konfigurasi ini digunakan untuk mengirim struk pembelian ke email pembeli. Isi dengan kredensial SMTP dari Hostinger, Gmail, atau provider email lainnya.
-                        </p>
+                        <div className="settings-section-body">
+                            <div className="settings-form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="meta_pixel_id">Meta Pixel ID</label>
+                                    <input
+                                        id="meta_pixel_id"
+                                        type="text"
+                                        value={data.meta_pixel_id}
+                                        onChange={e => setData({...data, meta_pixel_id: e.target.value})}
+                                        placeholder="Contoh: 1234567890123456"
+                                    />
+                                    <p className="settings-field-hint">Temukan Pixel ID di <strong>Meta Business Manager → Events Manager → Data Sources</strong>. Kosongkan untuk menonaktifkan tracking.</p>
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="meta_access_token">Meta Conversions API Token</label>
+                                    <input
+                                        id="meta_access_token"
+                                        type="password"
+                                        value={data.meta_access_token}
+                                        onChange={e => setData({...data, meta_access_token: e.target.value})}
+                                        placeholder="EAABxxxxx..."
+                                    />
+                                    <p className="settings-field-hint">Generate token ini dari tab <strong>Settings</strong> di Meta Events Manager.</p>
+                                </div>
+                            </div>
+                            <div className="settings-info-card">
+                                <div className="settings-info-card__header"><Info size={16} aria-hidden="true" /> Event yang dilacak otomatis</div>
+                                <div className="settings-info-card__list">
+                                    <div><code>PageView</code> — setiap halaman dibuka</div>
+                                    <div><code>ViewContent</code> — halaman detail produk (dengan harga &amp; nama produk)</div>
+                                    <div><code>InitiateCheckout</code> — saat user memulai checkout (dengan total nilai keranjang)</div>
+                                    <div><code>Purchase</code> — setelah pembayaran berhasil (dengan revenue &amp; item data asli)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-2)' }}>
+                    {/* Mail / SMTP Section */}
+                    <section className="settings-section" aria-labelledby="settings-mail-title">
+                        <div className="settings-section-header">
+                            <div className="settings-section-heading">
+                                <span className="settings-section-icon settings-section-icon--mail"><Mail size={20} /></span>
+                                <div>
+                                    <h2 id="settings-mail-title">Pengaturan Email (SMTP)</h2>
+                                    <p>Kirim struk pembelian dan notifikasi ke email pembeli.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="settings-section-body">
+                            <div className="settings-form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="mail_host">SMTP Host</label>
+                                    <input
+                                        id="mail_host"
+                                        type="text"
+                                        value={data.mail_host}
+                                        onChange={e => setData({...data, mail_host: e.target.value})}
+                                        placeholder="smtp.hostinger.com"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="mail_port">SMTP Port</label>
+                                    <input
+                                        id="mail_port"
+                                        type="text"
+                                        value={data.mail_port}
+                                        onChange={e => setData({...data, mail_port: e.target.value})}
+                                        placeholder="587"
+                                    />
+                                </div>
+                            </div>
+                            <div className="settings-form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="mail_username">Username Email</label>
+                                    <input
+                                        id="mail_username"
+                                        type="text"
+                                        value={data.mail_username}
+                                        onChange={e => setData({...data, mail_username: e.target.value})}
+                                        placeholder="no-reply@jaggadacademy.com"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="mail_password">Password Email</label>
+                                    <input
+                                        id="mail_password"
+                                        type="password"
+                                        value={data.mail_password}
+                                        onChange={e => setData({...data, mail_password: e.target.value})}
+                                        placeholder="••••••••••••"
+                                    />
+                                </div>
+                            </div>
+                            <div className="settings-form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="mail_encryption">Enkripsi</label>
+                                    <select
+                                        id="mail_encryption"
+                                        value={data.mail_encryption}
+                                        onChange={e => setData({...data, mail_encryption: e.target.value})}
+                                    >
+                                        <option value="tls">TLS (port 587)</option>
+                                        <option value="ssl">SSL (port 465)</option>
+                                        <option value="">Tanpa Enkripsi</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="mail_from_name">Nama Pengirim</label>
+                                    <input
+                                        id="mail_from_name"
+                                        type="text"
+                                        value={data.mail_from_name}
+                                        onChange={e => setData({...data, mail_from_name: e.target.value})}
+                                        placeholder="JAGGAD ACADEMY"
+                                    />
+                                </div>
+                            </div>
                             <div className="form-group">
-                                <label>SMTP Host</label>
+                                <label htmlFor="mail_from_address">Alamat Email Pengirim (From)</label>
                                 <input
-                                    type="text"
-                                    value={data.mail_host}
-                                    onChange={e => setData({...data, mail_host: e.target.value})}
-                                    placeholder="smtp.hostinger.com"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>SMTP Port</label>
-                                <input
-                                    type="text"
-                                    value={data.mail_port}
-                                    onChange={e => setData({...data, mail_port: e.target.value})}
-                                    placeholder="587"
-                                />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-2)' }}>
-                            <div className="form-group">
-                                <label>Username Email</label>
-                                <input
-                                    type="text"
-                                    value={data.mail_username}
-                                    onChange={e => setData({...data, mail_username: e.target.value})}
+                                    id="mail_from_address"
+                                    type="email"
+                                    value={data.mail_from_address}
+                                    onChange={e => setData({...data, mail_from_address: e.target.value})}
                                     placeholder="no-reply@jaggadacademy.com"
                                 />
-                            </div>
-                            <div className="form-group">
-                                <label>Password Email</label>
-                                <input
-                                    type="password"
-                                    value={data.mail_password}
-                                    onChange={e => setData({...data, mail_password: e.target.value})}
-                                    placeholder="••••••••••••"
-                                />
+                                <p className="settings-field-hint">Alamat ini akan tampil sebagai pengirim di inbox penerima.</p>
                             </div>
                         </div>
+                    </section>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-2)' }}>
-                            <div className="form-group">
-                                <label>Enkripsi</label>
-                                <select
-                                    value={data.mail_encryption}
-                                    onChange={e => setData({...data, mail_encryption: e.target.value})}
-                                    style={{ width: '100%', padding: '10px 12px', background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', color: 'var(--color-text-primary)', fontSize: '16px' }}
-                                >
-                                    <option value="tls">TLS (port 587)</option>
-                                    <option value="ssl">SSL (port 465)</option>
-                                    <option value="">Tanpa Enkripsi</option>
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Nama Pengirim</label>
-                                <input
-                                    type="text"
-                                    value={data.mail_from_name}
-                                    onChange={e => setData({...data, mail_from_name: e.target.value})}
-                                    placeholder="JAGGAD ACADEMY"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-                            <label>Alamat Email Pengirim (From)</label>
-                            <input
-                                type="email"
-                                value={data.mail_from_address}
-                                onChange={e => setData({...data, mail_from_address: e.target.value})}
-                                placeholder="no-reply@jaggadacademy.com"
-                            />
-                            <p style={{ fontSize: '16px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                                Alamat ini akan tampil sebagai pengirim di inbox penerima.
-                            </p>
-                        </div>
-
-                        <div style={{ marginTop: 'var(--space-6)', display: 'flex', justifyContent: 'flex-end' }}>
-                            <button className="btn-admin-primary" disabled={isSaving}>
-                                {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                                <span>{isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+                    <div className="settings-footer">
+                        <button className="btn-admin-primary" type="submit" disabled={isSaving}>
+                            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                            <span>{isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>
+                        </button>
+                    </div>
+                </form>
+            </main>
         </AdminLayout>
     );
 }

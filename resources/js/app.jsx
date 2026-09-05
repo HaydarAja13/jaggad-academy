@@ -11,6 +11,20 @@ import { router } from '@inertiajs/react';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+// Fix Inertia + Vite CSS race condition: force browser to re-evaluate
+// styles after client-side navigation so lazy-loaded CSS chunks apply
+// immediately instead of requiring a manual page refresh.
+router.on('finish', () => {
+    // Single rAF may fire before Vite injects the new CSS chunk.
+    // Double-rAF + forced reflow guarantees the browser has painted
+    // with the freshly-loaded stylesheet applied.
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            void document.body.offsetHeight;
+        });
+    });
+});
+
 // Meta Pixel: inject base code and track PageView on every navigation
 function initMetaPixel(pixelId) {
     if (!pixelId || window._fbPixelInitialized) return;

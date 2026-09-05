@@ -121,8 +121,8 @@ export default function UserLearning({ id, product: dbProduct, completedMaterial
                                                 </span>
                                                 <span className="learning-material-action">Buka <ExternalLink size={18} aria-hidden="true" /></span>
                                                 </a>
-                                                <button type="button" className="learning-complete-button" onClick={() => router.post(route('dashboard.learning.complete', [product.slug, index]), { completed: !completed.has(index) }, { preserveScroll: true })}>
-                                                    <CheckCircle2 size={18} aria-hidden="true" /> {completed.has(index) ? 'Selesai' : 'Tandai selesai'}
+                                                <button type="button" className="learning-complete-button" data-state={completed.has(index) ? 'completed' : 'pending'} onClick={() => router.post(route('dashboard.learning.complete', [product.slug, index]), { completed: !completed.has(index) }, { preserveScroll: true })}>
+                                                    <CheckCircle2 size={18} aria-hidden="true" /> {completed.has(index) ? 'Sudah selesai' : 'Belum selesai'}
                                                 </button>
                                             </div>
                                         ) : (

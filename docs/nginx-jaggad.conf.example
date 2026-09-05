@@ -1,0 +1,78 @@
+# Contoh Konfigurasi Nginx Production untuk JAGGAD Academy
+# Letakkan di /etc/nginx/sites-available/jaggad dan symlink ke /etc/nginx/sites-enabled/
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name domain-anda.com www.domain-anda.com;
+
+    # Redirect seluruh HTTP ke HTTPS (Item 15)
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name domain-anda.com www.domain-anda.com;
+
+    # Document root harus menunjuk ke direktori /public (Item 13)
+    root /var/www/jaggad/public;
+    index index.php index.html;
+
+    # Sertifikat SSL (Let's Encrypt / Certbot)
+    ssl_certificate /etc/letsencrypt/live/domain-anda.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/domain-anda.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # Security Headers (Item 15)
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    # Nonaktifkan directory listing (Item 15 & 16)
+    autoindex off;
+
+    # Batasi ukuran upload (Maksimal 10MB untuk bukti transfer / gambar materi)
+    client_max_body_size 10M;
+
+    # Gzip Compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+
+    # Cache asset statis Vite
+    location ~* \.(?:ico|css|js|gif|jpe?g|png|webp|woff2?|eot|ttf|svg)$ {
+        expires 6M;
+        access_log off;
+        add_header Cache-Control "public, max-age=15552000, immutable";
+    }
+
+    # Blokir akses ke file .env, file tersembunyi (.git, dll), file log, dan backup (Item 15)
+    location ~ /\.(?!well-known).* {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    location ~* \.(env|log|key|sql|sqlite|bak|backup)$ {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # Routing Laravel (Front Controller)
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # PHP-FPM FastCGI pass (sesuaikan versi php-fpm Anda, misal php8.2-fpm atau php8.3-fpm)
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+        fastcgi_read_timeout 60;
+    }
+}

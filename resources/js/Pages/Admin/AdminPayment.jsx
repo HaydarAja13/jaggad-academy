@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Plus, CreditCard, Pencil, Trash2, X, ToggleLeft, ToggleRight, QrCode, Banknote, Eye, Shield, Landmark } from 'lucide-react';
+import { Plus, CreditCard, Pencil, Trash2, X, ToggleLeft, ToggleRight, QrCode, Banknote, Eye, Shield, Landmark, Search, Settings } from 'lucide-react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import toast from 'react-hot-toast';
 import './Admin.css';
@@ -9,9 +9,13 @@ export default function AdminPayment({ dbBanks = [] }) {
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editingBank, setEditingBank] = useState(null);
     const [selectedBank, setSelectedBank] = useState(null);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('Semua');
     const [form, setForm] = useState({ bank_name: '', account_holder: '', account_number: '' });
     const manualBanks = dbBanks.filter(method => method.type === 'bank_transfer');
     const gateway = dbBanks.find(method => method.type === 'midtrans');
+
+    const activeBanks = manualBanks.filter(b => b.status == 1 || b.status === true).length;
 
     const showError = errors => toast.error(Object.values(errors || {})[0] || 'Permintaan tidak dapat diproses.');
 
@@ -25,7 +29,7 @@ export default function AdminPayment({ dbBanks = [] }) {
 
     const handleSave = () => {
         if (!form.bank_name || !form.account_number || !form.account_holder) return toast.error('Lengkapi data bank');
-        
+
         if (editingBank) {
             router.put(route('admin.payment.update', editingBank.slug), form, {
                 preserveScroll: true,
@@ -64,88 +68,181 @@ export default function AdminPayment({ dbBanks = [] }) {
         setIsAddOpen(true);
     };
 
+    const query = search.trim().toLowerCase();
+    const filtered = manualBanks.filter(b => {
+        const matchSearch = !query || [b.bank_name, b.account_name, b.account_number].some(value => value.toLowerCase().includes(query));
+        const matchFilter = statusFilter === 'Semua'
+            || (statusFilter === 'Aktif' && (b.status == 1 || b.status === true))
+            || (statusFilter === 'Nonaktif' && !(b.status == 1 || b.status === true));
+        return matchSearch && matchFilter;
+    });
+
+    const statusCounts = {
+        Semua: manualBanks.length,
+        Aktif: activeBanks,
+        Nonaktif: manualBanks.length - activeBanks,
+    };
+    const hasFilters = query || statusFilter !== 'Semua';
+
     return (
         <AdminLayout>
             <Head title="Pengaturan Pembayaran - JAGGAD ACADEMY" />
-            <div className="admin-page">
-                <div className="admin-page-header">
-                    <h1>Pengaturan Pembayaran</h1>
-                    <p className="admin-page-subtitle">Kelola metode pembayaran dan rekening bank untuk transaksi pelanggan</p>
-                </div>
+            <main className="admin-page payment-page">
+                <header className="payment-header">
+                    <div>
+                        <h1>Metode Pembayaran</h1>
+                        <p>Kelola rekening bank manual dan payment gateway untuk transaksi pelanggan.</p>
+                    </div>
+                    <button type="button" className="products-primary" onClick={() => { setForm({ bank_name: '', account_holder: '', account_number: '' }); setEditingBank(null); setIsAddOpen(true); }}>
+                        <Plus size={18} aria-hidden="true" />
+                        Tambah rekening
+                    </button>
+                </header>
 
-                <div className="payment-admin-grid">
-                    {/* Manual Transfer */}
-                    <div className="admin-table-card payment-admin-card">
-                        <div className="admin-table-header">
-                            <div className="payment-admin-heading">
-                                <span className="payment-admin-icon"><Banknote size={20} /></span>
-                                <div>
-                                    <h3>Transfer bank manual</h3>
-                                    <p>Pelanggan mengirim bukti untuk diverifikasi admin.</p>
-                                </div>
-                            </div>
-                            <button className="btn-icon edit" aria-label="Tambah rekening" onClick={() => { setForm({ bank_name: '', account_holder: '', account_number: '' }); setEditingBank(null); setIsAddOpen(true); }}><Plus size={18} /></button>
+                <section className="products-summary" aria-label="Ringkasan metode pembayaran">
+                    <div>
+                        <strong>{manualBanks.length}</strong>
+                        <span>Total rekening</span>
+                    </div>
+                    <div>
+                        <strong>{activeBanks}</strong>
+                        <span>Aktif digunakan</span>
+                    </div>
+                    <div>
+                        <strong>{gateway?.status ? 'Aktif' : 'Nonaktif'}</strong>
+                        <span>Status gateway</span>
+                    </div>
+                </section>
+
+                <section className="payment-methods" aria-labelledby="payment-methods-title">
+                    <div className="products-toolbar">
+                        <div>
+                            <h2 id="payment-methods-title">Transfer bank manual</h2>
+                            <p>{filtered.length} dari {manualBanks.length} rekening ditampilkan</p>
                         </div>
-                        <div className="admin-table-wrap">
-                            <table className="admin-table">
-                                <thead>
-                                    <tr><th>Bank</th><th>No. Rekening</th><th>Status</th><th>Aksi</th></tr>
-                                </thead>
-                                <tbody>
-                                    {manualBanks.map(b => {
-                                        const isActive = b.status == 1 || b.status === true;
-                                        return (
+                        <div className="products-filters">
+                            <label className="products-search">
+                                <span className="sr-only">Cari rekening</span>
+                                <Search size={18} aria-hidden="true" />
+                                <input
+                                    type="search"
+                                    placeholder="Cari nama bank, pemilik, atau nomor rekening"
+                                    value={search}
+                                    onChange={event => setSearch(event.target.value)}
+                                />
+                            </label>
+                            <label className="products-select">
+                                <span className="sr-only">Filter status</span>
+                                <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+                                    <option value="Semua">Semua status</option>
+                                    <option value="Aktif">Aktif</option>
+                                    <option value="Nonaktif">Nonaktif</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                    <div className="admin-table-wrap">
+                        <table className="admin-table products-table payment-table">
+                            <thead>
+                                <tr>
+                                    <th>Rekening</th>
+                                    <th>No. Rekening</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map(b => {
+                                    const isActive = b.status == 1 || b.status === true;
+                                    return (
                                         <tr key={b.id}>
-                                            <td>
-                                                <div className="payment-bank-name">{b.bank_name}</div>
-                                                <div className="payment-bank-holder">{b.account_name}</div>
+                                            <td data-label="Rekening">
+                                                <div className="payment-bank-cell">
+                                                    <div className="payment-bank-icon" aria-hidden="true"><Landmark size={20} /></div>
+                                                    <div>
+                                                        <strong>{b.bank_name}</strong>
+                                                        <span>{b.account_name}</span>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td className="trx-id">{b.account_number}</td>
-                                            <td>
+                                            <td data-label="No. Rekening"><span className="trx-id">{b.account_number}</span></td>
+                                            <td data-label="Status">
                                                 <button className={`payment-status-toggle${isActive ? ' active' : ''}`} onClick={() => toggleBank(b.slug)} aria-label={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${b.bank_name}`}>
                                                     {isActive ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                                                 </button>
                                             </td>
-                                            <td>
-                                                <div className="actions-col">
-                                                    <button className="btn-icon" onClick={() => setSelectedBank(b)} title="Lihat Detail"><Eye size={15} /></button>
-                                                    <button className="btn-icon edit" onClick={() => openEdit(b)}><Pencil size={15} /></button>
-                                                    <button className="btn-icon delete" onClick={() => deleteBank(b.slug)}><Trash2 size={14} /></button>
+                                            <td data-label="Aksi">
+                                                <div className="product-actions">
+                                                    <button type="button" className="product-edit" onClick={() => setSelectedBank(b)} title="Lihat detail">
+                                                        <Eye size={16} aria-hidden="true" />
+                                                        Detail
+                                                    </button>
+                                                    <button type="button" className="product-edit" onClick={() => openEdit(b)}>
+                                                        <Pencil size={16} aria-hidden="true" />
+                                                        Edit
+                                                    </button>
+                                                    <button type="button" className="product-delete" onClick={() => deleteBank(b.slug)} aria-label={`Hapus ${b.bank_name}`}>
+                                                        <Trash2 size={17} aria-hidden="true" />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
-                                    )})}
-                                    {manualBanks.length === 0 && <tr><td colSpan="4"><div className="payment-admin-empty"><Banknote size={24} /><span>Belum ada rekening transfer.</span></div></td></tr>}
-                                </tbody>
-                            </table>
-                        </div>
+                                    );
+                                })}
+                                {filtered.length === 0 && (
+                                    <tr>
+                                        <td colSpan="4">
+                                            <div className="products-empty">
+                                                <Banknote size={28} aria-hidden="true" />
+                                                <h3>{hasFilters ? 'Rekening tidak ditemukan' : 'Belum ada rekening'}</h3>
+                                                <p>{hasFilters ? 'Coba ubah kata kunci atau filter status.' : 'Tambahkan rekening bank untuk menerima pembayaran manual.'}</p>
+                                                {hasFilters ? (
+                                                    <button type="button" onClick={() => { setSearch(''); setStatusFilter('Semua'); }}>Reset filter</button>
+                                                ) : (
+                                                    <button type="button" onClick={() => { setForm({ bank_name: '', account_holder: '', account_number: '' }); setEditingBank(null); setIsAddOpen(true); }}>Tambah rekening</button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
+                    <div className="products-list-footer">
+                        Menampilkan {filtered.length} rekening
+                    </div>
+                </section>
 
-                    {/* Automatic Gateway */}
-                    <div className="admin-table-card payment-admin-card payment-gateway-card">
-                        <div className="admin-table-header">
-                            <div className="payment-admin-heading">
-                                <span className="payment-admin-icon payment-admin-icon--gateway"><QrCode size={20} /></span>
-                                <div>
-                                    <h3>Midtrans Payment Gateway</h3>
-                                    <p>QRIS, Virtual Account, dan kartu.</p>
-                                </div>
+                <section className="payment-gateway-section" aria-labelledby="payment-gateway-title">
+                    <div className="payment-gateway-header">
+                        <div className="payment-gateway-heading">
+                            <span className="payment-admin-icon payment-admin-icon--gateway"><QrCode size={20} /></span>
+                            <div>
+                                <h2 id="payment-gateway-title">Midtrans Payment Gateway</h2>
+                                <p>QRIS, Virtual Account, dan kartu kredit secara otomatis.</p>
                             </div>
-                            {gateway && <button className={`status-badge ${gateway.status ? 'success' : 'warning'}`} onClick={() => toggleBank(gateway.slug)}>{gateway.status ? 'Aktif' : 'Maintenance'}</button>}
                         </div>
-                        <div className="payment-gateway-body">
-                            <div className="payment-gateway-note">
-                                <Shield size={20} aria-hidden="true" />
-                                <p>
-                                    {gateway?.status ? 'Midtrans aktif dan pembayaran diverifikasi otomatis.' : 'Midtrans tetap tersimpan, tetapi tidak dapat dipilih pelanggan sampai credential lengkap dan status diaktifkan.'}
-                                </p>
-                            </div>
-                            <button className="btn-auth w-full" onClick={() => router.get(route('admin.settings.index'))}>
-                                Kelola API Key & Credentials
+                        {gateway && (
+                            <button className={`status-badge ${gateway.status ? 'success' : 'warning'}`} onClick={() => toggleBank(gateway.slug)}>
+                                {gateway.status ? 'Aktif' : 'Maintenance'}
                             </button>
-                        </div>
+                        )}
                     </div>
-                </div>
+                    <div className="payment-gateway-body">
+                        <div className="payment-gateway-note">
+                            <Shield size={20} aria-hidden="true" />
+                            <p>
+                                {gateway?.status
+                                    ? 'Midtrans aktif dan pembayaran diverifikasi otomatis.'
+                                    : 'Midtrans tetap tersimpan, tetapi tidak dapat dipilih pelanggan sampai credential lengkap dan status diaktifkan.'}
+                            </p>
+                        </div>
+                        <button className="btn-gateway-settings" onClick={() => router.get(route('admin.settings.index'))}>
+                            <Settings size={18} aria-hidden="true" />
+                            Kelola API Key & Credentials
+                        </button>
+                    </div>
+                </section>
 
                 {isAddOpen && (
                     <div className="modal-overlay" onClick={() => setIsAddOpen(false)}>
@@ -176,34 +273,23 @@ export default function AdminPayment({ dbBanks = [] }) {
                     </div>
                 )}
 
-                {/* Bank Detail Modal */}
                 {selectedBank && (
                     <div className="modal-overlay" onClick={() => setSelectedBank(null)}>
                         <div className="modal modal-detail" onClick={e => e.stopPropagation()}>
-                            <div className="modal-detail-header" style={{ borderColor: 'var(--color-border)' }}>
-                                <div style={{ 
-                                    width: 56, 
-                                    height: 56, 
-                                    borderRadius: 'var(--radius-md)', 
-                                    background: 'var(--color-accent-dim)', 
-                                    color: 'var(--color-accent-light)',
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center',
-                                    flexShrink: 0
-                                }}>
-                                    <Landmark size={28} />
+                            <div className="modal-detail-header">
+                                <div className={`modal-detail-status-icon ${(selectedBank.status == 1 || selectedBank.status === true) ? 'success' : 'error'}`}>
+                                    <Landmark size={24} aria-hidden="true" />
                                 </div>
-                                <div style={{ marginLeft: 'var(--space-4)' }}>
-                                    <p className="modal-detail-id">METODE PEMBAYARAN</p>
-                                    <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-text-primary)' }}>{selectedBank.bank_name}</h3>
+                                <div>
+                                    <h2 className="modal-detail-id">{selectedBank.bank_name}</h2>
+                                    <div className="modal-detail-date">METODE PEMBAYARAN</div>
                                     <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 4 }}>
                                         <span className={`status-badge ${(selectedBank.status == 1 || selectedBank.status === true) ? 'success' : 'error'}`} style={{ fontSize: 'var(--text-xs)' }}>
                                             {(selectedBank.status == 1 || selectedBank.status === true) ? 'Aktif' : 'Nonaktif'}
                                         </span>
                                     </div>
                                 </div>
-                                <button className="btn-icon" onClick={() => setSelectedBank(null)} style={{ marginLeft: 'auto' }}><X size={20} /></button>
+                                <button className="btn-icon modal-detail-close" onClick={() => setSelectedBank(null)} aria-label="Tutup detail"><X size={22} aria-hidden="true" /></button>
                             </div>
 
                             <div className="modal-detail-body">
@@ -236,7 +322,7 @@ export default function AdminPayment({ dbBanks = [] }) {
                         </div>
                     </div>
                 )}
-            </div>
+            </main>
         </AdminLayout>
     );
 }
