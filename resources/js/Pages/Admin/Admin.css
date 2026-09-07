@@ -5450,6 +5450,97 @@ input:checked + .toggle-slider:before {
     outline-offset: 3px;
 }
 
+/* ── Danger Zone ── */
+.settings-danger-zone {
+    border-color: rgba(180, 35, 24, 0.25);
+    margin-top: var(--space-5);
+}
+
+.settings-section-icon--danger {
+    background: rgba(180, 35, 24, 0.1);
+    color: #b42318;
+}
+
+.settings-danger-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+    padding: var(--space-4);
+    border: 1px solid rgba(180, 35, 24, 0.18);
+    border-radius: 12px;
+    background: #fef3f2;
+}
+
+.settings-danger-row > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.settings-danger-row strong {
+    color: #b42318;
+    font-size: 16px;
+}
+
+.settings-danger-row span {
+    color: var(--settings-muted);
+    line-height: 1.55;
+}
+
+.settings-danger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    background: #b42318;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.settings-danger-btn:hover {
+    background: #912018;
+}
+
+.settings-danger-btn--secondary {
+    background: transparent;
+    border: 1px solid rgba(180, 35, 24, 0.4);
+    color: #b42318;
+}
+
+.settings-danger-btn--secondary:hover {
+    background: rgba(180, 35, 24, 0.08);
+}
+
+.settings-reset-confirm-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+    text-align: left;
+}
+
+.settings-reset-confirm-field label {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--settings-ink);
+}
+
+.settings-reset-confirm-field input {
+    min-height: var(--control-height);
+    padding: 0 var(--space-4);
+    border: 1px solid var(--border-field, #d8cdd1);
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--settings-ink);
+}
+
 /* ── Settings responsive ── */
 @media (max-width: 900px) {
     .settings-header {
@@ -5465,6 +5556,11 @@ input:checked + .toggle-slider:before {
         flex-direction: column;
         align-items: stretch;
         gap: var(--space-3);
+    }
+
+    .settings-danger-row {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 

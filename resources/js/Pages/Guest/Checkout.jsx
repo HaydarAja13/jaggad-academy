@@ -66,6 +66,7 @@ export default function Checkout({ auth, dbPaymentMethods = [] }) {
     const handlePay = () => {
         if (!selectedPayment?.enabled) return toast.error('Pilih metode pembayaran yang tersedia.');
         if (selectedPayment.isManual && !proofFile) return toast.error('Unggah bukti pembayaran terlebih dahulu.');
+        if (!selectedPayment.isManual && !window.snap) return toast.error('Midtrans belum siap. Tunggu sebentar lalu coba lagi.');
 
         setProcessing(true);
         const payload = {
@@ -94,14 +95,16 @@ export default function Checkout({ auth, dbPaymentMethods = [] }) {
                                 toast.success('Pembayaran berhasil. Materi siap dipelajari.');
                                 router.visit(route('dashboard'));
                             },
-                        }),
-                        onPending: () => router.post(route('checkout.verify', trx_code), {}, {
-                            onSuccess: () => {
+                            onError: errors => {
                                 setProcessing(false);
-                                toast.success('Pembayaran sedang diproses.');
-                                router.visit(route('dashboard'));
+                                Object.values(errors).forEach(error => toast.error(error));
                             },
                         }),
+                        onPending: () => {
+                            setProcessing(false);
+                            toast.success('Pembayaran sedang diproses.');
+                            router.visit(route('dashboard'));
+                        },
                         onError: () => {
                             setProcessing(false);
                             toast.error('Pembayaran gagal. Silakan coba kembali.');
@@ -111,10 +114,13 @@ export default function Checkout({ auth, dbPaymentMethods = [] }) {
                             toast('Pembayaran ditunda. Pesanan tersimpan dan dapat dilanjutkan nanti.');
                         },
                     });
-                } else {
+                } else if (selectedPayment.isManual) {
                     setProcessing(false);
                     clearCart();
                     setStep(3);
+                } else {
+                    setProcessing(false);
+                    toast.error('Gateway pembayaran belum memberikan token. Keranjang Anda tetap tersimpan.');
                 }
             },
             onError: errors => {

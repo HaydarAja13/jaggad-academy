@@ -338,6 +338,70 @@
     transform: translateX(3px);
 }
 
+/* Our Clients */
+.client-marquee {
+    --client-cell: 248px;
+    padding: clamp(48px, 5vw, 64px) 0 clamp(64px, 7vw, 88px);
+    background: #ffffff;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.client-marquee__viewport {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, transparent, black 96px, black calc(100% - 96px), transparent);
+    mask-image: linear-gradient(to right, transparent, black 96px, black calc(100% - 96px), transparent);
+}
+
+.client-marquee__track {
+    display: flex;
+    width: max-content;
+    animation: client-marquee 42s linear infinite;
+}
+
+.client-marquee__group {
+    display: flex;
+    align-items: center;
+    flex: none;
+}
+
+.client-marquee__cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--client-cell);
+    height: 124px;
+    flex: none;
+}
+
+.client-marquee__cell img {
+    max-width: 192px;
+    max-height: 64px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+@keyframes client-marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .client-marquee__viewport {
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .client-marquee__viewport::-webkit-scrollbar {
+        display: none;
+    }
+
+    .client-marquee__track {
+        animation: none;
+    }
+}
+
 /* Stats */
 .stats-proof {
     padding: clamp(64px, 7vw, 88px) 0;
@@ -1518,6 +1582,24 @@
         scroll-snap-align: center;
     }
 
+    .client-marquee {
+        --client-cell: 168px;
+    }
+
+    .client-marquee__viewport {
+        -webkit-mask-image: linear-gradient(to right, transparent, black 48px, black calc(100% - 48px), transparent);
+        mask-image: linear-gradient(to right, transparent, black 48px, black calc(100% - 48px), transparent);
+    }
+
+    .client-marquee__cell {
+        height: 106px;
+    }
+
+    .client-marquee__cell img {
+        max-width: 134px;
+        max-height: 52px;
+    }
+
     .stats-proof {
         padding: 72px 0;
     }
@@ -1542,6 +1624,19 @@
         padding: 28px 0;
         gap: 18px;
         border-right: 0;
+    }
+
+    .client-marquee {
+        --client-cell: 144px;
+    }
+
+    .client-marquee__cell {
+        height: 92px;
+    }
+
+    .client-marquee__cell img {
+        max-width: 112px;
+        max-height: 46px;
     }
 
     .stats-proof__primary strong {

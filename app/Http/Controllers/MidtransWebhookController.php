@@ -32,12 +32,12 @@ class MidtransWebhookController extends Controller
 
         $payload = $validator->validated();
         $signature = hash('sha512', $payload['order_id'].$payload['status_code'].$payload['gross_amount'].$serverKey);
-        if (!hash_equals($signature, $payload['signature_key'])) {
+        if (! hash_equals($signature, $payload['signature_key'])) {
             return response()->json(['message' => 'Invalid signature'], 403);
         }
 
         $transaction = Transaction::where('transaction_code', $payload['order_id'])->first();
-        if (!$transaction) {
+        if (! $transaction) {
             return response()->json(['message' => 'Transaction not found'], 200);
         }
 
@@ -48,21 +48,24 @@ class MidtransWebhookController extends Controller
 
         $status = $this->mapStatus(
             $payload['transaction_status'],
-            $payload['payment_type'] ?? '',
             $payload['fraud_status'] ?? '',
         );
 
         if ($status) {
-            $finalizer->apply($transaction, $status, $payload['payment_type'] ?? null, $request->all());
+            $finalizer->apply($transaction, $status, $payload['payment_type'] ?? null, $request->except('signature_key'));
         }
 
         return response()->json(['message' => 'OK']);
     }
 
-    private function mapStatus(string $transactionStatus, string $paymentType, string $fraudStatus): ?string
+    private function mapStatus(string $transactionStatus, string $fraudStatus): ?string
     {
         if ($transactionStatus === 'capture') {
-            return $paymentType === 'credit_card' && $fraudStatus === 'challenge' ? 'pending' : 'success';
+            return match ($fraudStatus) {
+                'accept' => 'success',
+                'deny' => 'failed',
+                default => 'pending',
+            };
         }
 
         return match ($transactionStatus) {

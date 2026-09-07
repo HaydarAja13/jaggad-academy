@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Product extends Model
 {
@@ -55,13 +56,18 @@ class Product extends Model
     {
         static::creating(function ($product) {
             if (empty($product->slug)) {
-                $product->slug = \Illuminate\Support\Str::slug($product->name) . '-' . uniqid();
+                $base = Str::slug($product->name) ?: 'product';
+                $product->slug = $base;
+
+                for ($suffix = 2; static::where('slug', $product->slug)->exists(); $suffix++) {
+                    $product->slug = "{$base}-{$suffix}";
+                }
             }
         });
 
         static::updating(function ($product) {
-            if ($product->isDirty('name') || empty($product->slug)) {
-                $product->slug = \Illuminate\Support\Str::slug($product->name) . '-' . uniqid();
+            if (empty($product->slug)) {
+                $product->slug = Str::slug($product->name).'-'.$product->getKey();
             }
         });
     }

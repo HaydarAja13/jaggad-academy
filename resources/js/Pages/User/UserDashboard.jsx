@@ -158,7 +158,7 @@ export default function UserDashboard({ auth, purchasedProducts = [], transactio
         status: transaction.status === 'success' ? 'Berhasil' : transaction.payment?.status === 'rejected' ? 'Bukti perlu diperbaiki' : transaction.status === 'pending' ? 'Pending' : 'Gagal',
         paymentStatus: transaction.payment?.status,
         rejectionReason: transaction.payment?.rejection_reason,
-        proof: getStorageUrl(transaction.payment?.proof_image),
+        proof: transaction.payment?.proof_url || getStorageUrl(transaction.payment?.proof_image),
         bank: transaction.payment_type?.toUpperCase() || transaction.payment?.payment_method?.bank_name || 'Pembayaran otomatis',
         snapToken: transaction.snap_token,
         payload: transaction.payment_payload ? JSON.parse(transaction.payment_payload) : null,

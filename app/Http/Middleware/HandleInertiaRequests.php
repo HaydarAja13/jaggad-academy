@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\SiteContent;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -29,7 +30,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $contentData = \App\Models\SiteContent::where('key', 'site_content')->first();
+        $contentData = SiteContent::where('key', 'site_content')->first();
         $dbContent = $contentData ? json_decode($contentData->value, true) : null;
 
         $purchasedProductIds = [];
@@ -37,10 +38,10 @@ class HandleInertiaRequests extends Middleware
             $purchasedProductIds = $request->user()->products()->pluck('products.id')->toArray();
         }
 
-        $settingsData = \App\Models\SiteContent::where('key', 'site_settings')->first();
+        $settingsData = SiteContent::where('key', 'site_settings')->first();
         $siteSettings = $settingsData ? json_decode($settingsData->value, true) : [];
 
-        $adsData = \App\Models\SiteContent::where('key', 'ads_promo')->first();
+        $adsData = SiteContent::where('key', 'ads_promo')->first();
         $dbAds = $adsData ? json_decode($adsData->value, true) : null;
 
         return [
@@ -50,10 +51,10 @@ class HandleInertiaRequests extends Middleware
                 'purchased_products' => $purchasedProductIds,
             ],
             'siteContent' => array_merge($dbContent ?: [], [
-                'ads' => $dbAds
+                'ads' => $dbAds,
             ]),
             'midtrans' => [
-                'client_key' => $siteSettings['midtrans_client_key'] ?? config('services.midtrans.client_key'),
+                'client_key' => ($siteSettings['midtrans_client_key'] ?? null) ?: config('services.midtrans.client_key'),
                 'is_production' => $siteSettings['midtrans_is_production'] ?? config('services.midtrans.is_production'),
             ],
             'meta_pixel_id' => $siteSettings['meta_pixel_id'] ?? null,

@@ -55,7 +55,7 @@ class TransactionFinalizer
             }
 
             foreach ($locked->items as $item) {
-                if (!$item->product_id) {
+                if (! $item->product_id) {
                     continue;
                 }
 
@@ -71,7 +71,7 @@ class TransactionFinalizer
             return $locked->fresh()->load(['user', 'items.product.category', 'payment.paymentMethod']);
         });
 
-        if (!$finalized) {
+        if (! $finalized) {
             return ['changed' => false, 'email_sent' => true];
         }
 
@@ -83,16 +83,18 @@ class TransactionFinalizer
 
     private function sendReceipt(Transaction $transaction): bool
     {
+        $emailSent = true;
+
         try {
             Mail::to($transaction->user->email)->send(new PurchaseReceiptMail($transaction));
-            $this->trackMetaPurchase($transaction);
-
-            return true;
         } catch (\Throwable $exception) {
-            Log::error('Purchase completion notification error: '.$exception->getMessage());
-
-            return false;
+            $emailSent = false;
+            Log::error('Purchase receipt email error: '.$exception->getMessage());
         }
+
+        $this->trackMetaPurchase($transaction);
+
+        return $emailSent;
     }
 
     private function trackMetaPurchase(Transaction $transaction): void
@@ -102,7 +104,7 @@ class TransactionFinalizer
         $pixelId = $settingsData['meta_pixel_id'] ?? null;
         $accessToken = $settingsData['meta_access_token'] ?? null;
 
-        if (!$pixelId || !$accessToken) {
+        if (! $pixelId || ! $accessToken) {
             return;
         }
 
@@ -113,10 +115,12 @@ class TransactionFinalizer
                 'item_price' => (float) $item->price,
             ])->all();
 
-            Http::post("https://graph.facebook.com/v19.0/{$pixelId}/events", [
+            $version = config('services.meta.graph_version');
+            Http::timeout(5)->post("https://graph.facebook.com/{$version}/{$pixelId}/events", [
                 'data' => [[
                     'event_name' => 'Purchase',
                     'event_time' => time(),
+                    'event_id' => $transaction->transaction_code,
                     'action_source' => 'website',
                     'user_data' => [
                         'em' => hash('sha256', strtolower(trim($transaction->user->email))),

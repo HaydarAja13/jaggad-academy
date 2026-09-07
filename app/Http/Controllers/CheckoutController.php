@@ -2,21 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
-use App\Models\Payment;
 use App\Services\TransactionFinalizer;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Intervention\Image\ImageManager;
+use Inertia\Inertia;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\WebpEncoder;
+use Intervention\Image\ImageManager;
+use Midtrans\Snap;
 
 class CheckoutController extends Controller
 {
@@ -40,11 +42,11 @@ class CheckoutController extends Controller
         $validated = $request->validate([
             'phone' => 'required|string|max:32',
             'payment_method_id' => 'required|exists:payment_methods,id',
-            'cart' => 'required|array|min:1',
+            'cart' => 'required|array|min:1|max:50',
             'cart.*.id' => 'nullable|required_without:cart.*.package_slug|integer|distinct|exists:products,id',
             'cart.*.package_slug' => 'nullable|required_without:cart.*.id|string|distinct',
             'active_trx' => 'nullable|string|max:40',
-            'proof' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
+            'proof' => 'nullable|image|mimes:jpg,jpeg,png|max:5120|dimensions:max_width=8000,max_height=8000',
         ]);
 
         [$products, $linePrices, $itemDetails, $grandTotal] = $this->resolveCart($validated['cart']);
@@ -55,18 +57,18 @@ class CheckoutController extends Controller
             ->pluck('products.name');
         if ($ownedProducts->isNotEmpty()) {
             throw ValidationException::withMessages([
-                'cart' => 'Anda sudah memiliki produk berikut: ' . $ownedProducts->join(', ') . '.',
+                'cart' => 'Anda sudah memiliki produk berikut: '.$ownedProducts->join(', ').'.',
             ]);
         }
 
         $paymentMethod = PaymentMethod::findOrFail($validated['payment_method_id']);
-        if (!$paymentMethod->status) {
+        if (! $paymentMethod->status) {
             throw ValidationException::withMessages(['payment_method_id' => 'Metode pembayaran ini sedang tidak tersedia.']);
         }
 
         $isManual = $paymentMethod->type === PaymentMethod::TYPE_BANK_TRANSFER;
         if ($isManual) {
-            $request->validate(['proof' => 'required|image|mimes:jpg,jpeg,png|max:5120']);
+            $request->validate(['proof' => 'required|image|mimes:jpg,jpeg,png|max:5120|dimensions:max_width=8000,max_height=8000']);
         } elseif (empty(config('services.midtrans.server_key')) || empty(config('services.midtrans.client_key'))) {
             throw ValidationException::withMessages(['payment_method_id' => 'Midtrans masih dalam pemeliharaan. Silakan gunakan transfer bank.']);
         }
@@ -80,7 +82,7 @@ class CheckoutController extends Controller
         try {
             $transaction = DB::transaction(function () use ($validated, $user, $grandTotal, $products, $linePrices, $isManual, $proofPath, $paymentMethod) {
                 $transaction = null;
-                if (!empty($validated['active_trx'])) {
+                if (! empty($validated['active_trx'])) {
                     $transaction = Transaction::where('transaction_code', $validated['active_trx'])
                         ->where('user_id', $user->id)
                         ->where('status', 'pending')
@@ -98,7 +100,7 @@ class CheckoutController extends Controller
                     $transaction->payment?->delete();
                 } else {
                     $transaction = Transaction::create([
-                        'transaction_code' => 'TRX-' . strtoupper(Str::random(8)),
+                        'transaction_code' => 'TRX-'.strtoupper(Str::random(8)),
                         'user_id' => $user->id,
                         'total_amount' => $grandTotal,
                         'status' => 'pending',
@@ -127,7 +129,7 @@ class CheckoutController extends Controller
             });
         } catch (\Throwable $exception) {
             if ($proofPath) {
-                Storage::disk('public')->delete($proofPath);
+                Storage::disk('local')->delete($proofPath);
             }
             throw $exception;
         }
@@ -135,40 +137,44 @@ class CheckoutController extends Controller
         if ($isManual) {
             return back()->with([
                 'success' => 'Pesanan berhasil dibuat, silakan tunggu konfirmasi admin!',
-                'trx_code' => $transaction->transaction_code
+                'trx_code' => $transaction->transaction_code,
             ]);
         }
 
         try {
             $params = [
-                    'transaction_details' => [
-                        'order_id' => $transaction->transaction_code,
-                        'gross_amount' => (int)$grandTotal,
-                    ],
-                    'customer_details' => [
-                        'first_name' => $user->name,
-                        'email' => $user->email,
-                        'phone' => $request->phone,
-                    ],
-                    'item_details' => $itemDetails,
-                    'callbacks' => [
-                        'finish'   => url('/dashboard'),
-                        'unfinish' => url('/dashboard'),
-                        'error'    => url('/checkout'),
-                    ],
+                'transaction_details' => [
+                    'order_id' => $transaction->transaction_code,
+                    'gross_amount' => (int) $grandTotal,
+                ],
+                'customer_details' => [
+                    'first_name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $request->phone,
+                ],
+                'item_details' => $itemDetails,
+                'callbacks' => [
+                    'finish' => url('/dashboard'),
+                    'unfinish' => url('/dashboard'),
+                    'error' => url('/checkout'),
+                ],
             ];
 
-            $snapToken = \Midtrans\Snap::getSnapToken($params);
+            $snapToken = Snap::getSnapToken($params);
             $transaction->update(['snap_token' => $snapToken]);
 
             return back()->with([
                 'success' => 'Silakan selesaikan pembayaran!',
                 'snap_token' => $snapToken,
-                'trx_code' => $transaction->transaction_code
+                'trx_code' => $transaction->transaction_code,
             ]);
 
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal terhubung ke gateway pembayaran: ' . $e->getMessage());
+            Log::error('Midtrans Snap token error: '.$e->getMessage());
+
+            throw ValidationException::withMessages([
+                'payment_method_id' => 'Gagal terhubung ke gateway pembayaran. Silakan coba lagi atau gunakan transfer bank.',
+            ]);
         }
     }
 
@@ -179,12 +185,12 @@ class CheckoutController extends Controller
         }
 
         $request->validate([
-            'proof' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+            'proof' => 'required|image|mimes:jpg,jpeg,png|max:5120|dimensions:max_width=8000,max_height=8000',
         ]);
 
         $transaction->load('payment.paymentMethod');
         $payment = $transaction->payment;
-        if ($transaction->status !== 'pending' || !$payment || $payment->status !== 'rejected' || $payment->paymentMethod?->type !== PaymentMethod::TYPE_BANK_TRANSFER) {
+        if ($transaction->status !== 'pending' || ! $payment || $payment->status !== 'rejected' || $payment->paymentMethod?->type !== PaymentMethod::TYPE_BANK_TRANSFER) {
             throw ValidationException::withMessages(['proof' => 'Bukti pembayaran pada transaksi ini tidak dapat diubah.']);
         }
 
@@ -198,15 +204,34 @@ class CheckoutController extends Controller
                 'rejection_reason' => null,
             ]);
         } catch (\Throwable $exception) {
-            Storage::disk('public')->delete($newProof);
+            Storage::disk('local')->delete($newProof);
             throw $exception;
         }
 
         if ($oldProof && $oldProof !== $newProof) {
-            Storage::disk('public')->delete($oldProof);
+            foreach (['local', 'public'] as $disk) {
+                Storage::disk($disk)->delete($oldProof);
+            }
         }
 
         return back()->with('success', 'Bukti transfer baru berhasil dikirim dan menunggu verifikasi admin.');
+    }
+
+    public function proof(Request $request, Payment $payment)
+    {
+        $payment->load('transaction');
+        abort_unless($request->user()->role === 'admin' || $request->user()->id === $payment->transaction?->user_id, 403);
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($payment->proof_image)) {
+                return Storage::disk($disk)->response($payment->proof_image, headers: [
+                    'Cache-Control' => 'private, no-store',
+                    'X-Content-Type-Options' => 'nosniff',
+                ]);
+            }
+        }
+
+        abort(404);
     }
 
     public function verify(Request $request, Transaction $transaction, TransactionFinalizer $finalizer)
@@ -216,33 +241,49 @@ class CheckoutController extends Controller
             abort(403);
         }
 
+        if (! $transaction->snap_token || $transaction->payment) {
+            throw ValidationException::withMessages(['payment' => 'Transaksi ini bukan pembayaran Midtrans.']);
+        }
+
         try {
             $status = \Midtrans\Transaction::status($transaction->transaction_code);
-            
-            // Handle both object and array response
-            $trStatus = is_object($status) ? $status->transaction_status : $status['transaction_status'];
-            $type = is_object($status) ? $status->payment_type : $status['payment_type'];
+            $payload = (array) $status;
+            $trStatus = $payload['transaction_status'] ?? null;
+            $type = $payload['payment_type'] ?? null;
+            $fraudStatus = $payload['fraud_status'] ?? null;
+            $amount = $payload['gross_amount'] ?? null;
 
-            if ($trStatus == 'settlement' || $trStatus == 'capture') {
-                $finalizer->apply($transaction, 'success', $type, (array) $status);
+            if (($payload['order_id'] ?? null) !== $transaction->transaction_code
+                || ! is_numeric($amount)
+                || number_format((float) $amount, 2, '.', '') !== number_format((float) $transaction->total_amount, 2, '.', '')) {
+                throw ValidationException::withMessages(['payment' => 'Data pembayaran dari Midtrans tidak cocok dengan transaksi.']);
+            }
+
+            if ($trStatus === 'settlement' || ($trStatus === 'capture' && $fraudStatus === 'accept')) {
+                $finalizer->apply($transaction, 'success', $type, $payload);
+
                 return back()->with('success', 'Pembayaran berhasil dikonfirmasi secara otomatis!');
             }
 
-            return back()->with('info', 'Status pembayaran saat ini: ' . $trStatus);
+            throw ValidationException::withMessages(['payment' => 'Pembayaran belum berhasil dikonfirmasi oleh Midtrans.']);
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            Log::error('Midtrans verification error: '.$exception->getMessage());
 
-        } catch (\Exception $e) {
-            return back()->with('error', 'Gagal verifikasi: ' . $e->getMessage());
+            throw ValidationException::withMessages(['payment' => 'Status pembayaran belum dapat diverifikasi. Silakan coba lagi.']);
         }
     }
 
     private function saveImageAsWebp($file, $directory)
     {
-        $manager = new ImageManager(new Driver());
+        $manager = new ImageManager(new Driver);
         $image = $manager->decode($file->getRealPath());
         $encoded = $image->encode(new WebpEncoder(80));
-        $filename = uniqid() . '.webp';
+        $filename = uniqid().'.webp';
         $path = "{$directory}/{$filename}";
-        Storage::disk('public')->put($path, (string) $encoded);
+        Storage::disk('local')->put($path, (string) $encoded);
+
         return $path;
     }
 
@@ -254,7 +295,7 @@ class CheckoutController extends Controller
         $grandTotal = 0;
 
         foreach ($cart as $item) {
-            if (!empty($item['id'])) {
+            if (! empty($item['id'])) {
                 $product = Product::findOrFail($item['id']);
                 if ($products->has($product->id)) {
                     throw ValidationException::withMessages(['cart' => 'Produk yang sama tidak boleh muncul lebih dari sekali.']);
@@ -265,12 +306,13 @@ class CheckoutController extends Controller
                 $linePrices[$product->id] = $price;
                 $itemDetails[] = ['id' => $product->id, 'price' => $price, 'quantity' => 1, 'name' => $product->name];
                 $grandTotal += $price;
+
                 continue;
             }
 
             $slug = $item['package_slug'];
             $package = config("packages.{$slug}");
-            if (!$package) {
+            if (! $package) {
                 throw ValidationException::withMessages(['cart' => 'Paket yang dipilih tidak tersedia.']);
             }
 

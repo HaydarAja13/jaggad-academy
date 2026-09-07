@@ -7,10 +7,15 @@ import MainLayout from '../../Layouts/MainLayout';
 import toast from 'react-hot-toast';
 import './PackageLanding.css';
 
-export default function PackageLanding({ slug }) {
+export default function PackageLanding({ slug, serverPackage }) {
     const { addToCart } = useCart();
     const { auth } = usePage().props;
-    const pkg = packages.find(p => p.slug === slug);
+    const marketingPackage = packages.find(p => p.slug === slug);
+    const pkg = marketingPackage && {
+        ...marketingPackage,
+        title: serverPackage.name,
+        price: serverPackage.price,
+    };
 
     const handleBuy = () => {
         if (!auth.user) {

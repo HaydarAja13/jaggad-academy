@@ -36,7 +36,7 @@ const BLOCK_TYPES = [
     { type: 'button',  label: 'Tombol Beli (→ Konfirmasi)', icon: MousePointerClick, color: '#10b981' },
 ];
 
-const LEARNING_FORMAT_SLUGS = ['ebook', 'video', 'webinar', 'offline'];
+// All categories from the database are used as learning formats (no hardcoded slugs)
 const joinFields = (...values) => values.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
 const DASHBOARD_FIELDS = [
     ['Sambutan & Aksi', [
@@ -135,9 +135,7 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
     const [whyJaggadImagePreview, setWhyJaggadImagePreview] = useState(null);
     const [aboutHeroImageFile, setAboutHeroImageFile] = useState(null);
     const [aboutHeroImagePreview, setAboutHeroImagePreview] = useState(null);
-    const [learningFormats, setLearningFormats] = useState(() => LEARNING_FORMAT_SLUGS
-        .map(slug => dbCategories.find(category => category.slug === slug))
-        .filter(Boolean));
+    const [learningFormats, setLearningFormats] = useState(() => [...dbCategories]);
     const [learningFormatImages, setLearningFormatImages] = useState(() => Array(4).fill(null));
     const featuredPreviewProductIds = (content.home.featuredProductIds || []).length
         ? content.home.featuredProductIds

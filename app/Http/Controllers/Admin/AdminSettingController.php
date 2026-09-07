@@ -4,13 +4,21 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Payment;
+use App\Models\Product;
 use App\Models\SiteContent;
+use App\Models\Transaction;
+use App\Models\TransactionItem;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManager;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\WebpEncoder;
-use Inertia\Inertia;
+use Intervention\Image\ImageManager;
 
 class AdminSettingController extends Controller
 {
@@ -18,35 +26,48 @@ class AdminSettingController extends Controller
     public function index()
     {
         $settingsData = SiteContent::where('key', 'site_settings')->first();
+        $settings = $settingsData ? (json_decode($settingsData->value, true) ?: []) : [];
+        foreach (['google_client_secret', 'midtrans_server_key', 'meta_access_token', 'mail_password'] as $secret) {
+            unset($settings[$secret]);
+        }
+
         return Inertia::render('Admin/AdminSettings', [
-            'dbSettings' => $settingsData ? json_decode($settingsData->value, true) : null,
+            'dbSettings' => $settings,
         ]);
     }
 
     public function saveSettings(Request $request)
     {
-        $request->validate([
-            'google_client_id' => 'nullable|string',
-            'google_client_secret' => 'nullable|string',
-            'google_redirect_url' => 'nullable|url',
-            'midtrans_server_key' => 'nullable|string',
-            'midtrans_client_key' => 'nullable|string',
+        $validated = $request->validate([
+            'google_client_id' => 'nullable|string|max:255',
+            'google_client_secret' => 'nullable|string|max:512',
+            'google_redirect_url' => 'nullable|url:http,https|max:2048',
+            'midtrans_server_key' => 'nullable|string|max:255',
+            'midtrans_client_key' => 'nullable|string|max:255',
             'midtrans_is_production' => 'nullable|boolean',
-            'meta_pixel_id' => 'nullable|string',
-            'meta_access_token' => 'nullable|string',
-            'mail_mailer' => 'nullable|string',
-            'mail_host' => 'nullable|string',
-            'mail_port' => 'nullable|string',
-            'mail_username' => 'nullable|string',
-            'mail_password' => 'nullable|string',
-            'mail_encryption' => 'nullable|string',
+            'meta_pixel_id' => 'nullable|string|max:32',
+            'meta_access_token' => 'nullable|string|max:2048',
+            'mail_mailer' => 'nullable|in:smtp',
+            'mail_host' => 'nullable|string|max:255',
+            'mail_port' => 'nullable|integer|min:1|max:65535',
+            'mail_username' => 'nullable|string|max:255',
+            'mail_password' => 'nullable|string|max:512',
+            'mail_encryption' => 'nullable|in:tls,ssl',
             'mail_from_address' => 'nullable|email',
-            'mail_from_name' => 'nullable|string',
+            'mail_from_name' => 'nullable|string|max:255',
         ]);
+
+        $existing = SiteContent::where('key', 'site_settings')->first();
+        $existingSettings = $existing ? json_decode($existing->value, true) : [];
+        foreach (['google_client_secret', 'midtrans_server_key', 'meta_access_token', 'mail_password'] as $secret) {
+            if (empty($validated[$secret]) && ! empty($existingSettings[$secret])) {
+                $validated[$secret] = $existingSettings[$secret];
+            }
+        }
 
         SiteContent::updateOrCreate(
             ['key' => 'site_settings'],
-            ['value' => json_encode($request->all())]
+            ['value' => json_encode($validated)]
         );
 
         return back()->with('success', 'Pengaturan kredensial berhasil disimpan!');
@@ -56,10 +77,11 @@ class AdminSettingController extends Controller
     public function ads()
     {
         $adsData = SiteContent::where('key', 'ads_promo')->first();
-        $products = \App\Models\Product::with('category')->get();
+        $products = Product::with('category')->get();
+
         return Inertia::render('Admin/AdminAds', [
             'dbAds' => $adsData ? $adsData->value : null,
-            'products' => $products
+            'products' => $products,
         ]);
     }
 
@@ -80,7 +102,7 @@ class AdminSettingController extends Controller
                 function ($attribute, $value, $fail) {
                     $host = strtolower(parse_url($value, PHP_URL_HOST) ?: '');
                     $host = preg_replace('/^www\./', '', $host);
-                    if (!in_array($host, ['youtube.com', 'm.youtube.com', 'youtu.be'], true)) {
+                    if (! in_array($host, ['youtube.com', 'm.youtube.com', 'youtu.be'], true)) {
                         $fail('URL video harus berasal dari YouTube.');
                     }
                 },
@@ -131,7 +153,7 @@ class AdminSettingController extends Controller
             ['value' => json_encode($validated, JSON_UNESCAPED_UNICODE)]
         );
 
-        if ($newImage && $oldImage && !str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
+        if ($newImage && $oldImage && ! str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
             Storage::disk('public')->delete($oldImage);
         }
 
@@ -142,15 +164,15 @@ class AdminSettingController extends Controller
     public function content()
     {
         $contentData = SiteContent::where('key', 'site_content')->first();
-        $categories = \App\Models\Category::withCount('products')->get();
-        $featuredProducts = \App\Models\Product::with('category')->where('featured', true)->take(6)->get();
-        $allProducts = \App\Models\Product::with('category')->get();
-        
+        $categories = Category::withCount('products')->get();
+        $featuredProducts = Product::with('category')->where('featured', true)->take(6)->get();
+        $allProducts = Product::with('category')->get();
+
         return Inertia::render('Admin/AdminContent', [
             'dbContent' => $contentData ? $contentData->value : null,
             'dbCategories' => $categories,
             'dbFeaturedProducts' => $featuredProducts,
-            'dbAllProducts' => $allProducts
+            'dbAllProducts' => $allProducts,
         ]);
     }
 
@@ -166,6 +188,11 @@ class AdminSettingController extends Controller
             'home.ctaBannerTitle' => 'nullable|string|max:160',
             'home.ctaBannerDesc' => 'nullable|string|max:500',
             'home.ctaBannerBtn' => 'nullable|string|max:80',
+            'home.heroCards' => 'nullable|array|max:3',
+            'home.heroCards.*.title' => 'nullable|string|max:160',
+            'home.heroCards.*.subtitle' => 'nullable|string|max:300',
+            'home.heroCards.*.image' => 'nullable|string|max:2048',
+            'home.heroCards.*.url' => ['nullable', 'string', 'max:2048', 'regex:/^(\/(?!\/)|https?:\/\/)/i'],
             'about' => 'required|array',
             'contact' => 'required|array',
             'contact.pageTitle' => 'nullable|string|max:80',
@@ -199,14 +226,17 @@ class AdminSettingController extends Controller
             'contact.email' => 'required|email|max:255',
             'contact.phone' => 'required|string|max:40',
             'contact.address' => 'required|string|max:500',
-            'contact.mapsUrl' => 'nullable|url|max:2048',
+            'contact.mapsUrl' => 'nullable|url:http,https|max:2048',
             'dashboard' => 'required|array',
             'dashboard.*' => 'required|string|max:500',
             'social' => 'required|array',
+            'social.instagram' => 'nullable|url:http,https|max:2048',
+            'social.youtube' => 'nullable|url:http,https|max:2048',
+            'social.twitter' => 'nullable|url:http,https|max:2048',
             'branding' => 'required|array',
             'checkout' => 'required|array',
-            'logoFile' => 'nullable|file|mimes:png,jpg,jpeg,svg,webp|max:2048',
-            'faviconFile' => 'nullable|file|mimes:png,jpg,jpeg,ico,svg|max:1024',
+            'logoFile' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'faviconFile' => 'nullable|file|mimes:png,jpg,jpeg,ico|max:1024',
             'heroCardImages' => 'nullable|array|max:3',
             'heroCardImages.*' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:5120',
             'whyJaggadImageFile' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:5120',
@@ -237,7 +267,7 @@ class AdminSettingController extends Controller
             $oldImage = $oldHome['heroCards'][$index]['image'] ?? null;
             $home['heroCards'][$index]['image'] = $this->saveImageAsWebp($file, 'hero');
 
-            if ($oldImage && !str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
+            if ($oldImage && ! str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
                 Storage::disk('public')->delete($oldImage);
             }
         }
@@ -246,7 +276,7 @@ class AdminSettingController extends Controller
             $oldImage = $oldHome['whyJaggadImage'] ?? null;
             $home['whyJaggadImage'] = $this->saveImageAsWebp($request->file('whyJaggadImageFile'), 'home');
 
-            if ($oldImage && !str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
+            if ($oldImage && ! str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
                 Storage::disk('public')->delete($oldImage);
             }
         }
@@ -255,15 +285,14 @@ class AdminSettingController extends Controller
             $oldImage = $oldAbout['heroImage'] ?? null;
             $about['heroImage'] = $this->saveImageAsWebp($request->file('aboutHeroImageFile'), 'about');
 
-            if ($oldImage && !str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
+            if ($oldImage && ! str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
                 Storage::disk('public')->delete($oldImage);
             }
         }
 
-        $allowedFormatSlugs = ['ebook', 'video', 'webinar', 'offline'];
         foreach ($request->input('learningFormats', []) as $index => $formatData) {
             $category = Category::find($formatData['id']);
-            if (!$category || !in_array($category->slug, $allowedFormatSlugs, true)) {
+            if (! $category) {
                 continue;
             }
 
@@ -281,31 +310,27 @@ class AdminSettingController extends Controller
 
             $category->update($updates);
 
-            if ($oldImage && !str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
+            if ($oldImage && ! str_starts_with($oldImage, 'http') && Storage::disk('public')->exists($oldImage)) {
                 Storage::disk('public')->delete($oldImage);
             }
         }
 
         if ($request->hasFile('logoFile')) {
             $file = $request->file('logoFile');
-            if ($file->getClientOriginalExtension() === 'svg') {
-                $branding['logo'] = $file->store('branding', 'public');
-            } else {
-                $branding['logo'] = $this->saveImageAsWebp($file, 'branding');
-            }
-            if ($oldBranding && !empty($oldBranding['logo']) && Storage::disk('public')->exists($oldBranding['logo'])) {
+            $branding['logo'] = $this->saveImageAsWebp($file, 'branding');
+            if ($oldBranding && ! empty($oldBranding['logo']) && Storage::disk('public')->exists($oldBranding['logo'])) {
                 Storage::disk('public')->delete($oldBranding['logo']);
             }
         }
-        
+
         if ($request->hasFile('faviconFile')) {
             $file = $request->file('faviconFile');
-            if (in_array(strtolower($file->getClientOriginalExtension()), ['svg', 'ico'])) {
+            if (strtolower($file->getClientOriginalExtension()) === 'ico') {
                 $branding['favicon'] = $file->store('branding', 'public');
             } else {
                 $branding['favicon'] = $this->saveImageAsWebp($file, 'branding');
             }
-            if ($oldBranding && !empty($oldBranding['favicon']) && Storage::disk('public')->exists($oldBranding['favicon'])) {
+            if ($oldBranding && ! empty($oldBranding['favicon']) && Storage::disk('public')->exists($oldBranding['favicon'])) {
                 Storage::disk('public')->delete($oldBranding['favicon']);
             }
         }
@@ -334,14 +359,82 @@ class AdminSettingController extends Controller
         return Inertia::render('Admin/AdminChatbot');
     }
 
+    // Danger Zone: hapus semua data dummy (produk, kategori, transaksi, customer)
+    public function resetData(Request $request)
+    {
+        $request->validate([
+            'confirmation' => ['required', 'string', Rule::in(['RESET'])],
+        ]);
+
+        $summary = DB::transaction(function () {
+            $customerIds = User::query()->where('role', '!=', 'admin')->pluck('id');
+            $customerEmails = User::query()->whereIn('id', $customerIds)->pluck('email');
+
+            $summary = [
+                'customers' => $customerIds->count(),
+                'products' => Product::count(),
+                'categories' => Category::count(),
+                'transactions' => Transaction::count(),
+            ];
+
+            // Hapus dari tabel anak ke induk agar aman terhadap foreign key
+            Payment::query()->delete();
+            DB::table('material_progress')->delete();
+            DB::table('user_products')->delete();
+            TransactionItem::query()->delete();
+            Transaction::query()->delete();
+            Product::query()->delete();
+            Category::query()->delete();
+
+            DB::table('sessions')->whereIn('user_id', $customerIds)->delete();
+            DB::table('password_reset_tokens')->whereIn('email', $customerEmails)->delete();
+            User::query()->whereIn('id', $customerIds)->delete();
+
+            // Buang antrean email/notifikasi lama yang menunjuk data yang sudah dihapus
+            if (Schema::hasTable('jobs')) {
+                DB::table('jobs')->delete();
+            }
+            if (Schema::hasTable('failed_jobs')) {
+                DB::table('failed_jobs')->delete();
+            }
+
+            // Statistik akun yang dipertahankan (admin) di-nol-kan
+            DB::table('users')->update(['purchase_count' => 0, 'total_spent' => 0]);
+
+            return $summary;
+        });
+
+        Storage::disk('local')->deleteDirectory('payments');
+        foreach (['payments', 'products', 'categories', 'landing'] as $directory) {
+            Storage::disk('public')->deleteDirectory($directory);
+        }
+
+        return back()->with(
+            'success',
+            "Reset selesai: {$summary['products']} produk, {$summary['categories']} kategori, {$summary['transactions']} transaksi, dan {$summary['customers']} akun customer telah dihapus."
+        );
+    }
+
+    // Danger Zone: nol-kan semua angka statistik tanpa menghapus data
+    public function resetStats()
+    {
+        DB::transaction(function () {
+            DB::table('products')->update(['sold_count' => 0]);
+            DB::table('users')->update(['purchase_count' => 0, 'total_spent' => 0]);
+        });
+
+        return back()->with('success', 'Statistik berhasil direset ke 0.');
+    }
+
     private function saveImageAsWebp($file, $directory)
     {
-        $manager = new ImageManager(new Driver());
+        $manager = new ImageManager(new Driver);
         $image = $manager->decode($file->getRealPath());
         $encoded = $image->encode(new WebpEncoder(80));
-        $filename = uniqid() . '.webp';
+        $filename = uniqid().'.webp';
         $path = "{$directory}/{$filename}";
         Storage::disk('public')->put($path, (string) $encoded);
+
         return $path;
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Socialite\Facades\Socialite;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -50,5 +51,23 @@ class AuthenticationTest extends TestCase
 
         $this->assertGuest();
         $response->assertRedirect('/');
+    }
+
+    public function test_inactive_user_cannot_authenticate_with_google(): void
+    {
+        $user = User::factory()->create(['email' => 'inactive@example.com', 'status' => 'inactive']);
+        $provider = \Mockery::mock();
+        $provider->shouldReceive('user')->once()->andReturn((object) [
+            'id' => 'google-123',
+            'name' => $user->name,
+            'email' => $user->email,
+            'avatar' => null,
+        ]);
+        Socialite::shouldReceive('driver')->once()->with('google')->andReturn($provider);
+
+        $this->get('/auth/google/callback')->assertRedirect(route('login'))
+            ->assertSessionHasErrors('email');
+
+        $this->assertGuest();
     }
 }

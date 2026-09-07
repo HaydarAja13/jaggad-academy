@@ -3,26 +3,29 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Intervention\Image\ImageManager;
+use Inertia\Inertia;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\WebpEncoder;
+use Intervention\Image\ImageManager;
+
 class AdminProductController extends Controller
 {
     public function index(Request $request)
     {
         // Ensure all products have slugs
-        Product::whereNull('slug')->orWhere('slug', '')->get()->each(function($p) {
-            $p->slug = \Illuminate\Support\Str::slug($p->name) . '-' . uniqid();
+        Product::whereNull('slug')->orWhere('slug', '')->get()->each(function ($p) {
+            $p->slug = Str::slug($p->name).'-'.uniqid();
             $p->save();
         });
 
         $products = Product::with('category')->latest()->get();
+
         return Inertia::render('Admin/AdminProducts', [
             'dbProducts' => $products,
         ]);
@@ -31,8 +34,9 @@ class AdminProductController extends Controller
     public function create()
     {
         $categories = Category::all();
+
         return Inertia::render('Admin/AdminProductForm', [
-            'dbCategories' => $categories
+            'dbCategories' => $categories,
         ]);
     }
 
@@ -47,13 +51,19 @@ class AdminProductController extends Controller
             'longDescription' => 'nullable|string',
             'badge' => 'nullable|string|max:255',
             'imageFile' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
-            'imageUrl' => 'nullable|string',
+            'imageUrl' => 'nullable|url:http,https|max:2048',
             'benefits' => 'nullable|array',
+            'benefits.*' => 'string|max:500',
             'materials' => 'nullable|array',
+            'materials.*.title' => 'required|string|max:255',
+            'materials.*.duration' => 'nullable|string|max:100',
+            'materials.*.link' => 'nullable|url:http,https|max:2048',
+            'materials.*.pages' => 'nullable|integer|min:0',
+            'materials.*.videos' => 'nullable|integer|min:0',
             'startAt' => 'nullable|date',
             'endAt' => 'nullable|date|after_or_equal:startAt',
             'location' => 'nullable|string|max:255',
-            'landingBlocks' => 'nullable|string',
+            'landingBlocks' => 'nullable|string|max:50000',
             'landingBlockImages.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
         ]);
 
@@ -107,9 +117,10 @@ class AdminProductController extends Controller
     public function edit(Product $product)
     {
         $categories = Category::all();
+
         return Inertia::render('Admin/AdminProductForm', [
             'product' => $product,
-            'dbCategories' => $categories
+            'dbCategories' => $categories,
         ]);
     }
 
@@ -124,13 +135,19 @@ class AdminProductController extends Controller
             'longDescription' => 'nullable|string',
             'badge' => 'nullable|string|max:255',
             'imageFile' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
-            'imageUrl' => 'nullable|string',
+            'imageUrl' => 'nullable|url:http,https|max:2048',
             'benefits' => 'nullable|array',
+            'benefits.*' => 'string|max:500',
             'materials' => 'nullable|array',
+            'materials.*.title' => 'required|string|max:255',
+            'materials.*.duration' => 'nullable|string|max:100',
+            'materials.*.link' => 'nullable|url:http,https|max:2048',
+            'materials.*.pages' => 'nullable|integer|min:0',
+            'materials.*.videos' => 'nullable|integer|min:0',
             'startAt' => 'nullable|date',
             'endAt' => 'nullable|date|after_or_equal:startAt',
             'location' => 'nullable|string|max:255',
-            'landingBlocks' => 'nullable|string',
+            'landingBlocks' => 'nullable|string|max:50000',
             'landingBlockImages.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
         ]);
 
@@ -140,7 +157,7 @@ class AdminProductController extends Controller
                 Storage::disk('public')->delete($product->image);
             }
             $imagePath = $this->saveImageAsWebp($request->file('imageFile'), 'products');
-        } elseif (!empty($data['imageUrl'])) {
+        } elseif (! empty($data['imageUrl'])) {
             $imagePath = $data['imageUrl'];
         }
 
@@ -200,12 +217,14 @@ class AdminProductController extends Controller
         // Delete landing block images
         $blocks = is_array($product->landing_blocks) ? $product->landing_blocks : json_decode($product->landing_blocks, true) ?? [];
         foreach ($blocks as $b) {
-            if ($b['type'] === 'image' && !empty($b['url']) && !str_starts_with($b['url'], 'http')) {
-                if (Storage::disk('public')->exists($b['url'])) Storage::disk('public')->delete($b['url']);
+            if ($b['type'] === 'image' && ! empty($b['url']) && ! str_starts_with($b['url'], 'http')) {
+                if (Storage::disk('public')->exists($b['url'])) {
+                    Storage::disk('public')->delete($b['url']);
+                }
             }
-            if ($b['type'] === 'slider' && !empty($b['images'])) {
+            if ($b['type'] === 'slider' && ! empty($b['images'])) {
                 foreach ($b['images'] as $img) {
-                    if (!str_starts_with($img, 'http') && Storage::disk('public')->exists($img)) {
+                    if (! str_starts_with($img, 'http') && Storage::disk('public')->exists($img)) {
                         Storage::disk('public')->delete($img);
                     }
                 }
@@ -213,6 +232,7 @@ class AdminProductController extends Controller
         }
 
         $product->delete();
+
         return back()->with('success', 'Produk berhasil dihapus.');
     }
 
@@ -303,14 +323,18 @@ class AdminProductController extends Controller
     {
         $images = [];
         $hero = $content['hero']['image'] ?? null;
-        if ($hero && !str_starts_with($hero, 'http')) $images[] = $hero;
+        if ($hero && ! str_starts_with($hero, 'http')) {
+            $images[] = $hero;
+        }
 
         foreach ($content['blocks'] ?? [] as $block) {
-            if (($block['type'] ?? '') === 'image' && !empty($block['url']) && !str_starts_with($block['url'], 'http')) {
+            if (($block['type'] ?? '') === 'image' && ! empty($block['url']) && ! str_starts_with($block['url'], 'http')) {
                 $images[] = $block['url'];
             }
             foreach ($block['images'] ?? [] as $image) {
-                if ($image && !str_starts_with($image, 'http')) $images[] = $image;
+                if ($image && ! str_starts_with($image, 'http')) {
+                    $images[] = $image;
+                }
             }
         }
 
@@ -319,12 +343,13 @@ class AdminProductController extends Controller
 
     private function saveImageAsWebp($file, $directory)
     {
-        $manager = new ImageManager(new Driver());
+        $manager = new ImageManager(new Driver);
         $image = $manager->decode($file->getRealPath());
         $encoded = $image->encode(new WebpEncoder(80));
-        $filename = uniqid() . '.webp';
+        $filename = uniqid().'.webp';
         $path = "{$directory}/{$filename}";
         Storage::disk('public')->put($path, (string) $encoded);
+
         return $path;
     }
 }

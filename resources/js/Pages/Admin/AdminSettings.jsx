@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Save, Loader2, ShieldCheck, CreditCard, Activity, Mail, Info } from 'lucide-react';
+import { Save, Loader2, ShieldCheck, CreditCard, Activity, Mail, Info, TriangleAlert, RefreshCcw, Trash2 } from 'lucide-react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import toast from 'react-hot-toast';
 import './Admin.css';
@@ -26,6 +26,36 @@ export default function AdminSettings({ dbSettings }) {
     });
 
     const [isSaving, setIsSaving] = useState(false);
+    const [resetModal, setResetModal] = useState(null); // 'data' | 'stats' | null
+    const [confirmText, setConfirmText] = useState('');
+    const [isResetting, setIsResetting] = useState(false);
+
+    const openResetModal = (mode) => {
+        setResetModal(mode);
+        setConfirmText('');
+    };
+
+    const closeResetModal = () => {
+        if (isResetting) return;
+        setResetModal(null);
+        setConfirmText('');
+    };
+
+    const submitReset = (endpoint, confirmation, successMessage) => {
+        setIsResetting(true);
+        router.post(route(endpoint), confirmation ? { confirmation } : {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsResetting(false);
+                closeResetModal();
+                toast.success(successMessage);
+            },
+            onError: () => {
+                setIsResetting(false);
+                toast.error('Gagal memproses reset.');
+            },
+        });
+    };
 
     const handleSave = (e) => {
         e.preventDefault();
@@ -311,6 +341,92 @@ export default function AdminSettings({ dbSettings }) {
                         </button>
                     </div>
                 </form>
+
+                {/* Danger Zone */}
+                <section className="settings-section settings-danger-zone" aria-labelledby="settings-danger-title">
+                    <div className="settings-section-header">
+                        <div className="settings-section-heading">
+                            <span className="settings-section-icon settings-section-icon--danger"><TriangleAlert size={20} /></span>
+                            <div>
+                                <h2 id="settings-danger-title">Danger Zone</h2>
+                                <p>Tindakan di bagian ini bersifat permanen dan tidak dapat dibatalkan.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="settings-section-body">
+                        <div className="settings-danger-row">
+                            <div>
+                                <strong>Reset data ke kondisi awal</strong>
+                                <span>Hapus permanen semua produk, kategori, transaksi, pembayaran, dan akun customer. Akun admin & metode pembayaran dipertahankan.</span>
+                            </div>
+                            <button type="button" className="settings-danger-btn" onClick={() => openResetModal('data')}>
+                                <Trash2 size={16} aria-hidden="true" /> Reset Data
+                            </button>
+                        </div>
+                        <div className="settings-danger-row">
+                            <div>
+                                <strong>Reset statistik ke 0</strong>
+                                <span>Nol-kan sold_count di semua produk serta purchase_count & total_spent di semua user tanpa menghapus data.</span>
+                            </div>
+                            <button type="button" className="settings-danger-btn settings-danger-btn--secondary" onClick={() => openResetModal('stats')}>
+                                <RefreshCcw size={16} aria-hidden="true" /> Reset Statistik
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                {resetModal && (
+                    <div className="modal-overlay" onClick={closeResetModal}>
+                        <div className="modal products-delete-modal" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title" onClick={event => event.stopPropagation()}>
+                            <div className="products-delete-icon"><TriangleAlert size={24} aria-hidden="true" /></div>
+                            <h3 id="reset-modal-title" className="modal-title">
+                                {resetModal === 'data' ? 'Reset semua data?' : 'Reset semua statistik?'}
+                            </h3>
+                            {resetModal === 'data' ? (
+                                <p>
+                                    Semua <strong>produk, kategori, transaksi, pembayaran, dan akun customer</strong> akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+                                </p>
+                            ) : (
+                                <p>
+                                    Semua angka <strong>sold_count</strong>, <strong>purchase_count</strong>, dan <strong>total_spent</strong> akan dikembalikan ke 0. Data tidak dihapus.
+                                </p>
+                            )}
+                            <div className="settings-reset-confirm-field">
+                                <label htmlFor="reset-confirmation">
+                                    {resetModal === 'data'
+                                        ? <>Ketik <strong>RESET</strong> untuk konfirmasi</>
+                                        : <>Ketik <strong>RESET STATS</strong> untuk konfirmasi</>}
+                                </label>
+                                <input
+                                    id="reset-confirmation"
+                                    type="text"
+                                    value={confirmText}
+                                    onChange={e => setConfirmText(e.target.value)}
+                                    placeholder={resetModal === 'data' ? 'RESET' : 'RESET STATS'}
+                                    autoComplete="off"
+                                    disabled={isResetting}
+                                />
+                            </div>
+                            <div className="modal-actions">
+                                <button className="btn-modal-cancel" onClick={closeResetModal} disabled={isResetting}>Batal</button>
+                                <button
+                                    className="products-delete-confirm"
+                                    disabled={isResetting || confirmText !== (resetModal === 'data' ? 'RESET' : 'RESET STATS')}
+                                    onClick={() => submitReset(
+                                        resetModal === 'data' ? 'admin.settings.reset-data' : 'admin.settings.reset-stats',
+                                        resetModal === 'data' ? 'RESET' : 'RESET STATS',
+                                        resetModal === 'data'
+                                            ? 'Semua data berhasil direset. Akun admin & metode pembayaran dipertahankan.'
+                                            : 'Statistik berhasil direset ke 0.'
+                                    )}
+                                >
+                                    {isResetting ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
+                                    {isResetting ? 'Memproses...' : (resetModal === 'data' ? 'Reset Data' : 'Reset Statistik')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
         </AdminLayout>
     );

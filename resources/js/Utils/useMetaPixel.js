@@ -42,7 +42,8 @@ export function useMetaPixel() {
     };
 
     const trackPurchase = (transactionCode, totalAmount, cartItems = []) => {
-        track('Purchase', {
+        if (!isActive()) return;
+        window.fbq('track', 'Purchase', {
             transaction_id: transactionCode,
             content_ids: cartItems.map(i => String(i.id)),
             content_type: 'product',
@@ -54,7 +55,7 @@ export function useMetaPixel() {
                 quantity: 1,
                 item_price: parseFloat(i.price) || 0,
             })),
-        });
+        }, { eventID: transactionCode });
     };
 
     return { track, trackViewContent, trackInitiateCheckout, trackPurchase, isActive };

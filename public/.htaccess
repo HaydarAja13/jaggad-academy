@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Bukti transfer hanya boleh dibuka melalui route Laravel berotorisasi.
+    RewriteRule ^storage/payments/ - [F,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

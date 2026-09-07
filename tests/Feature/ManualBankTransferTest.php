@@ -22,7 +22,7 @@ class ManualBankTransferTest extends TestCase
 
     public function test_manual_checkout_uses_database_price_and_stores_payment_proof(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $customer = User::factory()->create();
         $product = Product::create(['name' => 'Kelas Aman', 'price' => 149000]);
         $method = $this->bankMethod();
@@ -37,7 +37,7 @@ class ManualBankTransferTest extends TestCase
         $transaction = Transaction::with('payment')->firstOrFail();
         $this->assertEquals(149000, $transaction->total_amount);
         $this->assertSame('pending', $transaction->payment->status);
-        Storage::disk('public')->assertExists($transaction->payment->proof_image);
+        Storage::disk('local')->assertExists($transaction->payment->proof_image);
     }
 
     public function test_inactive_midtrans_cannot_be_selected_directly(): void
@@ -78,6 +78,7 @@ class ManualBankTransferTest extends TestCase
 
     public function test_rejected_proof_can_be_reuploaded_by_its_owner(): void
     {
+        Storage::fake('local');
         Storage::fake('public');
         Mail::fake();
         $admin = User::factory()->create(['role' => 'admin']);
@@ -100,7 +101,7 @@ class ManualBankTransferTest extends TestCase
         $payment->refresh();
         $this->assertSame('pending', $payment->status);
         $this->assertNull($payment->rejection_reason);
-        Storage::disk('public')->assertExists($payment->proof_image);
+        Storage::disk('local')->assertExists($payment->proof_image);
     }
 
     public function test_approval_is_idempotent_and_sends_access_email(): void
@@ -137,6 +138,26 @@ class ManualBankTransferTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_payment_proof_is_private_to_its_owner_and_admin(): void
+    {
+        Storage::fake('local');
+        $owner = User::factory()->create();
+        $otherCustomer = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        [, $payment] = $this->pendingTransfer($owner);
+        Storage::disk('local')->put($payment->proof_image, 'private-proof');
+
+        $this->actingAs($owner)->get(route('payments.proof', $payment))
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private');
+        $this->actingAs($admin)->get(route('payments.proof', $payment))->assertOk();
+        $this->actingAs($otherCustomer)->get(route('payments.proof', $payment))->assertForbidden();
+
+        $serialized = $payment->fresh()->toArray();
+        $this->assertArrayNotHasKey('proof_image', $serialized);
+        $this->assertSame(route('payments.proof', $payment), $serialized['proof_url']);
+    }
+
     private function bankMethod(): PaymentMethod
     {
         return PaymentMethod::create([
@@ -152,7 +173,7 @@ class ManualBankTransferTest extends TestCase
     {
         $product = Product::create(['name' => 'Kelas Aman', 'price' => 149000]);
         $transaction = Transaction::create([
-            'transaction_code' => 'TRX-' . strtoupper(str()->random(8)),
+            'transaction_code' => 'TRX-'.strtoupper(str()->random(8)),
             'user_id' => $customer->id,
             'total_amount' => 149000,
             'status' => 'pending',

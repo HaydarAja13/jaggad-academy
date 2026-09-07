@@ -1,172 +1,122 @@
-# Production Readiness Checklist
+# Production Readiness Checklist — JAGGAD Academy
 
-Status audit saat ini: **NO-GO** → Aplikasi siap, menunggu infrastruktur dan verifikasi manual.
+Audit terakhir: **7 September 2026**
 
-Dokumen ini adalah urutan kerja untuk menyiapkan JAGGAD Academy sebelum digunakan untuk transaksi production. Jangan lanjut ke tahap berikutnya sebelum acceptance criteria tahap sebelumnya terpenuhi.
+Status repository: **CONDITIONAL GO**
 
-**Centang ✅ = selesai, termasuk test otomatis.**
-**Belum centang = butuh aksi (banyak di antaranya butuh bantuan Anda karena credential/akses).**
+Status menerima transaksi production: **NO-GO sampai seluruh item P0 manual selesai**
 
----
+Kode, build, migrasi SQLite, dan regression test sudah lolos. Status masih NO-GO untuk trafik nyata karena credential, MySQL production, DNS/TLS, webhook publik, SMTP, backup offsite, dan pengujian provider hanya dapat diverifikasi pada infrastruktur pemilik.
 
-## A. Perbaikan Aplikasi
+## 1. Bukti audit otomatis
 
-### 1. Perbaiki error page production ✅
+| Pemeriksaan | Hasil audit |
+|---|---|
+| PHPUnit | 70 test, 349 assertion — lulus |
+| Unit test JavaScript | 3 test — lulus |
+| Install frontend bersih | `npm ci` — lulus |
+| Build Vite production | lulus, 3.428 module ditransformasi |
+| Dependency tree | `npm ls --depth=0` — bersih |
+| Audit npm | 0 vulnerability pada audit cache saat audit |
+| Composer | `composer validate --strict` — lulus |
+| Audit Composer | tidak ada advisory pada lock file |
+| Platform Composer | PHP 8.3 dan extension lokal memenuhi requirement production |
+| Migrasi + seeder | lulus pada database SQLite production-like kosong |
+| Constraint slug | unique index produk dan kategori terpasang |
+| Cache Laravel | config, event, route, dan view cache berhasil |
+| Smoke test HTTP | `/up`, `/`, dan paket valid mengembalikan HTTP 200 |
+| Backup/restore | database SQLite dan `storage/app` berhasil dibuat dan diverifikasi |
+| Syntax | PHP dan Bash file yang berubah valid |
+| Route aplikasi | route cache berhasil; route publik bawaan `/storage/{path}` tidak aktif |
+| Secret scan repository | tidak ditemukan credential production yang ter-track |
 
-- [x] `resources/css/errors.css` diimport dari `resources/css/app.css` (di atas `@tailwind`).
-- [x] `error.blade.php` memakai `@vite('resources/css/app.css')`, bukan `errors.css` langsung.
-- [x] Vite config hanya input `app.css` + `app.jsx` — manifest selalu punya entry ini.
-- [x] URL acak menghasilkan HTTP `404`, akses ilegal menghasilkan HTTP `403`, exception server menghasilkan HTTP `500`.
-- [x] Feature test `ErrorPagesTest` lolos di environment testing (condition: Vite manifest production-like).
+Catatan batas audit:
 
-Acceptance criteria:
-- Halaman `403`, `404`, dan `500` dapat dirender tanpa exception tambahan.
-- Response status tidak berubah menjadi `500` hanya karena stylesheet tidak ada di manifest.
+- MySQL belum dapat diuji lokal karena Docker daemon/MySQL tidak tersedia. Migrasi **wajib** diuji pada clone/snapshot MySQL staging sebelum production.
+- Audit tidak dapat membuktikan keberhasilan Midtrans, SMTP, Google OAuth, Meta CAPI, DNS, TLS, cron, firewall, atau restore offsite tanpa credential dan server nyata.
+- Audit UI lintas browser, mobile nyata, accessibility manual, serta load test belum dilakukan.
 
-### 2. Amankan webhook Midtrans ✅
+## 2. Perbaikan aplikasi yang sudah diterapkan
 
-Pada `app/Http/Controllers/MidtransWebhookController.php`:
-- [x] Tolak request jika Midtrans Server Key kosong → `503`.
-- [x] Gunakan `hash_equals()` untuk membandingkan signature → `403` jika palsu.
-- [x] Validasi field wajib: `order_id`, `status_code`, `gross_amount`, `transaction_status`, dan `signature_key` → `422`.
-- [x] Cocokkan `gross_amount` dari Midtrans dengan `total_amount` transaksi database → `422`.
-- [x] Transaksi diambil dan dikunci dengan `lockForUpdate()` di dalam `TransactionFinalizer`.
-- [x] Transaksi `success` tidak dapat turun status (cegah `pending`/`failed`/`expired`).
-- [x] Webhook duplikat tidak menggandakan akses, omzet, atau `sold_count` (idempotensi).
-- [x] `ProductionReadinessTest::test_midtrans_webhook_is_authenticated_amount_checked_and_idempotent` lolos.
+### Dependency dan runtime
 
-Referensi resmi:
-- [Midtrans HTTP(S) Notifications](https://docs.midtrans.com/docs/https-notification-webhooks)
-- [Midtrans Notification Best Practices](https://docs.midtrans.com/reference/handle-notifications)
+- [x] PHP dinaikkan ke `^8.3` agar dependency Laravel/Symfony yang didukung dan ter-patch dapat dipasang.
+- [x] Composer lock diperbarui dan lolos security audit.
+- [x] Node dibatasi ke `^20.19.0 || >=22.12.0`; Node 22 LTS direkomendasikan.
+- [x] `engine-strict=true` mencegah install dengan runtime Node yang tidak kompatibel.
+- [x] Timeout SMTP dan HTTP provider eksternal dibatasi agar request tidak menggantung tanpa batas.
 
-### 3. Satukan finalisasi transaksi ✅
+### Checkout, pembayaran, dan akses produk
 
-`app/Services/TransactionFinalizer.php` menjadi satu-satunya jalur finalisasi untuk:
-- [x] Approval admin manual
-- [x] Webhook Midtrans
-- [x] Verifikasi dari browser
+- [x] Harga dan produk checkout selalu diselesaikan ulang dari database/config server; nominal browser tidak dipercaya.
+- [x] Paket hanya dapat dibeli jika semua produk anggotanya tersedia; harga/nama tampilan berasal dari server.
+- [x] Pembuatan transaksi, item, dan payment manual berjalan dalam satu database transaction.
+- [x] Metode pembayaran nonaktif ditolak walau request dibuat langsung.
+- [x] Bukti transfer manual wajib di backend, maksimal 5 MB dan dimensi 8.000 × 8.000.
+- [x] Kegagalan pembuatan Snap token tidak ditampilkan sebagai sukses dan tidak membersihkan keranjang.
+- [x] Verifikasi browser hanya boleh untuk pemilik/admin, transaksi Midtrans, `order_id` dan nominal yang cocok.
+- [x] Status kartu `capture` hanya sukses jika `fraud_status=accept`; `deny` menjadi gagal.
+- [x] Signature dan nominal webhook diverifikasi; signature tidak disimpan dalam payload database.
+- [x] Finalisasi dipusatkan di `TransactionFinalizer`, memakai row lock dan idempotent.
+- [x] Transaksi sukses tidak dapat diturunkan kembali oleh webhook terlambat.
+- [x] Akses produk, `sold_count`, `purchase_count`, dan `total_spent` hanya bertambah satu kali.
+- [x] Kegagalan email/Meta tidak menggagalkan hak akses customer.
+- [x] Meta Pixel dan CAPI memakai `event_id` transaction code yang sama untuk deduplikasi.
+- [x] Checkout, upload bukti, verifikasi, login/register, dan reset password memiliki rate limit.
 
-Proses tersebut wajib:
-- [x] Mengunci row transaksi (`lockForUpdate`)
-- [x] Memastikan transaksi belum pernah sukses
-- [x] Memperbarui status dan `paid_at`
-- [x] Memberikan akses produk tepat satu kali (`syncWithoutDetaching`)
-- [x] Menambah `sold_count`, `purchase_count`, dan `total_spent` tepat satu kali
-- [x] Mengirim receipt email + Meta CAPI purchase event setelah database transaction berhasil
-- [x] Mencatat kegagalan email/Meta tanpa membatalkan akses customer
+### Privasi dan otorisasi
 
-### 4. Perbaiki perubahan metode Midtrans ✅
+- [x] Bukti pembayaran disimpan pada disk privat dan hanya dilayani melalui route terautentikasi.
+- [x] Hanya pemilik transaksi atau admin yang dapat melihat bukti pembayaran.
+- [x] Nginx dan Apache menolak akses langsung ke `/storage/payments` untuk instalasi lama.
+- [x] Link materi tidak dikirim pada endpoint produk publik; hanya pemilik produk yang mendapatkannya.
+- [x] URL materi dibatasi ke HTTP/HTTPS dan struktur data admin divalidasi.
+- [x] Upload SVG baru untuk logo/favicon ditolak untuk menghindari stored XSS.
+- [x] User inactive dikeluarkan saat request berikutnya dan ditolak pada password/Google login.
+- [x] Non-admin pada route admin mendapat HTTP 403.
+- [x] CSRF hanya dikecualikan untuk path webhook Midtrans yang tepat.
+- [x] Secret CMS tidak diserialisasi kembali ke browser dan nilai lama dipertahankan saat field secret kosong.
+- [x] User dengan histori transaksi dan akun admin tidak dapat menghapus diri melalui profile.
+- [x] Admin terakhir, master data berhistori, dan transaksi final dilindungi dari operasi destruktif.
 
-- [x] `resolveCart()` membuat transaksi/kode order baru ketika customer mengganti metode.
-- [x] Snap token hanya dibuat dari transaksi yang benar-benar baru.
-- [x] Order lama tetap `pending` dan tidak akan diproses lagi (bukan `expired`, lebih aman).
+### Data, operasi, dan deployment
 
-### 5. Lindungi data master dan histori ✅
+- [x] Status user dinormalisasi ke `active`/`inactive`.
+- [x] Slug produk/kategori diperbaiki dan dilindungi unique index; perubahan judul tidak mengubah URL produk lama.
+- [x] Script deploy memakai maintenance mode, install/build/test, migrasi, cache, queue restart, dan meninggalkan maintenance mode saat sukses.
+- [x] Jika deploy gagal, aplikasi sengaja tetap maintenance agar release setengah jadi tidak menerima trafik.
+- [x] Script backup mendukung MySQL/SQLite, memverifikasi output, menyertakan private storage, dan retention 30 hari.
+- [x] Reset data admin membersihkan upload private/public terkait selain record database.
+- [x] Konfigurasi mail Laravel 12 menggunakan `scheme` (`smtp`/`smtps`) yang benar.
+- [x] HTTPS hanya dipaksa otomatis pada environment production.
+- [x] Seeder production tidak membuat akun demo/default admin.
 
-- [x] Produk yang sudah pernah dibeli tidak dapat dihapus permanen → `AdminProductController::destroy` menolak dengan pesan error.
-- [x] Rekening yang memiliki payment history tidak boleh dihapus → `AdminPaymentController::destroy` menolak.
-- [x] Customer yang memiliki transaksi tidak boleh menghilangkan histori transaksi → `AdminUserController::destroy` menolak.
-- [x] Admin tidak boleh menghapus atau menonaktifkan dirinya sendiri → `AdminUserController::update/toggleStatus/destroy` menolak.
-- [x] Admin terakhir tidak boleh dihapus atau diturunkan menjadi customer → `AdminUserController::update/toggleStatus/destroy` menolak.
-- [x] `ProductionReadinessTest::test_historical_master_data_cannot_be_deleted` + `test_last_active_admin_cannot_be_demoted_or_deactivated` + `test_admin_cannot_delete_themselves` lolos.
+## 3. P0 — wajib selesai sebelum go-live
 
-### 6. Perbaiki field nullable admin ✅
+Semua checkbox berikut harus diisi manusia yang memegang server dan akun provider.
 
-- [x] `AdminProductController::store/update`: semua field opsional memakai `?? null` (`category`, `originalPrice`, `badge`, `short_description`, `description`, `imageUrl`).
-- [x] `AdminCategoryController::store/update`: `description` memakai `?? null`.
-- [x] `ProductionReadinessTest::test_nullable_product_fields_do_not_cause_server_error` lolos.
+### 3.1 Server dan database
 
-### 7. Pindahkan paket bundling ke server-side ✅
+- [ ] Gunakan PHP 8.3+ dengan `bcmath`, `ctype`, `curl`, `dom/xml`, `fileinfo`, `gd`, `intl`, `mbstring`, `openssl`, `pdo_mysql`, `tokenizer`, dan `zip`.
+- [ ] Gunakan Node 22 LTS dan npm 10+ pada build server, atau deploy asset yang telah dibangun CI.
+- [ ] Arahkan document root Nginx/Apache tepat ke `<release>/public`, bukan root repository.
+- [ ] Buat user MySQL khusus aplikasi dengan hak minimum; jangan memakai root.
+- [ ] Jalankan seluruh migrasi pada clone/snapshot **MySQL staging** dan uji rollback/restore.
+- [ ] Pastikan `storage` dan `bootstrap/cache` writable oleh user PHP-FPM, bukan world-writable.
+- [ ] Pasang process manager untuk queue worker jika `QUEUE_CONNECTION=database` digunakan.
+- [ ] Jalankan satu instance scheduler (`php artisan schedule:work`) atau cron `schedule:run` jika task terjadwal ditambah.
 
-- [x] Paket didefinisikan di `config/packages.php` (slug, nama, harga, daftar produk).
-- [x] `CheckoutController::resolveCart` memperluas `package_slug` menjadi produk nyata dan menghitung harga dari config.
-- [x] Harga final dihitung di backend; frontend hanya mengirim `package_slug`.
-- [x] Slug paket yang tidak dikenal menghasilkan `404` (`abort_unless`).
-- [x] Checkout memberikan akses ke seluruh produk dalam paket setelah pembayaran sukses.
-- [x] `ProductionReadinessTest::test_package_checkout_uses_server_price_and_real_products` lolos.
+### 3.2 Environment production
 
-> **Catatan**: Master paket admin (CRUD paket via UI) masih ditunda — paket dikelola sebagai config file. Bisa ditambahkan di tahap berikutnya.
-
-### 8. Lengkapi materi dan progres pembelajaran ✅
-
-- [x] Tabel `material_progress` dengan unique constraint (`user_id`, `product_id`, `material_index`).
-- [x] Endpoint `POST /dashboard/learning/{product}/materials/{material}/complete` dengan pengecekan kepemilikan.
-- [x] Materi tanpa link tidak dapat ditandai selesai (ditolak oleh controller).
-- [x] Progres dihitung berdasarkan jumlah materi selesai dibanding total materi.
-- [x] `ProductionReadinessTest::test_customer_can_complete_only_owned_available_material` lolos.
-
-> **Catatan**: Materi seed default belum memiliki link — ini data, bukan kode. Admin harus menambahkan link materi melalui panel admin sebelum produk dipublikasikan.
-
-### 9. Normalisasi status user ✅
-
-- [x] Model menggunakan nilai `active` dan `inactive` secara konsisten.
-- [x] Migration `2026_09_03_130000_normalize_user_statuses.php` mengubah data lama.
-- [x] Login menolak user `inactive` (`LoginRequest::authenticate`).
-- [x] `AdminUserController` menggunakan `normalizeStatus()` → tidak ada lagi nilai `Aktif`/`Nonaktif` di database.
-- [x] `ProductionReadinessTest::test_inactive_user_is_rejected_at_login` lolos.
-
-### 10. Verifikasi email — dinonaktifkan ✅
-
-- [x] Email verification **tidak diaktifkan** sesuai permintaan (sebelumnya tidak ada).
-- [x] `User` model tidak implement `MustVerifyEmail`.
-- [x] Route memakai middleware `auth` saja (tanpa `verified`).
-- [x] User baru bisa langsung login dan akses dashboard tanpa verifikasi email.
-
-> **Catatan**: Jika ingin mengaktifkan verifikasi email di masa depan, tambahkan `implements MustVerifyEmail` ke model `User` dan tambahkan `verified` middleware ke route yang ingin dilindungi.
-
-### 11. Hapus kredensial demo ✅
-
-- [x] Seeder hanya membuat akun demo jika `!app()->environment('production')`.
-- [x] Akun `admin@jaggad.id` dan `user@gmail.com` tidak dibuat di production.
-- [x] Password `password` tidak digunakan di production.
-
-> **Catatan**: Di production, buat admin pertama melalui `php artisan tinker` atau seeder custom yang aman.
-
-### 12. Tambahkan regression test ✅
-
-- [x] Webhook tanpa Server Key ditolak (`test_webhook_rejected_when_server_key_empty`).
-- [x] Signature webhook palsu ditolak (`test_midtrans_webhook_...` — signature assertion).
-- [x] Nominal webhook yang berbeda ditolak (`test_midtrans_webhook_...` — amount mismatch assertion).
-- [x] Webhook duplikat tetap idempotent (`test_midtrans_webhook_...` — duplicate POST).
-- [x] Transaksi sukses tidak dapat turun status (finalized check).
-- [x] Checkout paket memberikan semua produk yang benar (`test_package_checkout_uses_server_price_and_real_products`).
-- [x] Produk dan rekening berhistori tidak dapat dihapus (`test_historical_master_data_cannot_be_deleted`).
-- [x] Admin terakhir dan admin aktif tidak dapat menghapus/dirinya sendiri (`test_last_active_admin_cannot_be_demoted_or_deactivated` + `test_admin_cannot_delete_themselves`).
-- [x] Field nullable produk tidak menghasilkan `500` (`test_nullable_product_fields_do_not_cause_server_error`).
-- [x] Email verification dinonaktifkan (user bisa langsung akses, tanpa verifikasi).
-- [x] Customer tidak dapat menyelesaikan materi milik customer lain (`test_customer_can_complete_only_owned_available_material`).
-- [x] Error page production menghasilkan status yang benar (`ErrorPagesTest`).
-
-**Total: 50 test, 204 assertion — lolos semua.**
-
----
-
-## B. Server dan Konfigurasi ⚠️
-
-> **Bagian ini membutuhkan akses server dan credential production — tidak dapat dilakukan dari repository saja.**
-
-### 13. Siapkan runtime production
-
-Gunakan:
-- PHP `8.2` atau lebih baru.
-- Composer.
-- Nginx atau Apache.
-- MySQL atau PostgreSQL untuk database production.
-- Ekstensi PHP PDO, GD, cURL, OpenSSL, Mbstring, Fileinfo, Intl, dan ZIP.
-- Node.js hanya pada build server bila asset dibangun sebelum release.
-
-Document root web server harus menunjuk ke folder `public`, bukan root repository.
-
-### 14. Gunakan environment production
-
-Contoh dasar:
+Minimal:
 
 ```dotenv
-APP_NAME="JAGGAD Academy"
+APP_NAME="JAGGAD ACADEMY"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://domain-anda.com
 APP_TIMEZONE=Asia/Jakarta
+APP_KEY=base64:...
 
 LOG_CHANNEL=stack
 LOG_LEVEL=warning
@@ -176,313 +126,171 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=jaggad
 DB_USERNAME=jaggad_app
-DB_PASSWORD=PASSWORD_KUAT
+DB_PASSWORD=...
 
 SESSION_DRIVER=database
 SESSION_SECURE_COOKIE=true
+SESSION_ENCRYPT=true
 CACHE_STORE=database
 QUEUE_CONNECTION=database
+FILESYSTEM_DISK=public
 
 MAIL_MAILER=smtp
-MAIL_HOST=smtp-provider.example
+MAIL_HOST=...
 MAIL_PORT=587
 MAIL_USERNAME=...
 MAIL_PASSWORD=...
-MAIL_ENCRYPTION=tls
+MAIL_SCHEME=smtp
 MAIL_FROM_ADDRESS=noreply@domain-anda.com
-MAIL_FROM_NAME="JAGGAD Academy"
-
-MIDTRANS_SERVER_KEY=...
-MIDTRANS_CLIENT_KEY=...
-MIDTRANS_IS_PRODUCTION=true
-
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REDIRECT_URL=https://domain-anda.com/auth/google/callback
+MAIL_FROM_NAME="JAGGAD ACADEMY"
 ```
 
-Ketentuan:
-- [x] Jangan commit `.env` (dilindungi oleh `.gitignore`).
-- [x] Jangan menyimpan Server Key, SMTP password, atau Google Client Secret di repository (bersih dari repo, dikelola via database CMS / runtime).
-- [ ] Gunakan secret manager dari hosting bila tersedia.
-- [ ] Pastikan `APP_KEY` production dibuat sekali dan ikut dibackup. Jangan menggantinya setelah data terenkripsi digunakan.
+- [ ] Buat `APP_KEY` **sekali** untuk instalasi baru dan simpan di secret manager + backup terenkripsi.
+- [ ] Jangan pernah menjalankan `key:generate` lagi pada instalasi aktif; mengganti key memutus session/data terenkripsi.
+- [ ] Pastikan `.env`, dump database, backup, dan log tidak berada di document root atau artifact publik.
+- [ ] Pastikan clock server sinkron NTP; timestamp pembayaran dan signature bergantung pada waktu yang benar.
 
-Referensi: [Laravel Environment Configuration](https://laravel.com/framework/docs/12.x).
+Kredensial Midtrans, Google, Meta, dan SMTP dapat diisi dari Admin → Settings dan akan meng-override fallback `.env`. Karena secret tersebut tersimpan di database, batasi akses database/backup dan enkripsi backup offsite.
 
-### 15. Amankan server
+### 3.3 TLS dan web server
 
-- [ ] Gunakan sertifikat HTTPS valid.
-- [x] Redirect seluruh HTTP ke HTTPS (`URL::forceScheme('https')` di `AppServiceProvider` & template Nginx).
-- [ ] Buka hanya port `80`, `443`, dan SSH yang dibatasi.
-- [x] Nonaktifkan directory listing (`Options -Indexes` di `public/.htaccess` + `autoindex off` di Nginx).
-- [x] Batasi ukuran upload sesuai batas aplikasi (validasi 5MB di Laravel, 10MB di template server).
-- [x] Pasang header `X-Content-Type-Options`, `X-Frame-Options`, Referrer Policy, dan Permissions Policy (`app/Http/Middleware/SecurityHeaders.php` terdaftar di `bootstrap/app.php` & diuji).
-- [ ] Gunakan database user khusus aplikasi dengan permission minimum.
-- [ ] Pastikan `storage` dan `bootstrap/cache` writable oleh user web server.
-- [x] Pastikan `.env`, log, source map sensitif, dan file backup tidak dapat diakses dari web (di luar root `public` + aturan Nginx).
-- [x] Lindungi rute privat dan dashboard dari crawler web (`public/robots.txt`).
+- [ ] Pasang sertifikat TLS valid dan redirect HTTP → HTTPS.
+- [ ] Terapkan lalu sesuaikan `docs/nginx-jaggad.conf.example` atau aturan Apache ekuivalen.
+- [ ] Pastikan HSTS `includeSubDomains` hanya diaktifkan jika seluruh subdomain sudah HTTPS.
+- [ ] Batasi firewall ke 80/443 serta SSH dari sumber yang diperlukan.
+- [ ] Set PHP `upload_max_filesize`/`post_max_size` dan web server sedikit di atas batas aplikasi 5 MB.
+- [ ] Dari jaringan publik, pastikan `/.env`, `/vendor`, `/storage/payments/*`, backup, dan source map tidak dapat diunduh.
+- [ ] Pastikan `/up` merespons 200 melalui load balancer tanpa mengekspos detail internal.
 
-Template Nginx siap pakai: `docs/nginx-jaggad.conf.example`.
+### 3.4 Admin dan konten
 
-### 16. Siapkan storage dan backup
+- [ ] Buat admin pertama secara aman melalui mekanisme server internal; jangan memakai password default/seeder demo.
+- [ ] Aktifkan MFA pada panel hosting, email, Google Cloud, Meta, Midtrans, dan database provider. Aplikasi admin sendiri belum memiliki MFA.
+- [ ] Ganti seluruh data sandbox/demo: produk, rekening, nomor kontak, domain, logo, link materi, dan copy legal.
+- [ ] Jangan menjalankan `InitialDataSeeder` pada production tanpa review: seeder tidak membuat user production, tetapi tetap membuat kategori, 6 produk contoh, dan 3 metode pembayaran.
+- [ ] Pastikan setiap produk berbayar memiliki link materi yang benar dan hanya dapat dibuka oleh pembeli.
+- [ ] Pastikan paket yang ditawarkan di `config/packages.php` berisi produk aktif; perubahan paket masih membutuhkan deploy.
 
-```bash
-php artisan storage:link
-```
+### 3.5 Midtrans
 
-- [x] Skrip backup otomatis database & storage (`scripts/backup.sh` dengan kompresi gzip & retention 30 hari).
-- [ ] Jadwalkan cron backup harian di server (`0 2 * * * /path/to/scripts/backup.sh`).
-- [ ] Simpan backup pada server atau provider yang berbeda (S3/R2/offsite).
-- [ ] Terapkan retention harian, mingguan, dan bulanan.
-- [ ] Lakukan satu restore test sebelum go-live.
-- [x] Pastikan bukti pembayaran tidak dapat didaftar melalui directory listing.
+- [ ] Isi Server Key/Client Key sandbox, mode production `false`, lalu bersihkan config cache.
+- [ ] Daftarkan Notification URL `https://domain-anda.com/midtrans/webhook`.
+- [ ] Daftarkan Finish URL `https://domain-anda.com/dashboard` dan Error URL `https://domain-anda.com/checkout`.
+- [ ] Uji Snap: pending, settlement, capture accept, capture deny, cancel, deny, expire, browser ditutup sebelum callback, dan webhook duplikat.
+- [ ] Cocokkan transaksi, nominal, akses produk, statistik, email, dan event Meta setelah setiap skenario.
+- [ ] Ganti ke credential live + mode production `true`, bersihkan cache, lalu lakukan pembelian live nominal kecil.
+- [ ] Pastikan Notification URL hanya HTTPS publik dan balasan webhook stabil 2xx.
 
-### 17. Konfigurasi email nyata
+### 3.6 Email
 
-- [ ] Ganti mail driver `log` menjadi SMTP yang valid (dapat diisi via Admin Settings `/admin/settings` atau `.env`).
-- [ ] Konfigurasikan SPF, DKIM, dan DMARC domain.
-- [ ] Uji receipt pembelian, penolakan bukti, reset password, dan verifikasi email.
-- [ ] Uji pengiriman ke lebih dari satu provider email.
-- [x] Pastikan kegagalan SMTP tercatat dan admin dapat mengirim ulang receipt (`AdminTransactionController::resendAccessEmail`).
+- [ ] Konfigurasikan SMTP production dan uji timeout/error log.
+- [ ] Uji receipt pembelian, resend receipt admin, penolakan pembayaran, dan reset password.
+- [ ] Uji ke minimal Gmail dan satu provider lain; cek spam.
+- [ ] Pasang SPF, DKIM, dan DMARC untuk domain pengirim.
 
-### 18. Konfigurasi Midtrans
+### 3.7 Google OAuth dan Meta
 
-Uji dahulu menggunakan sandbox:
-- [ ] Pembuatan Snap token.
-- [ ] Pembayaran pending.
-- [ ] Settlement atau capture.
-- [ ] Deny, cancel, dan expire.
-- [x] Webhook duplikat (idempotensi diuji di test suite).
-- [ ] Browser ditutup sebelum callback.
-- [ ] Customer menekan verifikasi berkali-kali.
-- [x] Nominal dan signature yang dimanipulasi (ditolak & diverifikasi otomatis).
+- [ ] Google: tambahkan callback persis `https://domain-anda.com/auth/google/callback`, consent screen production, domain terverifikasi, dan akun support resmi.
+- [ ] Google: uji akun baru, akun email yang sudah ada, akun aplikasi inactive, cancel, dan callback gagal.
+- [ ] Meta: isi Pixel ID dan CAPI token production; gunakan Test Events untuk `PageView`, `ViewContent`, `InitiateCheckout`, dan `Purchase`.
+- [ ] Meta: pastikan Purchase browser/server ter-deduplicate dengan event ID yang sama dan nilai/currency benar.
+- [ ] Batasi/rotasi token provider dan dokumentasikan pemilik serta tanggal rotasinya.
 
-Setelah seluruh pengujian lolos:
-- [ ] Masukkan production Server Key dan Client Key di Admin Settings / `.env`.
-- [ ] Aktifkan `MIDTRANS_IS_PRODUCTION=true`.
-- [ ] Atur notification URL HTTPS ke `/midtrans/webhook` di Midtrans Dashboard.
-- [ ] Jangan aktifkan metode Midtrans sebelum production credentials terverifikasi.
+### 3.8 Backup, monitoring, dan recovery
 
-### 19. Gunakan satu package manager ✅
+- [ ] Set `BACKUP_DIR` ke storage terpisah dan jadwalkan `scripts/backup.sh` harian.
+- [ ] Salin backup secara terenkripsi ke akun/provider lain; backup pada server aplikasi bukan disaster recovery.
+- [ ] Lakukan restore nyata database + `storage/app`, termasuk satu bukti transfer privat.
+- [ ] Tetapkan RPO/RTO, retention harian/mingguan/bulanan, pemilik restore, dan prosedur insiden.
+- [ ] Pasang alert untuk HTTP 5xx, `/up`, queue gagal, disk, CPU/RAM, database, sertifikat TLS, dan kegagalan backup.
+- [ ] Aktifkan log rotation dan pastikan payload sensitif/token tidak masuk log.
+- [ ] Jika instalasi lama pernah menyimpan bukti di `storage/app/public/payments`, pindahkan file tersebut ke `storage/app/private/payments` setelah backup dan verifikasi record.
 
-- [x] Pilih npm bila `package-lock.json` menjadi lockfile resmi.
-- [x] Gunakan `npm ci` pada CI dan production build.
-- [x] Jangan bergantian antara npm dan pnpm pada release yang sama (`pnpm-lock.yaml` dihapus dan diabaikan).
-- [x] Commit lockfile yang dipilih (`package-lock.json`).
+### 3.9 Bisnis dan kepatuhan
 
-### 20. Jalankan deployment terkontrol ✅
+- [ ] Publikasikan syarat layanan, kebijakan privasi, refund/cancel, informasi badan usaha, dan kanal bantuan yang benar.
+- [ ] Tetapkan SOP refund/chargeback, sengketa bukti transfer, salah nominal, dan customer kehilangan akses.
+- [ ] Verifikasi izin penggunaan logo, testimonial, aset, font, dan materi pembelajaran.
+- [ ] Lakukan acceptance test owner pada desktop/mobile nyata dan accessibility keyboard dasar.
 
-Pipeline deployment otomatis disiapkan di `scripts/deploy.sh` dan dapat dijalankan via:
-```bash
-composer deploy
-```
-atau manual:
-```bash
-composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
-npm ci
-npm run build
-php artisan test
-php artisan down
-php artisan migrate --force
-php artisan storage:link
-php artisan optimize
-php artisan queue:restart
-php artisan up
-```
+## 4. Deployment runbook
 
-- [x] Skrip deployment terkontrol otomatis tersedia (`scripts/deploy.sh`).
-
-### 21. Jalankan queue worker bila memakai queue
-
-Gunakan Supervisor atau systemd untuk menjalankan worker secara permanen.
-Template konfigurasi Supervisor siap pakai tersedia di `docs/supervisor-jaggad.conf.example`.
-
-Contoh command worker:
+### Sebelum deploy
 
 ```bash
-php artisan queue:work --sleep=3 --tries=3 --timeout=60 --max-time=3600
-```
-
-- [ ] Pastikan process manager menghidupkan kembali worker bila crash.
-- [x] Jalankan `php artisan queue:restart` setiap deployment (sudah ada di `scripts/deploy.sh`).
-- [ ] Pantau tabel `failed_jobs`.
-- [x] Nilai `--timeout` (60s) harus lebih kecil daripada `retry_after` (90s).
-
----
-
-## C. Verifikasi Go-Live ⚠️
-
-> **Bagian ini membutuhkan akses staging/production — tidak dapat dilakukan dari repository saja.**
-
-### 22. Uji staging dengan database baru
-
-- [ ] Gunakan konfigurasi yang menyerupai production.
-- [ ] Jalankan semua migration tanpa akun demo.
-- [ ] Buat satu admin production-like.
-- [ ] Buat kategori, produk, materi, rekening, paket, dan customer melalui UI.
-- [ ] Pastikan aplikasi tidak bergantung pada ID produk tetap seperti `1` sampai `6`.
-
-### 23. Jalankan matriks transaksi manual
-
-- [ ] Checkout transfer manual berhasil.
-- [ ] Harga dari browser yang dimanipulasi diabaikan.
-- [ ] Bukti bukan gambar ditolak.
-- [ ] Bukti terlalu besar ditolak.
-- [ ] Admin menolak bukti beserta alasan.
-- [ ] Customer mengunggah ulang bukti.
-- [ ] Admin menyetujui bukti baru.
-- [ ] Approval kedua tidak menggandakan statistik.
-- [ ] Produk yang sudah dimiliki tidak dapat dibeli ulang.
-- [ ] Customer lain tidak dapat melihat atau mengubah transaksi.
-- [ ] Master data yang memiliki histori tidak dapat dihapus.
-
-### 24. Jalankan customer journey
-
-- [ ] Registrasi.
-- [ ] Verifikasi email.
-- [ ] Login dan logout.
-- [ ] Lupa dan reset password.
-- [ ] Beranda dan promo.
-- [ ] Katalog, filter, pencarian, dan detail produk.
-- [ ] Sales page dan paket.
-- [ ] Keranjang dan checkout.
-- [ ] Receipt email.
-- [ ] Dashboard customer.
-- [ ] Membuka materi.
-- [ ] Menyelesaikan materi dan melihat progres.
-- [ ] Login ulang dan memastikan akses tetap tersedia.
-
-### 25. Jalankan admin journey
-
-- [ ] CRUD kategori.
-- [ ] CRUD produk dan upload gambar.
-- [ ] CRUD materi.
-- [ ] CRUD paket.
-- [ ] CRUD rekening.
-- [ ] Manajemen user dan status.
-- [ ] CMS beranda, tentang, kontak, promo, dan branding.
-- [ ] Daftar transaksi dan pagination.
-- [ ] Approval, rejection, upload ulang, dan resend email.
-- [ ] Export CSV.
-- [ ] Customer biasa mencoba membuka seluruh route admin dan harus ditolak.
-
-### 26. Uji tampilan
-
-Periksa desktop dan mobile untuk:
-- [ ] Beranda.
-- [ ] Produk dan detail produk.
-- [ ] Sales page dan paket.
-- [ ] Promo.
-- [ ] Checkout.
-- [ ] Dashboard dan learning.
-- [ ] Seluruh halaman admin.
-- [ ] Modal, tabel, form, navbar, dan footer.
-- [ ] Halaman `403`, `404`, dan `500`.
-
-Periksa juga navigasi keyboard, focus indicator, label form, kontras warna, scroll horizontal, dan reduced motion.
-
-### 27. Periksa runtime sebelum membuka traffic
-
-```bash
-php artisan migrate:status
-php artisan route:list
 php artisan about
-php artisan schedule:list
-php artisan queue:failed
-curl -I https://domain-anda.com/up
+composer audit --locked --no-interaction
+npm audit --audit-level=high
+scripts/backup.sh
 ```
 
-Pastikan:
-- [ ] Minimal satu admin aktif tersedia.
-- [ ] Tidak ada akun demo.
-- [ ] Minimal satu metode pembayaran aktif.
-- [ ] Seluruh produk memiliki slug unik.
-- [ ] Seluruh materi memiliki link valid.
-- [ ] Storage dapat dibaca dari domain production.
-- [ ] Tidak ada exception baru di log.
+- [ ] Catat commit/tag release dan hasil CI.
+- [ ] Pastikan backup terbaru dapat dibaca.
+- [ ] Beri tahu operator tentang maintenance window.
 
-### 28. Siapkan monitoring
+### Deploy
 
-- [ ] Monitor endpoint `/up` setiap satu sampai lima menit.
-- [ ] Buat alert untuk HTTP `500` dan downtime.
-- [ ] Aktifkan log rotation.
-- [ ] Monitor disk, CPU, memory, database connection, dan SSL expiry.
-- [ ] Monitor failed jobs dan kegagalan email.
-- [ ] Catat kegagalan webhook tanpa menyimpan secret atau data kartu.
+```bash
+./scripts/deploy.sh
+```
 
-### 29. Siapkan rollback
+Script menjalankan maintenance mode, install dependency, build, test, install Composer tanpa dev dependency, migrasi, storage link, cache production, dan queue restart. Jika command gagal, cari penyebab sebelum menjalankan `php artisan up`.
 
-Sebelum deployment:
-- [ ] Simpan backup database.
-- [ ] Simpan release aplikasi sebelumnya.
-- [ ] Catat migration yang akan dijalankan.
-- [ ] Hindari migration destruktif pada deployment pertama.
+Untuk first install saja, buat `.env` dan `APP_KEY` sebelum script. Script sengaja tidak menjalankan seeder.
 
-Jika smoke test gagal:
-- [ ] Aktifkan maintenance mode.
-- [ ] Kembalikan release aplikasi sebelumnya.
-- [ ] Jalankan kembali cache aplikasi.
-- [ ] Restore database hanya jika migration tidak backward-compatible dan rollback telah diuji.
-- [ ] Verifikasi `/up`, login, katalog, dan transaksi sebelum membuka traffic kembali.
+### Verifikasi setelah deploy
 
-### 30. Keputusan akhir GO atau NO-GO
+```bash
+php artisan about
+php artisan migrate:status
+php artisan queue:failed
+curl -fsS https://domain-anda.com/up
+```
 
-Production hanya dinyatakan **GO** bila seluruh kondisi berikut terpenuhi:
+- [ ] `APP_ENV=production`, debug OFF, URL dan timezone benar.
+- [ ] Login customer/admin, katalog, detail produk, checkout, upload bukti, dan logout bekerja.
+- [ ] Route bukti menolak guest/customer lain dan menerima pemilik/admin.
+- [ ] Jalankan satu transaksi end-to-end sesuai metode aktif.
+- [ ] Cek log aplikasi, PHP-FPM, Nginx, queue, SMTP, Midtrans, dan Meta.
 
-- [x] Semua temuan P0 dan P1 telah diperbaiki.
-- [x] Semua automated test lulus (51 test, 214 assertion — lolos ✅).
-- [x] Build production berhasil (`npm run build` — lolos ✅).
-- [x] Error page mengembalikan status yang benar (lolos ✅).
-- [ ] Midtrans sandbox lulus seluruh skenario (butuh akun sandbox).
-- [ ] SMTP nyata berhasil mengirim seluruh jenis email (butuh kredensial email).
-- [ ] Backup berhasil direstore (butuh verifikasi manual di server).
-- [ ] Satu transaksi transfer manual staging berhasil end-to-end.
-- [ ] Satu transaksi Midtrans staging berhasil end-to-end.
-- [ ] Akses produk dan progres customer tetap benar setelah login ulang.
-- [ ] Tidak ada error baru pada log setelah smoke test.
+## 5. Rollback
 
----
+1. Pertahankan maintenance mode.
+2. Kembalikan artifact/release ke commit sebelumnya.
+3. Restore database hanya bila migrasi tidak backward-compatible dan restore telah diputuskan operator.
+4. Restore `storage/app` bila file ikut berubah/hilang.
+5. Jalankan install/cache untuk release lama, smoke test, lalu `php artisan up`.
+6. Dokumentasikan transaksi yang masuk di sekitar insiden agar tidak diproses dua kali.
 
-## Ringkasan Status
+Jangan mengandalkan `migrate:rollback` otomatis pada production tanpa meninjau migration dan data yang sudah ditulis versi baru.
 
-### ✅ Selesai di Repository (Kode + Test + Konfigurasi)
+## 6. Batasan produk yang diterima atau perlu keputusan owner
 
-| Item | Status | Test / Bukti |
-|------|--------|--------------|
-| Error page production | ✅ | `ErrorPagesTest` |
-| Webhook Midtrans | ✅ | `ProductionReadinessTest::test_midtrans_webhook_...` |
-| Finalisasi transaksi (TransactionFinalizer) | ✅ | `ManualBankTransferTest` (6 tests) |
-| Paket checkout server-side | ✅ | `ProductionReadinessTest::test_package_checkout_...` |
-| Proteksi data historis | ✅ | `ProductionReadinessTest::test_historical_master_data_...` |
-| Proteksi admin (self + last) | ✅ | `ProductionReadinessTest::test_last_active_admin_...` + `test_admin_cannot_delete_...` |
-| Field nullable admin | ✅ | `ProductionReadinessTest::test_nullable_product_fields_...` |
-| Materi + progres pembelajaran | ✅ | `ProductionReadinessTest::test_customer_can_complete_...` |
-| Status user normalisasi | ✅ | `ProductionReadinessTest::test_inactive_user_...` |
-| Verifikasi email | Dinonaktifkan (sesuai permintaan) | - |
-| Kredensial demo hanya di local | ✅ | Seeder guard |
-| Security Headers Middleware | ✅ | `ProductionReadinessTest::test_security_headers_...` |
-| Robots.txt Crawler Protection | ✅ | Disallow `/admin/`, `/dashboard/`, `/checkout/` |
-| Pre-build font-size check | ✅ | `scripts/check-font-size.mjs` lolos tanpa pelanggaran |
-| Build Vite | ✅ | `npm run build` berhasil |
-| Standar Package Manager (npm) | ✅ | `pnpm-lock.yaml` dihapus, `npm ci` diverifikasi |
-| Skrip Deployment Terkontrol | ✅ | `scripts/deploy.sh` + `composer deploy` |
-| Skrip Backup & Retention 30 Hari | ✅ | `scripts/backup.sh` (MySQL & SQLite) |
-| Template Nginx Production | ✅ | `docs/nginx-jaggad.conf.example` |
-| Template Supervisor Queue Worker | ✅ | `docs/supervisor-jaggad.conf.example` |
-| Regression test suite | ✅ | 51 test, 214 assertion |
+Ini bukan regression blocker jika memang di luar scope peluncuran, tetapi harus disepakati:
 
-### ⚠️ Butuh Aksi Anda (Manual Verifikasi / Infrastruktur Luar)
+- Paket dikelola lewat config/deploy, belum ada CRUD paket admin.
+- Email verification sengaja nonaktif.
+- Admin aplikasi belum memiliki MFA dan audit log aktivitas lengkap.
+- Belum ada workflow refund/chargeback otomatis.
+- Belum ada kuota/seat khusus webinar atau kelas offline.
+- Belum ada coupon, pajak, invoice fiskal, atau rekonsiliasi settlement otomatis.
+- Email receipt dan Meta CAPI dipanggil sinkron setelah commit, tetapi sudah diberi timeout dan failure tidak membatalkan akses.
+- Secret integrasi CMS tersimpan di database, bukan application-level encrypted column.
+- Belum ada Content-Security-Policy ketat; header keamanan dasar sudah aktif.
+- Kontak publik masih perlu diverifikasi sebagai kanal operasional yang benar.
 
-| Item | Alasan | Langkah Aksi Anda |
-|------|--------|-------------------|
-| Server & Domain Production | Butuh VPS/hosting & DNS domain | Arahkan domain ke IP server, atur document root ke `/var/www/jaggad/public` |
-| SSL / HTTPS | Butuh sertifikat domain | Pasang Certbot Let's Encrypt (`certbot --nginx -d domain.com`) |
-| Firewall Server | Butuh akses root server | Jalankan `ufw allow 80`, `ufw allow 443`, `ufw allow OpenSSH` |
-| .env Production | Butuh secret production | Buat file `.env` di server, jalankan `php artisan key:generate` sekali saja |
-| SMTP Real | Butuh akun provider email | Masukkan SMTP Host, Port, Username, Password di `/admin/settings` atau `.env` |
-| Midtrans Production | Butuh akun bisnis Midtrans | Masukkan Server Key & Client Key production, set notification URL ke `https://domain.com/midtrans/webhook` |
-| Google OAuth (opsional) | Butuh Google Cloud Console | Masukkan Client ID & Secret di `/admin/settings` jika ingin login Google |
-| Backup Cron di Server | Butuh jadwal cron VPS | Tambahkan `0 2 * * * /var/www/jaggad/scripts/backup.sh` di crontab server |
-| Supervisor Worker (opsional) | Butuh queue asynchronous | Pasang `docs/supervisor-jaggad.conf.example` ke `/etc/supervisor/conf.d/` |
-| Isi Link Materi Produk | Data materi riil | Masukkan link materi (Google Drive/YouTube/Loom) via CMS admin sebelum buka jualan |
-| Smoke Test & QA Staging | Verifikasi end-to-end riil | Uji 1 transaksi Midtrans dan 1 transfer manual di web setelah domain aktif |
+Jika salah satu kemampuan di atas wajib untuk model bisnis/legal saat launch, ubah menjadi P0 dan jangan go-live sebelum tersedia.
+
+## 7. Sign-off
+
+| Peran | Pernyataan | Nama/tanggal |
+|---|---|---|
+| Developer | Commit yang diuji sama dengan release | [ ] |
+| Infra | Runtime, TLS, permissions, worker, cron, monitoring siap | [ ] |
+| Database | Migrasi MySQL staging dan restore test lulus | [ ] |
+| Business owner | Produk, harga, paket, rekening, materi, legal disetujui | [ ] |
+| Payment owner | Sandbox matrix dan satu live payment lulus | [ ] |
+| Marketing | Pixel/CAPI dan consent/privacy disetujui | [ ] |
+| Support | SOP refund, dispute, dan recovery akses siap | [ ] |
+
+Keputusan akhir hanya **GO** bila seluruh P0 dan sign-off terisi. Hingga saat itu, repository layak dijadikan release candidate tetapi belum boleh menerima transaksi production.

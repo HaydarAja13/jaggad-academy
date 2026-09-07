@@ -37,7 +37,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
         rawStatus: dbT.status,
         date: new Date(dbT.created_at).toLocaleDateString('id-ID'),
         payment: dbT.payment_type ? dbT.payment_type.toUpperCase() : (dbT.payment?.payment_method?.bank_name || 'Gateway Pembayaran'),
-        proof: getStorageUrl(dbT.payment?.proof_image),
+        proof: dbT.payment?.proof_url || getStorageUrl(dbT.payment?.proof_image),
         paymentStatus: dbT.payment?.status,
         rejectionReason: dbT.payment?.rejection_reason,
         payload: dbT.payment_payload ? JSON.parse(dbT.payment_payload) : null,

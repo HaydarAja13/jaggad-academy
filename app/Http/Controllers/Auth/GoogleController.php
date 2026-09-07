@@ -1,27 +1,34 @@
 <?php
 
 namespace App\Http\Controllers\Auth;
- 
+
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
-use Exception;
- 
+
 class GoogleController extends Controller
 {
     public function redirectToGoogle()
     {
         return Socialite::driver('google')->redirect();
     }
- 
-    public function handleGoogleCallback()
+
+    public function handleGoogleCallback(Request $request)
     {
         try {
             $user = Socialite::driver('google')->user();
             $findUser = User::where('email', $user->email)->first();
- 
+
             if ($findUser) {
+                if ($findUser->status === 'inactive') {
+                    return redirect()->route('login')->withErrors([
+                        'email' => 'Akun Anda sedang dinonaktifkan. Silakan hubungi admin untuk bantuan.',
+                    ]);
+                }
+
                 // If user doesn't have google_id yet, sync it
                 if (is_null($findUser->google_id)) {
                     $findUser->update([
@@ -29,8 +36,10 @@ class GoogleController extends Controller
                         'avatar' => $user->avatar,
                     ]);
                 }
-                
+
                 Auth::login($findUser);
+                $request->session()->regenerate();
+
                 return redirect()->intended(route('dashboard', absolute: false));
             } else {
                 $newUser = User::create([
@@ -43,11 +52,13 @@ class GoogleController extends Controller
                     'role' => 'customer',
                     'email_verified_at' => now(),
                 ]);
- 
+
                 Auth::login($newUser);
+                $request->session()->regenerate();
+
                 return redirect()->intended(route('dashboard', absolute: false));
             }
- 
+
         } catch (Exception $e) {
             return redirect(route('login'))->withErrors(['email' => 'Gagal masuk menggunakan Google.']);
         }

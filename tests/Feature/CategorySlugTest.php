@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Product;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -33,5 +35,33 @@ class CategorySlugTest extends TestCase
 
         $this->get(route('products', ['category' => 'unknown']))
             ->assertInertia(fn (Assert $page) => $page->component('Guest/Products')->where('category', 'all'));
+    }
+
+    public function test_product_and_category_slugs_are_unique_in_the_database(): void
+    {
+        Category::create(['name' => 'Pertama', 'slug' => 'same-category']);
+        Product::create(['name' => 'Pertama', 'slug' => 'same-product', 'price' => 1000]);
+
+        try {
+            Category::create(['name' => 'Kedua', 'slug' => 'same-category']);
+            $this->fail('Database menerima slug kategori duplikat.');
+        } catch (QueryException) {
+            $this->assertTrue(true);
+        }
+
+        $this->expectException(QueryException::class);
+        Product::create(['name' => 'Kedua', 'slug' => 'same-product', 'price' => 1000]);
+    }
+
+    public function test_generated_product_slug_is_readable_unique_and_stable(): void
+    {
+        $first = Product::create(['name' => 'Ebook Pemula', 'price' => 1000]);
+        $second = Product::create(['name' => 'Ebook Pemula', 'price' => 1000]);
+
+        $this->assertSame('ebook-pemula', $first->slug);
+        $this->assertSame('ebook-pemula-2', $second->slug);
+
+        $first->update(['name' => 'Ebook Pemula Edisi Baru']);
+        $this->assertSame('ebook-pemula', $first->fresh()->slug);
     }
 }

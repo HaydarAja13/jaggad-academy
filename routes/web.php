@@ -1,25 +1,24 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminCategoryController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminPaymentController;
+use App\Http\Controllers\Admin\AdminProductController;
+use App\Http\Controllers\Admin\AdminSettingController;
+use App\Http\Controllers\Admin\AdminTransactionController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\MidtransWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\Admin\AdminPaymentController;
-use App\Http\Controllers\Admin\AdminTransactionController;
-use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\AdminCategoryController;
-use App\Http\Controllers\Admin\AdminProductController;
-use App\Http\Controllers\Admin\AdminSettingController;
-use App\Http\Controllers\Admin\AdminUserController;
-
-use Illuminate\Foundation\Application;
+use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/products', [PublicController::class, 'products'])->name('products');
 Route::get('/products/{product}', [PublicController::class, 'productDetail'])->name('products.detail');
-
 
 Route::get('/about', function () {
     return Inertia::render('Guest/About');
@@ -32,27 +31,30 @@ Route::get('/contact', function () {
 Route::get('/products/{product}/sales', [PublicController::class, 'productSales'])->name('products.sales');
 
 Route::get('/packages/{slug}', function ($slug) {
-    abort_unless(config("packages.{$slug}"), 404);
+    $package = config("packages.{$slug}");
+    abort_unless($package && Product::whereIn('slug', $package['products'])->count() === count($package['products']), 404);
 
-    return Inertia::render('Guest/PackageLanding', ['slug' => $slug]);
+    return Inertia::render('Guest/PackageLanding', [
+        'slug' => $slug,
+        'serverPackage' => ['name' => $package['name'], 'price' => $package['price']],
+    ]);
 })->name('packages.landing');
 
-Route::middleware(['auth'])->group(function() {
+Route::middleware(['auth'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
-    Route::post('/checkout', [CheckoutController::class, 'process'])->name('checkout.process');
-    Route::post('/dashboard/transactions/{transaction}/proof', [CheckoutController::class, 'uploadProof'])->name('transactions.proof');
-    Route::post('/checkout/verify/{transaction}', [CheckoutController::class, 'verify'])->name('checkout.verify');
+    Route::post('/checkout', [CheckoutController::class, 'process'])->middleware('throttle:10,1')->name('checkout.process');
+    Route::post('/dashboard/transactions/{transaction}/proof', [CheckoutController::class, 'uploadProof'])->middleware('throttle:5,1')->name('transactions.proof');
+    Route::get('/payments/{payment}/proof', [CheckoutController::class, 'proof'])->name('payments.proof');
+    Route::post('/checkout/verify/{transaction}', [CheckoutController::class, 'verify'])->middleware('throttle:10,1')->name('checkout.verify');
 });
-
 
 Route::get('/promo', [PublicController::class, 'promo'])->name('ads');
 
-Route::middleware(['auth'])->group(function() {
+Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('dashboard');
     Route::get('/dashboard/learning/{product}', [UserController::class, 'learning'])->name('dashboard.learning');
     Route::post('/dashboard/learning/{product}/materials/{material}/complete', [UserController::class, 'completeMaterial'])->name('dashboard.learning.complete');
 });
-
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', function () {
@@ -85,7 +87,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::patch('/transactions/{transaction}/reject', [AdminTransactionController::class, 'reject'])->name('transactions.reject');
         Route::post('/transactions/{transaction}/resend-access-email', [AdminTransactionController::class, 'resendAccessEmail'])->name('transactions.resend-email');
 
-
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
         Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
         Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
@@ -104,6 +105,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
         Route::get('/settings', [AdminSettingController::class, 'index'])->name('settings.index');
         Route::post('/settings', [AdminSettingController::class, 'saveSettings'])->name('settings.store');
+        Route::post('/settings/reset-data', [AdminSettingController::class, 'resetData'])->name('settings.reset-data');
+        Route::post('/settings/reset-stats', [AdminSettingController::class, 'resetStats'])->name('settings.reset-stats');
 
         Route::get('/payment', [AdminPaymentController::class, 'index'])->name('payment.index');
         Route::post('/payment', [AdminPaymentController::class, 'store'])->name('payment.store');
@@ -115,10 +118,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
     });
 });
 
-Route::post('/midtrans/webhook', [\App\Http\Controllers\MidtransWebhookController::class, 'handle']);
+Route::post('/midtrans/webhook', [MidtransWebhookController::class, 'handle']);
 
 require __DIR__.'/auth.php';
-
-// Google Auth
-Route::get('auth/google', [App\Http\Controllers\Auth\GoogleController::class, 'redirectToGoogle'])->name('auth.google');
-Route::get('auth/google/callback', [App\Http\Controllers\Auth\GoogleController::class, 'handleGoogleCallback']);

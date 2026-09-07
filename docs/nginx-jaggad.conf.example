@@ -31,9 +31,15 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     # Nonaktifkan directory listing (Item 15 & 16)
     autoindex off;
+
+    # Bukti transfer dilayani lewat route berotorisasi, bukan public storage.
+    location ^~ /storage/payments/ {
+        deny all;
+    }
 
     # Batasi ukuran upload (Maksimal 10MB untuk bukti transfer / gambar materi)
     client_max_body_size 10M;
@@ -67,9 +73,10 @@ server {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
-    # PHP-FPM FastCGI pass (sesuaikan versi php-fpm Anda, misal php8.2-fpm atau php8.3-fpm)
+    # PHP-FPM FastCGI pass (project membutuhkan PHP 8.3+)
     location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        try_files $uri =404;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;

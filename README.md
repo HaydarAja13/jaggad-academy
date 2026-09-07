@@ -6,7 +6,7 @@ Platform edukasi digital modern yang dibangun menggunakan ekosistem **Laravel 12
 
 | Layer | Teknologi |
 |---|---|
-| **Backend** | Laravel 12 (PHP 8.2+) |
+| **Backend** | Laravel 12 (PHP 8.3+) |
 | **Frontend** | React 18 + Inertia.js |
 | **Styling** | Custom Vanilla CSS |
 | **Database** | MySQL (Produksi) / SQLite (Lokal) |
@@ -20,9 +20,9 @@ Platform edukasi digital modern yang dibangun menggunakan ekosistem **Laravel 12
 ## 🛠️ Setup Lokal (Development)
 
 ### Prasyarat
-- PHP >= 8.2
+- PHP >= 8.3
 - Composer
-- Node.js >= 18 & NPM
+- Node.js 22 LTS (minimum `20.19.0`) & npm >= 10
 - Database Server (MySQL atau SQLite)
 
 ### Langkah-langkah:
@@ -65,8 +65,8 @@ npm run dev
 ## 🌐 Panduan Deployment (Produksi)
 
 ### 1. Persyaratan Server
-- PHP >= 8.2 dengan ekstensi: `curl`, `mbstring`, `openssl`, `pdo`, `tokenizer`, `xml`
-- Composer & Node.js >= 18
+- PHP >= 8.3 dengan ekstensi: `curl`, `gd`, `mbstring`, `openssl`, `pdo`, `tokenizer`, `xml`
+- Composer, Node.js 22 LTS (minimum `20.19.0`), dan npm >= 10
 - Web server: **Nginx** atau Apache
 - Document Root diarahkan ke folder `/public`
 
@@ -201,7 +201,7 @@ server {
     error_page 404 /index.php;
 
     location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
@@ -299,12 +299,12 @@ Meta Pixel digunakan untuk melacak pengunjung dan konversi penjualan secara otom
 ## 🔄 Update Kode (setelah deploy awal)
 
 ```bash
+php artisan down --retry=60
 git pull origin main
-composer install --no-dev --optimize-autoloader
-npm install && npm run build
-php artisan migrate --force
-php artisan optimize
+composer deploy
 ```
+
+Jika langkah deployment gagal, aplikasi sengaja tetap dalam maintenance mode. Perbaiki atau rollback release, lalu jalankan `php artisan up` setelah smoke test berhasil.
 
 ---
 
@@ -362,7 +362,7 @@ max_execution_time = 120
 memory_limit = 256M
 ```
 ```bash
-sudo systemctl restart php8.2-fpm
+sudo systemctl restart php8.3-fpm
 ```
 
 ---

@@ -48,4 +48,8 @@ return [
         'is_sanitized' => true,
         'is_3ds' => true,
     ],
+
+    'meta' => [
+        'graph_version' => env('META_GRAPH_VERSION', 'v26.0'),
+    ],
 ];

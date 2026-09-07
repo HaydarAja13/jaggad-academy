@@ -12,6 +12,7 @@ export default function EditProfile({ auth }) {
         name: user.name,
         email: user.email,
         phone: user.phone || '',
+        current_password: '',
         password: '',
         password_confirmation: '',
     });
@@ -50,8 +51,19 @@ export default function EditProfile({ auth }) {
                             {/* Personal Info */}
                             <div className="form-section">
                                 <h3 className="section-title-small">Informasi Pribadi</h3>
-                                <div className="form-grid">
-                                    <div className="form-group">
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label>Password Saat Ini</label>
+                                    <input
+                                        type="password"
+                                        value={data.current_password}
+                                        onChange={e => setData('current_password', e.target.value)}
+                                        placeholder="Wajib jika mengganti password"
+                                        autoComplete="current-password"
+                                    />
+                                    {errors.current_password && <small className="text-red-500">{errors.current_password}</small>}
+                                </div>
+                                <div className="form-group">
                                         <label>Nama Lengkap</label>
                                         <input
                                             type="text"

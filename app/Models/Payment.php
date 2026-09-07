@@ -3,9 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Payment extends Model
 {
+    protected $appends = ['proof_url'];
+
+    protected $hidden = ['proof_image'];
+
     protected $fillable = [
         'transaction_id',
         'payment_method_id',
@@ -18,10 +23,17 @@ class Payment extends Model
     protected static function booted()
     {
         static::deleting(function ($payment) {
-            if ($payment->proof_image && \Illuminate\Support\Facades\Storage::disk('public')->exists($payment->proof_image)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($payment->proof_image);
+            foreach (['local', 'public'] as $disk) {
+                if ($payment->proof_image && Storage::disk($disk)->exists($payment->proof_image)) {
+                    Storage::disk($disk)->delete($payment->proof_image);
+                }
             }
         });
+    }
+
+    public function getProofUrlAttribute(): ?string
+    {
+        return $this->proof_image ? route('payments.proof', $this) : null;
     }
 
     public function transaction()

@@ -15,6 +15,21 @@ import './Welcome.css';
 
 const MAX_PRODUCT_NAME_LENGTH = 72;
 
+// Optimized marquee-ready copies of public/client-logo/*.png (trimmed, equal height). See docs/CLIENT_LOGOS.md.
+const CLIENT_LOGOS = [
+    { id: 1, w: 398, h: 72 },
+    { id: 3, w: 78, h: 72 },
+    { id: 2, w: 249, h: 72 },
+    { id: 4, w: 49, h: 72 },
+    { id: 5, w: 383, h: 72 },
+    { id: 8, w: 72, h: 72 },
+    { id: 6, w: 78, h: 72 },
+    { id: 11, w: 100, h: 72 },
+    { id: 7, w: 134, h: 72 },
+    { id: 9, w: 69, h: 72 },
+    { id: 10, w: 70, h: 72 },
+];
+
 function PurchaseActivityToast({ products }) {
     const activities = buildActivities(promoActivities, products);
     const [index, setIndex] = useState(() => pickNextActivityIndex(activities.length, -1));
@@ -121,15 +136,21 @@ export default function Welcome({ products = [], toastProducts = [], categories 
     const [primaryStat, ...supportingStats] = stats.slice(0, 4);
     const PrimaryStatIcon = primaryStat?.icon || Award;
     
-    const learningFormats = [
-        { slug: 'ebook', icon: BookOpen },
-        { slug: 'video', icon: Video },
-        { slug: 'webinar', icon: Mic },
-        { slug: 'offline', icon: MapPin },
-    ].map(format => {
-        const category = categories.find(item => item.slug === format.slug);
-        return category ? { ...category, Icon: format.icon } : null;
-    }).filter(Boolean);
+    // Dynamically build learning formats from all categories in the database
+    // Icon mapping: match slug/name against common patterns
+    const formatIconMap = [
+        { pattern: 'ebook', icon: BookOpen },
+        { pattern: 'video', icon: Video },
+        { pattern: 'webinar', icon: Mic },
+        { pattern: 'offline', icon: MapPin },
+        { pattern: 'kelas', icon: MapPin },
+    ];
+    const learningFormats = categories.map(category => {
+        const slug = (category.slug || '').toLowerCase();
+        const name = (category.name || '').toLowerCase();
+        const match = formatIconMap.find(m => slug.includes(m.pattern) || name.includes(m.pattern));
+        return { ...category, Icon: match?.icon || Zap };
+    });
 
     const selectedProductIds = (home.featuredProductIds || []).map(Number);
     const selectedProducts = selectedProductIds
@@ -205,6 +226,28 @@ export default function Welcome({ products = [], toastProducts = [], categories 
                                 </Card>
                             );
                         })}
+                    </div>
+                </div>
+            </section>
+
+            {/* Our Clients — logos alternate wide wordmark / compact emblem for rhythm; order is presentational only. */}
+            <section className="client-marquee" aria-labelledby="preview-home-clients-title">
+                <div className="container">
+                    <header className="showcase-heading client-marquee__heading">
+                        <h2 id="preview-home-clients-title">Klien Kami</h2>
+                    </header>
+                </div>
+                <div className="client-marquee__viewport">
+                    <div className="client-marquee__track">
+                        {[0, 1].map(copy => (
+                            <ul className="client-marquee__group" key={copy} aria-hidden={copy === 1 || undefined}>
+                                {CLIENT_LOGOS.map(({ id, w, h }) => (
+                                    <li className="client-marquee__cell" key={`${copy}-${id}`}>
+                                        <img src={`/client-logo/optimized/${id}.webp`} alt="" loading="lazy" width={w} height={h} />
+                                    </li>
+                                ))}
+                            </ul>
+                        ))}
                     </div>
                 </div>
             </section>

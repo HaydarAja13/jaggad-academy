@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -61,6 +63,24 @@ class ProfileTest extends TestCase
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
 
+    public function test_phone_and_password_can_be_updated_safely(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->patch('/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => '081234567890',
+            'current_password' => 'password',
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])->assertSessionHasNoErrors();
+
+        $user->refresh();
+        $this->assertSame('081234567890', $user->phone);
+        $this->assertTrue(Hash::check('new-password-123', $user->password));
+    }
+
     public function test_user_can_delete_their_account(): void
     {
         $user = User::factory()->create();
@@ -95,5 +115,34 @@ class ProfileTest extends TestCase
             ->assertRedirect('/profile');
 
         $this->assertNotNull($user->fresh());
+    }
+
+    public function test_account_with_transaction_history_cannot_be_deleted(): void
+    {
+        $user = User::factory()->create();
+        Transaction::create([
+            'transaction_code' => 'TRX-PROFILE-HISTORY',
+            'user_id' => $user->id,
+            'total_amount' => 1000,
+            'status' => 'success',
+        ]);
+
+        $this->actingAs($user)->delete('/profile', ['password' => 'password'])
+            ->assertSessionHasErrors('user');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh());
+        $this->assertDatabaseHas('transactions', ['transaction_code' => 'TRX-PROFILE-HISTORY']);
+    }
+
+    public function test_admin_cannot_delete_their_account_through_profile(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->delete('/profile', ['password' => 'password'])
+            ->assertSessionHasErrors('user');
+
+        $this->assertAuthenticatedAs($admin);
+        $this->assertNotNull($admin->fresh());
     }
 }
