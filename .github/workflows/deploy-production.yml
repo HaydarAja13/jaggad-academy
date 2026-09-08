@@ -12,13 +12,21 @@ concurrency:
 
 jobs:
   deploy:
-    name: Test Build and Dry Run Deploy
+    name: Test, Build, and Dry Run Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
+      # ============================================================
+      # 1. CHECKOUT SOURCE CODE
+      # ============================================================
+
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
+
+      # ============================================================
+      # 2. SETUP PHP + COMPOSER
+      # ============================================================
 
       - name: Setup PHP 8.3
         uses: shivammathur/setup-php@2.37.2
@@ -28,32 +36,96 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Setup Node 22
-        uses: actions/setup-node@v7
+      # ============================================================
+      # 3. SETUP NODE.JS
+      # ============================================================
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: package-lock.json
 
+      # ============================================================
+      # 4. INSTALL PHP DEPENDENCIES UNTUK TEST
+      # ============================================================
+
       - name: Install PHP development dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: |
+          composer install \
+            --prefer-dist \
+            --no-interaction \
+            --no-progress
+
+      # ============================================================
+      # 5. SIAPKAN ENVIRONMENT TEST LARAVEL
+      # ============================================================
 
       - name: Prepare Laravel test environment
         run: |
           cp .env.example .env
-          php artisan key:generate
+          php artisan key:generate --ansi
 
-      - name: Run Laravel tests
-        run: php artisan test
+      # ============================================================
+      # 6. INSTALL FRONTEND DEPENDENCIES
+      # ============================================================
 
       - name: Install frontend dependencies
         run: npm ci
 
+      # ============================================================
+      # 7. BUILD VITE
+      #
+      # WAJIB sebelum php artisan test karena beberapa Feature Test
+      # merender Blade/Inertia dan membutuhkan:
+      #
+      # public/build/manifest.json
+      # ============================================================
+
       - name: Build frontend
         run: npm run build
 
-      - name: Build production vendor
-        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+      # ============================================================
+      # 8. VERIFIKASI VITE MANIFEST
+      # ============================================================
+
+      - name: Verify Vite build
+        run: |
+          if [ ! -f public/build/manifest.json ]; then
+            echo "::error::public/build/manifest.json tidak ditemukan"
+            exit 1
+          fi
+
+          echo "Vite manifest ditemukan:"
+          ls -lah public/build/manifest.json
+
+      # ============================================================
+      # 9. LARAVEL TEST
+      # ============================================================
+
+      - name: Run Laravel tests
+        run: php artisan test
+
+      # ============================================================
+      # 10. UBAH VENDOR MENJADI PRODUCTION VENDOR
+      #
+      # Setelah tests selesai, dependency dev seperti Pail,
+      # PHPUnit, Faker, dll tidak perlu dikirim ke production.
+      # ============================================================
+
+      - name: Build production Composer dependencies
+        run: |
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --optimize-autoloader \
+            --no-interaction \
+            --no-progress
+
+      # ============================================================
+      # 11. PASTIKAN CONFIG STORAGE PRODUCTION SUDAH BENAR
+      # ============================================================
 
       - name: Verify production storage configuration
         run: |
@@ -62,17 +134,43 @@ jobs:
             exit 1
           fi
 
-      - name: Remove local environment caches
+          echo "PUBLIC_STORAGE_PATH configuration ditemukan."
+
+      # ============================================================
+      # 12. HAPUS CACHE YANG DIBUAT DI GITHUB RUNNER
+      #
+      # Jangan pernah kirim config cache dari environment GitHub
+      # ke production.
+      # ============================================================
+
+      - name: Remove runner Laravel caches
         run: |
           rm -f bootstrap/cache/config.php
           rm -f bootstrap/cache/events.php
           rm -f bootstrap/cache/routes-*.php
+          rm -f bootstrap/cache/packages.php
+          rm -f bootstrap/cache/services.php
+
+      # ============================================================
+      # 13. SIAPKAN PAYLOAD DEPLOYMENT
+      #
+      # Kita punya struktur hosting:
+      #
+      # /home/jaggadac/
+      # ├── jaggad-academy/
+      # └── public_html/
+      #
+      # Jadi dibuat dua payload terpisah.
+      # ============================================================
 
       - name: Prepare deployment folders
         run: |
           rm -rf .deploy
+
           mkdir -p .deploy/app
           mkdir -p .deploy/public
+
+          echo "Preparing Laravel application payload..."
 
           rsync -a ./ .deploy/app/ \
             --exclude='.git/' \
@@ -87,11 +185,29 @@ jobs:
             --exclude='storage/framework/cache/data/' \
             --exclude='storage/framework/sessions/' \
             --exclude='storage/framework/views/' \
-            --exclude='public/storage'
+            --exclude='storage/pail/' \
+            --exclude='public/storage' \
+            --exclude='public/hot'
+
+          echo "Preparing public_html payload..."
 
           rsync -a public/ .deploy/public/ \
             --exclude='storage' \
             --exclude='hot'
+
+      # ============================================================
+      # 14. BUAT INDEX.PHP KHUSUS PUBLIC_HTML
+      #
+      # public/index.php bawaan Laravel menganggap vendor ada:
+      # ../vendor
+      #
+      # Sedangkan production kita:
+      #
+      # /home/jaggadac/public_html/index.php
+      # /home/jaggadac/jaggad-academy/vendor/
+      #
+      # Jadi index.php public_html harus diarahkan secara khusus.
+      # ============================================================
 
       - name: Create production public index.php
         run: |
@@ -117,21 +233,62 @@ jobs:
           $app->handleRequest(Request::capture());
           PHP
 
-      - name: Dry run Laravel deployment
+      # ============================================================
+      # 15. VALIDASI PAYLOAD
+      # ============================================================
+
+      - name: Verify deployment payloads
+        run: |
+          echo "Checking Laravel payload..."
+
+          test -f .deploy/app/artisan
+          test -f .deploy/app/vendor/autoload.php
+          test -f .deploy/app/bootstrap/app.php
+
+          echo "Checking public payload..."
+
+          test -f .deploy/public/index.php
+          test -f .deploy/public/.htaccess
+          test -f .deploy/public/build/manifest.json
+
+          echo "Deployment payload validation passed."
+
+      # ============================================================
+      # 16. DRY RUN: LARAVEL APPLICATION
+      #
+      # FTP account root:
+      #
+      # /home/jaggadac
+      #
+      # Maka:
+      #
+      # ./jaggad-academy/
+      #
+      # = /home/jaggadac/jaggad-academy/
+      #
+      # dry-run:true berarti BELUM mengubah hosting.
+      # ============================================================
+
+      - name: Dry run Laravel application deployment
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.CPANEL_FTP_HOST }}
           username: ${{ secrets.CPANEL_FTP_USER }}
           password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+
           protocol: ftps
           security: strict
           port: 21
+
           local-dir: ./.deploy/app/
           server-dir: ./jaggad-academy/
+
           state-name: .jaggad-app-deploy-state.json
+
           dry-run: true
           log-level: standard
-          timeout: 60000
+          timeout: 120000
+
           exclude: |
             **/.git*
             **/.git*/**
@@ -143,6 +300,18 @@ jobs:
             storage/framework/cache/data/**
             storage/framework/sessions/**
             storage/framework/views/**
+            storage/pail/**
+            public/storage
+
+      # ============================================================
+      # 17. DRY RUN: PUBLIC_HTML
+      #
+      # ./public_html/
+      #
+      # = /home/jaggadac/public_html/
+      #
+      # Folder storage HARUS dilindungi karena berisi upload admin.
+      # ============================================================
 
       - name: Dry run public_html deployment
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
@@ -150,15 +319,20 @@ jobs:
           server: ${{ secrets.CPANEL_FTP_HOST }}
           username: ${{ secrets.CPANEL_FTP_USER }}
           password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+
           protocol: ftps
           security: strict
           port: 21
+
           local-dir: ./.deploy/public/
           server-dir: ./public_html/
+
           state-name: .jaggad-public-deploy-state.json
+
           dry-run: true
           log-level: standard
-          timeout: 60000
+          timeout: 120000
+
           exclude: |
             **/.git*
             **/.git*/**
@@ -166,3 +340,14 @@ jobs:
             storage/**
             .well-known/**
             cgi-bin/**
+
+      # ============================================================
+      # 18. SELESAI
+      # ============================================================
+
+      - name: Dry run completed
+        run: |
+          echo "============================================="
+          echo "JAGGAD deployment dry run completed."
+          echo "Tidak ada file production yang diubah."
+          echo "============================================="
