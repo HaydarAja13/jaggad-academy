@@ -48,9 +48,22 @@ jobs:
           cache-dependency-path: package-lock.json
 
       # ============================================================
-      # 4. COMPOSER HANYA UNTUK TEST DI GITHUB RUNNER
+      # 4. INSTALL LFTP
+      # ============================================================
+
+      - name: Install lftp
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y lftp
+
+          echo "lftp version:"
+          lftp --version | head -n 1
+
+      # ============================================================
+      # 5. COMPOSER UNTUK CI
       #
-      # vendor TIDAK akan di-upload ke cPanel.
+      # vendor hanya dipakai di GitHub runner untuk test.
+      # vendor TIDAK di-upload ke hosting.
       # ============================================================
 
       - name: Install PHP dependencies for CI
@@ -61,7 +74,7 @@ jobs:
             --no-progress
 
       # ============================================================
-      # 5. TEST ENVIRONMENT
+      # 6. TEST ENV
       # ============================================================
 
       - name: Prepare Laravel test environment
@@ -70,7 +83,7 @@ jobs:
           php artisan key:generate --ansi
 
       # ============================================================
-      # 6. FRONTEND
+      # 7. FRONTEND BUILD
       # ============================================================
 
       - name: Install frontend dependencies
@@ -81,22 +94,18 @@ jobs:
 
       - name: Verify Vite build
         run: |
-          if [ ! -f public/build/manifest.json ]; then
-            echo "::error::public/build/manifest.json tidak ditemukan"
-            exit 1
-          fi
-
+          test -f public/build/manifest.json
           echo "Vite build OK"
 
       # ============================================================
-      # 7. TEST LARAVEL
+      # 8. TEST LARAVEL
       # ============================================================
 
       - name: Run Laravel tests
         run: php artisan test
 
       # ============================================================
-      # 8. VERIFY STORAGE CONFIG
+      # 9. VERIFY STORAGE CONFIG
       # ============================================================
 
       - name: Verify production storage configuration
@@ -109,7 +118,7 @@ jobs:
           echo "Production storage configuration OK"
 
       # ============================================================
-      # 9. BUANG ENVIRONMENT TEST
+      # 10. REMOVE CI ENV
       # ============================================================
 
       - name: Remove CI environment files
@@ -118,38 +127,10 @@ jobs:
           rm -f public/hot
 
       # ============================================================
-      # 10. BUAT PAYLOAD PRODUCTION DENGAN WHITELIST
+      # 11. BUILD PRODUCTION-ONLY PAYLOAD
       #
-      # TIDAK copy seluruh repository.
-      #
-      # Yang dikirim hanya:
-      #
-      # app/
-      # bootstrap/app.php
-      # bootstrap/providers.php
-      # config/
-      # database/migrations/
-      # resources/views/
-      # routes/
-      # public/
-      # artisan
-      #
-      # TIDAK ADA:
-      #
-      # .agents
-      # .codex
-      # .impeccable
-      # AGENTS.md
-      # DESIGN.md
-      # PRODUCT.md
-      # README.md
-      # tests
-      # vendor
-      # node_modules
-      # package files
-      # docs
-      # dev scripts
-      # .env
+      # WHITELIST.
+      # Tidak copy seluruh repository.
       # ============================================================
 
       - name: Prepare production payload
@@ -159,53 +140,56 @@ jobs:
           mkdir -p .deploy/app
           mkdir -p .deploy/public
 
-          echo "Copying Laravel production runtime..."
+          # --------------------------------------------------------
+          # Laravel runtime
+          # --------------------------------------------------------
 
-          # Laravel application code
           cp -a app .deploy/app/app
 
-          # Laravel bootstrap runtime files only
           mkdir -p .deploy/app/bootstrap
-          cp bootstrap/app.php .deploy/app/bootstrap/app.php
+
+          cp bootstrap/app.php \
+            .deploy/app/bootstrap/app.php
 
           if [ -f bootstrap/providers.php ]; then
-            cp bootstrap/providers.php .deploy/app/bootstrap/providers.php
+            cp bootstrap/providers.php \
+              .deploy/app/bootstrap/providers.php
           fi
 
-          # Configuration
           cp -a config .deploy/app/config
 
-          # Production database migrations only
           mkdir -p .deploy/app/database
-          cp -a database/migrations .deploy/app/database/migrations
+          cp -a database/migrations \
+            .deploy/app/database/migrations
 
-          # Blade templates only.
-          # JSX/CSS source sudah dibuild oleh Vite sehingga tidak perlu
-          # dikirim ke production.
           mkdir -p .deploy/app/resources
-          cp -a resources/views .deploy/app/resources/views
+          cp -a resources/views \
+            .deploy/app/resources/views
 
-          # Laravel routes
           cp -a routes .deploy/app/routes
 
-          # Artisan diperlukan untuk Cron/migration manual
           cp artisan .deploy/app/artisan
 
-          # Public runtime + hasil build Vite.
-          # public/storage tidak boleh ikut.
+          # --------------------------------------------------------
+          # Laravel public/
+          # --------------------------------------------------------
+
           mkdir -p .deploy/app/public
 
           rsync -a public/ .deploy/app/public/ \
             --exclude='storage' \
             --exclude='hot'
 
-          # public_html mendapatkan file public Laravel yang sama.
+          # --------------------------------------------------------
+          # public_html/
+          # --------------------------------------------------------
+
           rsync -a public/ .deploy/public/ \
             --exclude='storage' \
             --exclude='hot'
 
       # ============================================================
-      # 11. INDEX.PHP KHUSUS PUBLIC_HTML
+      # 12. GENERATE PUBLIC_HTML INDEX.PHP
       # ============================================================
 
       - name: Create production public index.php
@@ -233,12 +217,12 @@ jobs:
           PHP
 
       # ============================================================
-      # 12. VALIDASI PAYLOAD
+      # 13. VERIFY PAYLOAD
       # ============================================================
 
       - name: Verify production payload
         run: |
-          echo "Top-level Laravel production payload:"
+          echo "Laravel payload:"
           find .deploy/app \
             -mindepth 1 \
             -maxdepth 1 \
@@ -246,7 +230,7 @@ jobs:
             | sort
 
           echo ""
-          echo "Validating required Laravel files..."
+          echo "Checking required files..."
 
           test -d .deploy/app/app
           test -f .deploy/app/artisan
@@ -257,131 +241,234 @@ jobs:
           test -d .deploy/app/routes
           test -f .deploy/app/public/build/manifest.json
 
-          echo ""
-          echo "Validating public_html payload..."
-
           test -f .deploy/public/index.php
           test -f .deploy/public/.htaccess
           test -f .deploy/public/build/manifest.json
 
           echo ""
-          echo "Checking forbidden development files..."
+          echo "Checking forbidden files..."
 
           test ! -e .deploy/app/.agents
           test ! -e .deploy/app/.codex
           test ! -e .deploy/app/.impeccable
+          test ! -e .deploy/app/vendor
+          test ! -e .deploy/app/node_modules
+          test ! -e .deploy/app/tests
+          test ! -e .deploy/app/.env
           test ! -e .deploy/app/AGENTS.md
           test ! -e .deploy/app/DESIGN.md
           test ! -e .deploy/app/PRODUCT.md
-          test ! -e .deploy/app/README.md
-          test ! -e .deploy/app/tests
-          test ! -e .deploy/app/vendor
-          test ! -e .deploy/app/node_modules
-          test ! -e .deploy/app/package.json
-          test ! -e .deploy/app/package-lock.json
-          test ! -e .deploy/app/.env
 
           echo ""
-          echo "Production payload validation passed."
-
-          echo ""
-          echo "Number of Laravel payload files:"
+          echo "Laravel payload files:"
           find .deploy/app -type f | wc -l
 
-          echo "Number of public_html payload files:"
+          echo "public_html payload files:"
           find .deploy/public -type f | wc -l
 
+          echo "Payload verification passed."
+
       # ============================================================
-      # 13. DEPLOY LARAVEL RUNTIME
+      # 14. TEST FTP LOGIN + DIRECTORY
       #
-      # FTP root:
-      # /home/jaggadac
+      # Login/control menggunakan TLS.
       #
-      # Server target:
-      # /home/jaggadac/jaggad-academy
+      # Untuk sementara certificate verification dimatikan karena
+      # kita masih connect menggunakan IP Biznet.
+      # ============================================================
+
+      - name: Test cPanel FTP connection
+        env:
+          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.CPANEL_FTP_PASSWORD }}
+        run: |
+          lftp -c "
+            set cmd:fail-exit yes;
+            set net:timeout 20;
+            set net:max-retries 2;
+
+            set ftp:passive-mode yes;
+            set ftp:ssl-allow yes;
+            set ftp:ssl-force yes;
+            set ftp:ssl-protect-data no;
+
+            set ssl:verify-certificate no;
+
+            open -u \"$FTP_USER\",\"$FTP_PASSWORD\" ftp://$FTP_HOST:21;
+
+            cd jaggad-academy;
+            pwd;
+
+            cd ../public_html;
+            pwd;
+
+            bye;
+          "
+
+          echo "FTP login and target directories OK."
+
+      # ============================================================
+      # 15. DEPLOY LARAVEL
       #
-      # Folder server-side berikut dipertahankan:
+      # Pertama coba:
       #
-      # vendor/
-      # storage/
-      # .env
-      # .git/
-      # bootstrap/cache/
+      # FTPS control  = encrypted
+      # FTPS data     = encrypted
+      #
+      # Kalau data TLS Biznet gagal, fallback otomatis:
+      #
+      # control/login = encrypted
+      # data transfer = clear
+      #
+      # Username/password tetap dikirim melalui TLS.
       # ============================================================
 
       - name: Deploy Laravel application
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.CPANEL_FTP_HOST }}
-          username: ${{ secrets.CPANEL_FTP_USER }}
-          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+        env:
+          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.CPANEL_FTP_PASSWORD }}
+        run: |
+          echo "Attempting full FTPS deployment..."
 
-          protocol: ftps
-          security: loose
-          port: 21
+          if lftp -c "
+            set cmd:fail-exit yes;
+            set net:timeout 30;
+            set net:max-retries 2;
 
-          local-dir: ./.deploy/app/
-          server-dir: ./jaggad-academy/
+            set ftp:passive-mode yes;
 
-          # State baru agar tidak memakai state deployment lama
-          # yang sempat berisi vendor/dev files.
-          state-name: .jaggad-production-v2-state.json
+            set ftp:ssl-allow yes;
+            set ftp:ssl-force yes;
+            set ftp:ssl-protect-data yes;
 
-          log-level: minimal
-          timeout: 120000
+            set ssl:verify-certificate no;
 
-          exclude: |
-            **/.git*
-            **/.git*/**
-            .env
-            vendor/**
-            storage/**
-            bootstrap/cache/**
-            node_modules/**
-            .agents/**
-            .codex/**
-            .impeccable/**
-            tests/**
+            open -u \"$FTP_USER\",\"$FTP_PASSWORD\" ftp://$FTP_HOST:21;
+
+            mirror \
+              --reverse \
+              --only-newer \
+              --verbose \
+              --parallel=2 \
+              .deploy/app/ \
+              jaggad-academy/;
+
+            bye;
+          "; then
+            echo "Full FTPS Laravel deployment succeeded."
+          else
+            echo ""
+            echo "Full TLS data channel rejected by hosting."
+            echo "Retrying with encrypted login/control channel..."
+            echo ""
+
+            lftp -c "
+              set cmd:fail-exit yes;
+              set net:timeout 30;
+              set net:max-retries 2;
+
+              set ftp:passive-mode yes;
+
+              set ftp:ssl-allow yes;
+              set ftp:ssl-force yes;
+              set ftp:ssl-protect-data no;
+
+              set ssl:verify-certificate no;
+
+              open -u \"$FTP_USER\",\"$FTP_PASSWORD\" ftp://$FTP_HOST:21;
+
+              mirror \
+                --reverse \
+                --only-newer \
+                --verbose \
+                --parallel=2 \
+                .deploy/app/ \
+                jaggad-academy/;
+
+              bye;
+            "
+          fi
 
       # ============================================================
-      # 14. DEPLOY PUBLIC_HTML
+      # 16. DEPLOY PUBLIC_HTML
       #
-      # /home/jaggadac/public_html/storage
-      # tidak boleh disentuh karena itu upload CMS.
+      # public_html/storage TIDAK ada dalam local payload,
+      # dan kita TIDAK menggunakan --delete.
       # ============================================================
 
       - name: Deploy public_html
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.CPANEL_FTP_HOST }}
-          username: ${{ secrets.CPANEL_FTP_USER }}
-          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+        env:
+          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.CPANEL_FTP_PASSWORD }}
+        run: |
+          echo "Attempting full FTPS deployment..."
 
-          protocol: ftps
-          security: loose
-          port: 21
+          if lftp -c "
+            set cmd:fail-exit yes;
+            set net:timeout 30;
+            set net:max-retries 2;
 
-          local-dir: ./.deploy/public/
-          server-dir: ./public_html/
+            set ftp:passive-mode yes;
 
-          # State baru juga untuk public deployment.
-          state-name: .jaggad-public-v2-state.json
+            set ftp:ssl-allow yes;
+            set ftp:ssl-force yes;
+            set ftp:ssl-protect-data yes;
 
-          log-level: minimal
-          timeout: 120000
+            set ssl:verify-certificate no;
 
-          exclude: |
-            **/.git*
-            **/.git*/**
-            storage/**
-            .well-known/**
-            cgi-bin/**
+            open -u \"$FTP_USER\",\"$FTP_PASSWORD\" ftp://$FTP_HOST:21;
+
+            mirror \
+              --reverse \
+              --only-newer \
+              --verbose \
+              --parallel=2 \
+              .deploy/public/ \
+              public_html/;
+
+            bye;
+          "; then
+            echo "Full FTPS public_html deployment succeeded."
+          else
+            echo ""
+            echo "Full TLS data channel rejected by hosting."
+            echo "Retrying with encrypted login/control channel..."
+            echo ""
+
+            lftp -c "
+              set cmd:fail-exit yes;
+              set net:timeout 30;
+              set net:max-retries 2;
+
+              set ftp:passive-mode yes;
+
+              set ftp:ssl-allow yes;
+              set ftp:ssl-force yes;
+              set ftp:ssl-protect-data no;
+
+              set ssl:verify-certificate no;
+
+              open -u \"$FTP_USER\",\"$FTP_PASSWORD\" ftp://$FTP_HOST:21;
+
+              mirror \
+                --reverse \
+                --only-newer \
+                --verbose \
+                --parallel=2 \
+                .deploy/public/ \
+                public_html/;
+
+              bye;
+            "
+          fi
 
       # ============================================================
-      # 15. VERIFY BIZNET
+      # 17. VERIFY BIZNET PRODUCTION
       #
-      # Domain publik belum cutover, jadi resolve langsung
-      # ke IP Biznet.
+      # DNS publik belum cutover.
       # ============================================================
 
       - name: Verify production server
@@ -411,12 +498,11 @@ jobs:
           echo "Production verification passed."
 
       # ============================================================
-      # 16. DONE
+      # 18. DONE
       # ============================================================
 
       - name: Deployment completed
         run: |
           echo "============================================="
           echo "JAGGAD production deployment completed."
-          echo "Only production runtime files were deployed."
           echo "============================================="
