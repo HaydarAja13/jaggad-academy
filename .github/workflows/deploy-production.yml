@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       # ============================================================
-      # 2. SETUP PHP
+      # 2. PHP
       # ============================================================
 
       - name: Setup PHP 8.3
@@ -37,7 +37,7 @@ jobs:
           tools: composer:v2
 
       # ============================================================
-      # 3. SETUP NODE
+      # 3. NODE
       # ============================================================
 
       - name: Setup Node.js 22
@@ -48,13 +48,12 @@ jobs:
           cache-dependency-path: package-lock.json
 
       # ============================================================
-      # 4. INSTALL PHP DEPENDENCIES UNTUK CI SAJA
+      # 4. COMPOSER HANYA UNTUK TEST DI GITHUB RUNNER
       #
-      # vendor diperlukan di GitHub runner untuk test.
-      # vendor TIDAK dikirim via FTP ke hosting.
+      # vendor TIDAK akan di-upload ke cPanel.
       # ============================================================
 
-      - name: Install PHP dependencies
+      - name: Install PHP dependencies for CI
         run: |
           composer install \
             --prefer-dist \
@@ -62,7 +61,7 @@ jobs:
             --no-progress
 
       # ============================================================
-      # 5. TEST ENV
+      # 5. TEST ENVIRONMENT
       # ============================================================
 
       - name: Prepare Laravel test environment
@@ -82,11 +81,15 @@ jobs:
 
       - name: Verify Vite build
         run: |
-          test -f public/build/manifest.json
+          if [ ! -f public/build/manifest.json ]; then
+            echo "::error::public/build/manifest.json tidak ditemukan"
+            exit 1
+          fi
+
           echo "Vite build OK"
 
       # ============================================================
-      # 7. TEST
+      # 7. TEST LARAVEL
       # ============================================================
 
       - name: Run Laravel tests
@@ -106,59 +109,103 @@ jobs:
           echo "Production storage configuration OK"
 
       # ============================================================
-      # 9. REMOVE RUNNER-SPECIFIC FILES
+      # 9. BUANG ENVIRONMENT TEST
       # ============================================================
 
-      - name: Remove runner-specific files
+      - name: Remove CI environment files
         run: |
           rm -f .env
-          rm -f bootstrap/cache/config.php
-          rm -f bootstrap/cache/events.php
-          rm -f bootstrap/cache/routes-*.php
-          rm -f bootstrap/cache/packages.php
-          rm -f bootstrap/cache/services.php
           rm -f public/hot
 
       # ============================================================
-      # 10. PREPARE LARAVEL PAYLOAD
+      # 10. BUAT PAYLOAD PRODUCTION DENGAN WHITELIST
       #
-      # PENTING:
-      # - vendor tidak dikirim
-      # - node_modules tidak dikirim
-      # - .env hosting tidak disentuh
-      # - user uploads tidak disentuh
+      # TIDAK copy seluruh repository.
+      #
+      # Yang dikirim hanya:
+      #
+      # app/
+      # bootstrap/app.php
+      # bootstrap/providers.php
+      # config/
+      # database/migrations/
+      # resources/views/
+      # routes/
+      # public/
+      # artisan
+      #
+      # TIDAK ADA:
+      #
+      # .agents
+      # .codex
+      # .impeccable
+      # AGENTS.md
+      # DESIGN.md
+      # PRODUCT.md
+      # README.md
+      # tests
+      # vendor
+      # node_modules
+      # package files
+      # docs
+      # dev scripts
+      # .env
       # ============================================================
 
-      - name: Prepare Laravel application payload
+      - name: Prepare production payload
         run: |
           rm -rf .deploy
+
           mkdir -p .deploy/app
           mkdir -p .deploy/public
 
-          rsync -a ./ .deploy/app/ \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            --exclude='.deploy/' \
-            --exclude='.env' \
-            --exclude='vendor/' \
-            --exclude='node_modules/' \
-            --exclude='tests/' \
-            --exclude='storage/app/public/' \
-            --exclude='storage/app/private/' \
-            --exclude='storage/logs/' \
-            --exclude='storage/framework/cache/data/' \
-            --exclude='storage/framework/sessions/' \
-            --exclude='storage/framework/views/' \
-            --exclude='storage/pail/' \
-            --exclude='public/storage' \
-            --exclude='public/hot'
+          echo "Copying Laravel production runtime..."
 
+          # Laravel application code
+          cp -a app .deploy/app/app
+
+          # Laravel bootstrap runtime files only
+          mkdir -p .deploy/app/bootstrap
+          cp bootstrap/app.php .deploy/app/bootstrap/app.php
+
+          if [ -f bootstrap/providers.php ]; then
+            cp bootstrap/providers.php .deploy/app/bootstrap/providers.php
+          fi
+
+          # Configuration
+          cp -a config .deploy/app/config
+
+          # Production database migrations only
+          mkdir -p .deploy/app/database
+          cp -a database/migrations .deploy/app/database/migrations
+
+          # Blade templates only.
+          # JSX/CSS source sudah dibuild oleh Vite sehingga tidak perlu
+          # dikirim ke production.
+          mkdir -p .deploy/app/resources
+          cp -a resources/views .deploy/app/resources/views
+
+          # Laravel routes
+          cp -a routes .deploy/app/routes
+
+          # Artisan diperlukan untuk Cron/migration manual
+          cp artisan .deploy/app/artisan
+
+          # Public runtime + hasil build Vite.
+          # public/storage tidak boleh ikut.
+          mkdir -p .deploy/app/public
+
+          rsync -a public/ .deploy/app/public/ \
+            --exclude='storage' \
+            --exclude='hot'
+
+          # public_html mendapatkan file public Laravel yang sama.
           rsync -a public/ .deploy/public/ \
             --exclude='storage' \
             --exclude='hot'
 
       # ============================================================
-      # 11. GENERATE PUBLIC_HTML INDEX.PHP
+      # 11. INDEX.PHP KHUSUS PUBLIC_HTML
       # ============================================================
 
       - name: Create production public index.php
@@ -186,35 +233,80 @@ jobs:
           PHP
 
       # ============================================================
-      # 12. VERIFY PAYLOAD
+      # 12. VALIDASI PAYLOAD
       # ============================================================
 
-      - name: Verify deployment payloads
+      - name: Verify production payload
         run: |
+          echo "Top-level Laravel production payload:"
+          find .deploy/app \
+            -mindepth 1 \
+            -maxdepth 1 \
+            -printf '%f\n' \
+            | sort
+
+          echo ""
+          echo "Validating required Laravel files..."
+
+          test -d .deploy/app/app
           test -f .deploy/app/artisan
           test -f .deploy/app/bootstrap/app.php
+          test -d .deploy/app/config
+          test -d .deploy/app/database/migrations
+          test -d .deploy/app/resources/views
+          test -d .deploy/app/routes
           test -f .deploy/app/public/build/manifest.json
+
+          echo ""
+          echo "Validating public_html payload..."
 
           test -f .deploy/public/index.php
           test -f .deploy/public/.htaccess
           test -f .deploy/public/build/manifest.json
 
-          if [ -d .deploy/app/vendor ]; then
-            echo "::error::vendor tidak boleh masuk payload FTP"
-            exit 1
-          fi
+          echo ""
+          echo "Checking forbidden development files..."
 
-          if [ -f .deploy/app/.env ]; then
-            echo "::error::.env tidak boleh masuk payload FTP"
-            exit 1
-          fi
+          test ! -e .deploy/app/.agents
+          test ! -e .deploy/app/.codex
+          test ! -e .deploy/app/.impeccable
+          test ! -e .deploy/app/AGENTS.md
+          test ! -e .deploy/app/DESIGN.md
+          test ! -e .deploy/app/PRODUCT.md
+          test ! -e .deploy/app/README.md
+          test ! -e .deploy/app/tests
+          test ! -e .deploy/app/vendor
+          test ! -e .deploy/app/node_modules
+          test ! -e .deploy/app/package.json
+          test ! -e .deploy/app/package-lock.json
+          test ! -e .deploy/app/.env
 
-          echo "Deployment payloads OK"
+          echo ""
+          echo "Production payload validation passed."
+
+          echo ""
+          echo "Number of Laravel payload files:"
+          find .deploy/app -type f | wc -l
+
+          echo "Number of public_html payload files:"
+          find .deploy/public -type f | wc -l
 
       # ============================================================
-      # 13. DEPLOY LARAVEL SOURCE
+      # 13. DEPLOY LARAVEL RUNTIME
       #
-      # vendor hosting dipertahankan.
+      # FTP root:
+      # /home/jaggadac
+      #
+      # Server target:
+      # /home/jaggadac/jaggad-academy
+      #
+      # Folder server-side berikut dipertahankan:
+      #
+      # vendor/
+      # storage/
+      # .env
+      # .git/
+      # bootstrap/cache/
       # ============================================================
 
       - name: Deploy Laravel application
@@ -231,29 +323,31 @@ jobs:
           local-dir: ./.deploy/app/
           server-dir: ./jaggad-academy/
 
-          state-name: .jaggad-app-deploy-state.json
+          # State baru agar tidak memakai state deployment lama
+          # yang sempat berisi vendor/dev files.
+          state-name: .jaggad-production-v2-state.json
+
           log-level: minimal
           timeout: 120000
 
           exclude: |
             **/.git*
             **/.git*/**
-            vendor/**
-            node_modules/**
             .env
-            storage/app/public/**
-            storage/app/private/**
-            storage/logs/**
-            storage/framework/cache/data/**
-            storage/framework/sessions/**
-            storage/framework/views/**
-            storage/pail/**
-            public/storage
+            vendor/**
+            storage/**
+            bootstrap/cache/**
+            node_modules/**
+            .agents/**
+            .codex/**
+            .impeccable/**
+            tests/**
 
       # ============================================================
       # 14. DEPLOY PUBLIC_HTML
       #
-      # storage/ tetap aman.
+      # /home/jaggadac/public_html/storage
+      # tidak boleh disentuh karena itu upload CMS.
       # ============================================================
 
       - name: Deploy public_html
@@ -270,7 +364,9 @@ jobs:
           local-dir: ./.deploy/public/
           server-dir: ./public_html/
 
-          state-name: .jaggad-public-deploy-state.json
+          # State baru juga untuk public deployment.
+          state-name: .jaggad-public-v2-state.json
+
           log-level: minimal
           timeout: 120000
 
@@ -282,13 +378,16 @@ jobs:
             cgi-bin/**
 
       # ============================================================
-      # 15. VERIFY BIZNET SERVER
+      # 15. VERIFY BIZNET
       #
-      # DNS publik belum cutover.
+      # Domain publik belum cutover, jadi resolve langsung
+      # ke IP Biznet.
       # ============================================================
 
       - name: Verify production server
         run: |
+          echo "Checking homepage..."
+
           curl \
             --fail \
             --silent \
@@ -297,6 +396,8 @@ jobs:
             --resolve jaggadacademy.com:443:103.125.180.21 \
             https://jaggadacademy.com/ \
             > /dev/null
+
+          echo "Checking Vite manifest..."
 
           curl \
             --fail \
@@ -315,4 +416,7 @@ jobs:
 
       - name: Deployment completed
         run: |
+          echo "============================================="
           echo "JAGGAD production deployment completed."
+          echo "Only production runtime files were deployed."
+          echo "============================================="
