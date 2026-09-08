@@ -14,7 +14,7 @@ jobs:
   deploy:
     name: Test, Build, and Deploy Production
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
 
     steps:
       # ============================================================
@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       # ============================================================
-      # 2. PHP
+      # 2. SETUP PHP
       # ============================================================
 
       - name: Setup PHP 8.3
@@ -37,7 +37,7 @@ jobs:
           tools: composer:v2
 
       # ============================================================
-      # 3. NODE
+      # 3. SETUP NODE
       # ============================================================
 
       - name: Setup Node.js 22
@@ -48,10 +48,13 @@ jobs:
           cache-dependency-path: package-lock.json
 
       # ============================================================
-      # 4. PHP DEPENDENCIES UNTUK TEST
+      # 4. INSTALL PHP DEPENDENCIES UNTUK CI SAJA
+      #
+      # vendor diperlukan di GitHub runner untuk test.
+      # vendor TIDAK dikirim via FTP ke hosting.
       # ============================================================
 
-      - name: Install PHP development dependencies
+      - name: Install PHP dependencies
         run: |
           composer install \
             --prefer-dist \
@@ -59,7 +62,7 @@ jobs:
             --no-progress
 
       # ============================================================
-      # 5. TEST ENVIRONMENT
+      # 5. TEST ENV
       # ============================================================
 
       - name: Prepare Laravel test environment
@@ -68,55 +71,29 @@ jobs:
           php artisan key:generate --ansi
 
       # ============================================================
-      # 6. FRONTEND DEPENDENCIES
+      # 6. FRONTEND
       # ============================================================
 
       - name: Install frontend dependencies
         run: npm ci
 
-      # ============================================================
-      # 7. BUILD VITE
-      # ============================================================
-
       - name: Build frontend
         run: npm run build
 
-      # ============================================================
-      # 8. VERIFY BUILD
-      # ============================================================
-
       - name: Verify Vite build
         run: |
-          if [ ! -f public/build/manifest.json ]; then
-            echo "::error::public/build/manifest.json tidak ditemukan"
-            exit 1
-          fi
-
-          echo "Vite manifest ditemukan:"
-          ls -lah public/build/manifest.json
+          test -f public/build/manifest.json
+          echo "Vite build OK"
 
       # ============================================================
-      # 9. LARAVEL TESTS
+      # 7. TEST
       # ============================================================
 
       - name: Run Laravel tests
         run: php artisan test
 
       # ============================================================
-      # 10. PRODUCTION VENDOR
-      # ============================================================
-
-      - name: Build production Composer dependencies
-        run: |
-          composer install \
-            --no-dev \
-            --prefer-dist \
-            --optimize-autoloader \
-            --no-interaction \
-            --no-progress
-
-      # ============================================================
-      # 11. VERIFY STORAGE CONFIG
+      # 8. VERIFY STORAGE CONFIG
       # ============================================================
 
       - name: Verify production storage configuration
@@ -126,38 +103,44 @@ jobs:
             exit 1
           fi
 
-          echo "PUBLIC_STORAGE_PATH configuration ditemukan."
+          echo "Production storage configuration OK"
 
       # ============================================================
-      # 12. HAPUS CACHE DARI GITHUB RUNNER
+      # 9. REMOVE RUNNER-SPECIFIC FILES
       # ============================================================
 
-      - name: Remove runner Laravel caches
+      - name: Remove runner-specific files
         run: |
+          rm -f .env
           rm -f bootstrap/cache/config.php
           rm -f bootstrap/cache/events.php
           rm -f bootstrap/cache/routes-*.php
           rm -f bootstrap/cache/packages.php
           rm -f bootstrap/cache/services.php
+          rm -f public/hot
 
       # ============================================================
-      # 13. PREPARE DEPLOYMENT PAYLOADS
+      # 10. PREPARE LARAVEL PAYLOAD
+      #
+      # PENTING:
+      # - vendor tidak dikirim
+      # - node_modules tidak dikirim
+      # - .env hosting tidak disentuh
+      # - user uploads tidak disentuh
       # ============================================================
 
-      - name: Prepare deployment folders
+      - name: Prepare Laravel application payload
         run: |
           rm -rf .deploy
-
           mkdir -p .deploy/app
           mkdir -p .deploy/public
-
-          echo "Preparing Laravel application payload..."
 
           rsync -a ./ .deploy/app/ \
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='.deploy/' \
             --exclude='.env' \
+            --exclude='vendor/' \
             --exclude='node_modules/' \
             --exclude='tests/' \
             --exclude='storage/app/public/' \
@@ -170,14 +153,12 @@ jobs:
             --exclude='public/storage' \
             --exclude='public/hot'
 
-          echo "Preparing public_html payload..."
-
           rsync -a public/ .deploy/public/ \
             --exclude='storage' \
             --exclude='hot'
 
       # ============================================================
-      # 14. INDEX.PHP KHUSUS CPANEL
+      # 11. GENERATE PUBLIC_HTML INDEX.PHP
       # ============================================================
 
       - name: Create production public index.php
@@ -205,33 +186,35 @@ jobs:
           PHP
 
       # ============================================================
-      # 15. VERIFY PAYLOAD
+      # 12. VERIFY PAYLOAD
       # ============================================================
 
       - name: Verify deployment payloads
         run: |
-          echo "Checking Laravel payload..."
-
           test -f .deploy/app/artisan
-          test -f .deploy/app/vendor/autoload.php
           test -f .deploy/app/bootstrap/app.php
-
-          echo "Checking public_html payload..."
+          test -f .deploy/app/public/build/manifest.json
 
           test -f .deploy/public/index.php
           test -f .deploy/public/.htaccess
           test -f .deploy/public/build/manifest.json
 
-          echo "Deployment payload validation passed."
+          if [ -d .deploy/app/vendor ]; then
+            echo "::error::vendor tidak boleh masuk payload FTP"
+            exit 1
+          fi
+
+          if [ -f .deploy/app/.env ]; then
+            echo "::error::.env tidak boleh masuk payload FTP"
+            exit 1
+          fi
+
+          echo "Deployment payloads OK"
 
       # ============================================================
-      # 16. DEPLOY LARAVEL APP
+      # 13. DEPLOY LARAVEL SOURCE
       #
-      # FTP root:
-      # /home/jaggadac
-      #
-      # Target:
-      # /home/jaggadac/jaggad-academy
+      # vendor hosting dipertahankan.
       # ============================================================
 
       - name: Deploy Laravel application
@@ -249,13 +232,14 @@ jobs:
           server-dir: ./jaggad-academy/
 
           state-name: .jaggad-app-deploy-state.json
-          log-level: standard
+          log-level: minimal
           timeout: 120000
 
           exclude: |
             **/.git*
             **/.git*/**
-            **/node_modules/**
+            vendor/**
+            node_modules/**
             .env
             storage/app/public/**
             storage/app/private/**
@@ -267,12 +251,9 @@ jobs:
             public/storage
 
       # ============================================================
-      # 17. DEPLOY PUBLIC_HTML
+      # 14. DEPLOY PUBLIC_HTML
       #
-      # Target:
-      # /home/jaggadac/public_html
-      #
-      # storage/ TIDAK BOLEH disentuh.
+      # storage/ tetap aman.
       # ============================================================
 
       - name: Deploy public_html
@@ -290,28 +271,24 @@ jobs:
           server-dir: ./public_html/
 
           state-name: .jaggad-public-deploy-state.json
-          log-level: standard
+          log-level: minimal
           timeout: 120000
 
           exclude: |
             **/.git*
             **/.git*/**
-            **/node_modules/**
             storage/**
             .well-known/**
             cgi-bin/**
 
       # ============================================================
-      # 18. VERIFY SERVER BARU
+      # 15. VERIFY BIZNET SERVER
       #
-      # DNS publik belum pindah, jadi pakai --resolve langsung
-      # ke IP Biznet.
+      # DNS publik belum cutover.
       # ============================================================
 
       - name: Verify production server
         run: |
-          echo "Checking homepage on Biznet..."
-
           curl \
             --fail \
             --silent \
@@ -320,8 +297,6 @@ jobs:
             --resolve jaggadacademy.com:443:103.125.180.21 \
             https://jaggadacademy.com/ \
             > /dev/null
-
-          echo "Checking Vite manifest on Biznet..."
 
           curl \
             --fail \
@@ -332,14 +307,12 @@ jobs:
             https://jaggadacademy.com/build/manifest.json \
             > /dev/null
 
-          echo "Production server verification passed."
+          echo "Production verification passed."
 
       # ============================================================
-      # 19. COMPLETE
+      # 16. DONE
       # ============================================================
 
       - name: Deployment completed
         run: |
-          echo "============================================="
           echo "JAGGAD production deployment completed."
-          echo "============================================="
