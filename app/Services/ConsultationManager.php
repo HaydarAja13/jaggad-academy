@@ -80,9 +80,6 @@ class ConsultationManager
             ->whereIn('status', ['awaiting_deposit', 'deposit_review', 'booked'])
             ->when($ignoreAppointmentId, fn ($query) => $query->where('id', '!=', $ignoreAppointmentId))
             ->get()
-            ->filter(fn (ConsultationAppointment $appointment) => $appointment->status !== 'awaiting_deposit'
-                || ! $appointment->deposit_due_at
-                || $appointment->deposit_due_at->isFuture())
             ->contains(function (ConsultationAppointment $appointment) use ($start, $end) {
                 $existingStart = $appointment->scheduled_start_at;
                 $existingEnd = $existingStart->copy()->addMinutes($appointment->duration_minutes);
