@@ -77,7 +77,6 @@ class ConsultationManager
         // ponytail: a per-mentor/day scan is enough for current volume; move overlap checks into SQL if daily bookings become large.
         return ConsultationAppointment::query()
             ->where('mentor_key', $mentorKey)
-            ->whereDate('scheduled_start_at', $start->toDateString())
             ->whereIn('status', ['awaiting_deposit', 'deposit_review', 'booked'])
             ->when($ignoreAppointmentId, fn ($query) => $query->where('id', '!=', $ignoreAppointmentId))
             ->get()
