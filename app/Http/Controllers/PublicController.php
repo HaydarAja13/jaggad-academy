@@ -9,6 +9,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -37,7 +38,10 @@ class PublicController extends Controller
         $stats = [
             'users' => User::where('role', 'customer')->count(),
             'products' => Product::count(),
-            'sales' => Transaction::where('purpose', Transaction::PURPOSE_PRODUCT)->where('status', 'success')->count(),
+            'sales' => Transaction::query()
+                ->when(Schema::hasColumn('transactions', 'purpose'), fn ($query) => $query->where('purpose', Transaction::PURPOSE_PRODUCT))
+                ->where('status', 'success')
+                ->count(),
         ];
 
         return Inertia::render('Guest/Welcome', [

@@ -219,6 +219,38 @@ jobs:
           $app->handleRequest(Request::capture());
           PHP
 
+          MIGRATION_TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$MIGRATION_TOKEN"
+          echo "MIGRATION_TOKEN=$MIGRATION_TOKEN" >> "$GITHUB_ENV"
+
+          cat > .deploy/public/jaggad-deploy-migrate.php <<PHP
+          <?php
+
+          declare(strict_types=1);
+
+          if (! hash_equals('$MIGRATION_TOKEN', (string) (\$_GET['token'] ?? ''))) {
+              http_response_code(404);
+              exit;
+          }
+
+          \$basePath = dirname(__DIR__).'/jaggad-academy';
+          require \$basePath.'/vendor/autoload.php';
+          \$app = require \$basePath.'/bootstrap/app.php';
+          \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          try {
+              \$exitCode = Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+              if (\$exitCode !== 0) {
+                  http_response_code(500);
+                  echo 'migration-failed';
+              } else {
+                  echo 'migrations-ok';
+              }
+          } finally {
+              @unlink(__FILE__);
+          }
+          PHP
+
       # ============================================================
       # 13. VERIFY PAYLOAD
       # ============================================================
@@ -247,6 +279,7 @@ jobs:
           test -f .deploy/public/index.php
           test -f .deploy/public/.htaccess
           test -f .deploy/public/build/manifest.json
+          test -f .deploy/public/jaggad-deploy-migrate.php
 
           echo ""
           echo "Checking forbidden files..."
@@ -467,6 +500,40 @@ jobs:
               bye;
             "
           fi
+
+      - name: Run production migrations
+        run: |
+          RESPONSE="$(curl \
+            --fail \
+            --silent \
+            --show-error \
+            --insecure \
+            --resolve jaggadacademy.com:443:103.125.180.21 \
+            "https://jaggadacademy.com/jaggad-deploy-migrate.php?token=$MIGRATION_TOKEN")"
+
+          test "$RESPONSE" = "migrations-ok"
+          echo "Production migrations completed."
+
+      - name: Remove migration endpoint
+        if: always()
+        env:
+          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.CPANEL_FTP_PASSWORD }}
+        run: |
+          lftp -c "
+            set cmd:fail-exit no;
+            set net:timeout 20;
+            set net:max-retries 1;
+            set ftp:passive-mode yes;
+            set ftp:ssl-allow yes;
+            set ftp:ssl-force yes;
+            set ftp:ssl-protect-data no;
+            set ssl:verify-certificate no;
+            open -u \"$FTP_USER\",\"$FTP_PASSWORD\" ftp://$FTP_HOST:21;
+            rm -f public_html/jaggad-deploy-migrate.php;
+            bye;
+          "
 
       # ============================================================
       # 17. VERIFY BIZNET PRODUCTION
