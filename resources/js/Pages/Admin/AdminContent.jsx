@@ -403,6 +403,31 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
         handleInputChange('home', 'faqs', faqs);
     };
 
+    const updateConsultation = (field, value) => handleInputChange('home', 'consultation', {
+        ...content.home.consultation,
+        [field]: value,
+    });
+
+    const updateConsultationPackage = (index, field, value) => {
+        const packages = [...(content.home.consultation?.packages || [])];
+        packages[index] = { ...packages[index], [field]: value };
+        updateConsultation('packages', packages);
+    };
+
+    const updateConsultationBenefit = (packageIndex, benefitIndex, value) => {
+        const item = content.home.consultation.packages[packageIndex];
+        const benefits = [...item.benefits];
+        benefits[benefitIndex] = value;
+        updateConsultationPackage(packageIndex, 'benefits', benefits);
+    };
+
+    const updateConsultationOption = (packageIndex, optionIndex, field, value) => {
+        const item = content.home.consultation.packages[packageIndex];
+        const options = [...item.options];
+        options[optionIndex] = { ...options[optionIndex], [field]: value };
+        updateConsultationPackage(packageIndex, 'options', options);
+    };
+
     const updateAchievement = (index, key, value) => {
         const achievements = [...(content.about.achievements || [])];
         achievements[index] = { ...achievements[index], [key]: value };
@@ -705,6 +730,48 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                 </div>
 
                                 <div className="cms-form-group">
+                                    <h4 className="cms-section-label">Paket Konsultasi</h4>
+                                    <p className="upload-hint">Harga dan DP di bawah menjadi sumber data resmi booking. DP wajib tepat 50% dari total.</p>
+                                    <label>Judul section</label>
+                                    <input data-preview-id="preview-home-consultation-title" value={content.home.consultation?.title || ''} onChange={event => updateConsultation('title', event.target.value)} />
+                                    <label>Deskripsi section</label>
+                                    <textarea data-preview-id="preview-home-consultation-subtitle" rows="3" value={content.home.consultation?.subtitle || ''} onChange={event => updateConsultation('subtitle', event.target.value)} />
+                                    <label>Label jadwal</label>
+                                    <input data-preview-id="preview-home-consultation-schedule" value={content.home.consultation?.scheduleLabel || ''} onChange={event => updateConsultation('scheduleLabel', event.target.value)} />
+                                    <label>Teks tombol</label>
+                                    <input value={content.home.consultation?.ctaLabel || ''} onChange={event => updateConsultation('ctaLabel', event.target.value)} />
+
+                                    <div className="cms-consultation-packages">
+                                        {(content.home.consultation?.packages || []).map((item, packageIndex) => (
+                                            <section className="cms-consultation-package" key={item.slug}>
+                                                <div className="cms-consultation-package__heading"><strong>Paket {packageIndex + 1} · {item.slug}</strong><label><input type="checkbox" checked={Boolean(item.popular)} onChange={event => updateConsultationPackage(packageIndex, 'popular', event.target.checked)} /> Populer</label></div>
+                                                <label>Nama</label>
+                                                <input data-preview-id={`preview-home-consultation-${packageIndex}-name`} value={item.name || ''} onChange={event => updateConsultationPackage(packageIndex, 'name', event.target.value)} />
+                                                <label>Label durasi</label>
+                                                <input data-preview-id={`preview-home-consultation-${packageIndex}-duration`} value={item.durationLabel || ''} onChange={event => updateConsultationPackage(packageIndex, 'durationLabel', event.target.value)} />
+                                                <label>Label harga</label>
+                                                <input data-preview-id={`preview-home-consultation-${packageIndex}-price`} value={item.priceLabel || ''} onChange={event => updateConsultationPackage(packageIndex, 'priceLabel', event.target.value)} />
+                                                <label>Deskripsi</label>
+                                                <textarea data-preview-id={`preview-home-consultation-${packageIndex}-description`} rows="2" value={item.description || ''} onChange={event => updateConsultationPackage(packageIndex, 'description', event.target.value)} />
+
+                                                <strong className="cms-consultation-package__subheading">Manfaat</strong>
+                                                {item.benefits.map((benefit, benefitIndex) => <input aria-label={`Manfaat ${benefitIndex + 1} ${item.name}`} key={benefitIndex} value={benefit} onChange={event => updateConsultationBenefit(packageIndex, benefitIndex, event.target.value)} />)}
+
+                                                <strong className="cms-consultation-package__subheading">Pilihan harga</strong>
+                                                {item.options.map((option, optionIndex) => (
+                                                    <div className="cms-consultation-option" key={option.key}>
+                                                        <label>Label<input value={option.label || ''} onChange={event => updateConsultationOption(packageIndex, optionIndex, 'label', event.target.value)} /></label>
+                                                        <label>Durasi (menit)<input type="number" min="15" value={option.durationMinutes} onChange={event => updateConsultationOption(packageIndex, optionIndex, 'durationMinutes', Number(event.target.value))} /></label>
+                                                        <label>Total<input type="number" min="1000" step="1000" value={option.totalPrice} onChange={event => updateConsultationOption(packageIndex, optionIndex, 'totalPrice', Number(event.target.value))} /></label>
+                                                        <label>DP 50%<input type="number" min="500" step="500" value={option.depositAmount} onChange={event => updateConsultationOption(packageIndex, optionIndex, 'depositAmount', Number(event.target.value))} /></label>
+                                                    </div>
+                                                ))}
+                                            </section>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="cms-form-group">
                                     <h4 className="cms-section-label">Produk Unggulan</h4>
                                     <p className="upload-hint">Pilih maksimal 6 produk. Nomor menunjukkan urutan tampil.</p>
                                     <div className="cms-product-picker">
@@ -896,6 +963,8 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <input data-preview-id="preview-home-nav-home" value={content.home.navHomeLabel || ''} onChange={(e) => handleInputChange('home', 'navHomeLabel', e.target.value)} />
                                     <label>Nav Produk</label>
                                     <input data-preview-id="preview-home-nav-products" value={content.home.navProductsLabel || ''} onChange={(e) => handleInputChange('home', 'navProductsLabel', e.target.value)} />
+                                    <label>Nav Konsultasi</label>
+                                    <input data-preview-id="preview-home-nav-consultation" value={content.home.navConsultationLabel || 'Konsultasi'} onChange={(e) => handleInputChange('home', 'navConsultationLabel', e.target.value)} />
                                     <label>Nav Tentang</label>
                                     <input data-preview-id="preview-home-nav-about" value={content.home.navAboutLabel || ''} onChange={(e) => handleInputChange('home', 'navAboutLabel', e.target.value)} />
                                     <label>Nav Kontak</label>

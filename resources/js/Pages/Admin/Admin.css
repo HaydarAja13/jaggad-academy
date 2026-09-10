@@ -5569,3 +5569,55 @@ input:checked + .toggle-slider:before {
         padding: var(--space-4) var(--space-5) var(--space-5);
     }
 }
+.cms-consultation-packages {
+    display: grid;
+    gap: var(--space-5);
+    margin-top: var(--space-5);
+}
+
+.cms-consultation-package {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg);
+}
+
+.cms-consultation-package__heading {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    align-items: center;
+    margin-bottom: var(--space-2);
+}
+
+.cms-consultation-package__heading label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+}
+
+.cms-consultation-package__heading input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-accent);
+}
+
+.cms-consultation-package__subheading {
+    margin-top: var(--space-3);
+    color: var(--color-accent);
+}
+
+.cms-consultation-option {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 640px) {
+    .cms-consultation-option { grid-template-columns: 1fr; }
+}

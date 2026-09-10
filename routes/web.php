@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCategoryController;
+use App\Http\Controllers\Admin\AdminConsultationController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminPaymentController;
 use App\Http\Controllers\Admin\AdminProductController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Admin\AdminSettingController;
 use App\Http\Controllers\Admin\AdminTransactionController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\MidtransWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicController;
@@ -19,6 +21,12 @@ use Inertia\Inertia;
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/products', [PublicController::class, 'products'])->name('products');
 Route::get('/products/{product}', [PublicController::class, 'productDetail'])->name('products.detail');
+Route::get('/konsultasi', [ConsultationController::class, 'index'])->name('consultations.index');
+Route::post('/konsultasi', [ConsultationController::class, 'store'])->middleware('throttle:5,1')->name('consultations.store');
+Route::get('/konsultasi/{consultationAppointment}/pembayaran', [ConsultationController::class, 'payment'])
+    ->middleware('signed')->name('consultations.payment');
+Route::post('/konsultasi/{consultationAppointment}/pembayaran', [CheckoutController::class, 'uploadConsultationProof'])
+    ->middleware(['signed', 'throttle:5,1'])->name('consultations.payment.store');
 
 Route::get('/about', function () {
     return Inertia::render('Guest/About');
@@ -86,6 +94,15 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::patch('/transactions/{transaction}/approve', [AdminTransactionController::class, 'approve'])->name('transactions.approve');
         Route::patch('/transactions/{transaction}/reject', [AdminTransactionController::class, 'reject'])->name('transactions.reject');
         Route::post('/transactions/{transaction}/resend-access-email', [AdminTransactionController::class, 'resendAccessEmail'])->name('transactions.resend-email');
+
+        Route::get('/consultations', [AdminConsultationController::class, 'index'])->name('consultations.index');
+        Route::post('/consultations/settings', [AdminConsultationController::class, 'saveSettings'])->name('consultations.settings');
+        Route::patch('/consultations/{consultationAppointment}/approve', [AdminConsultationController::class, 'approve'])->name('consultations.approve');
+        Route::patch('/consultations/{consultationAppointment}/reject', [AdminConsultationController::class, 'reject'])->name('consultations.reject');
+        Route::patch('/consultations/{consultationAppointment}/reschedule', [AdminConsultationController::class, 'reschedule'])->name('consultations.reschedule');
+        Route::patch('/consultations/{consultationAppointment}/complete', [AdminConsultationController::class, 'complete'])->name('consultations.complete');
+        Route::patch('/consultations/{consultationAppointment}/cancel', [AdminConsultationController::class, 'cancel'])->name('consultations.cancel');
+        Route::patch('/consultations/{consultationAppointment}/refund', [AdminConsultationController::class, 'refund'])->name('consultations.refund');
 
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
         Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');

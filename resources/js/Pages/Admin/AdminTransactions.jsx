@@ -29,11 +29,16 @@ export default function AdminTransactions({ dbTransactions = {} }) {
     const transactions = rawTransactions.map(dbT => ({
         id: dbT.transaction_code,
         dbId: dbT.id,
-        customer: dbT.user?.name || 'Pelanggan dihapus',
+        purpose: dbT.purpose || 'product_purchase',
+        isConsultation: dbT.purpose?.startsWith('consultation_'),
+        customer: dbT.user?.name || dbT.consultation_appointment?.customer_name || 'Pelanggan dihapus',
         email: dbT.user?.email || '',
-        products: dbT.items?.map(i => i.product?.name).filter(Boolean) || [],
+        whatsapp: dbT.consultation_appointment?.whatsapp || '',
+        products: dbT.purpose?.startsWith('consultation_')
+            ? [`${dbT.consultation_appointment?.package_name || 'Konsultasi'} · ${dbT.purpose === 'consultation_deposit' ? 'DP' : 'Pelunasan'}`]
+            : (dbT.items?.map(i => i.product?.name).filter(Boolean) || []),
         amount: dbT.total_amount || 0,
-        status: dbT.status === 'success' ? 'Berhasil' : dbT.payment?.status === 'rejected' ? 'Perlu perbaikan' : (dbT.status === 'failed' ? 'Gagal' : 'Pending'),
+        status: dbT.status === 'success' ? 'Berhasil' : dbT.payment?.status === 'rejected' && dbT.status === 'pending' ? 'Perlu perbaikan' : (['failed', 'expired', 'refunded'].includes(dbT.status) ? 'Gagal' : 'Pending'),
         rawStatus: dbT.status,
         date: new Date(dbT.created_at).toLocaleDateString('id-ID'),
         payment: dbT.payment_type ? dbT.payment_type.toUpperCase() : (dbT.payment?.payment_method?.bank_name || 'Gateway Pembayaran'),
@@ -48,7 +53,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
 
     const filtered = transactions.filter(t => {
         const query = search.trim().toLowerCase();
-        const matchSearch = !query || [t.customer, t.email, t.id, getProductSummary(t.products)].some(value => value.toLowerCase().includes(query));
+        const matchSearch = !query || [t.customer, t.email, t.whatsapp, t.id, getProductSummary(t.products)].some(value => value.toLowerCase().includes(query));
         const matchFilter = statusFilter === 'Semua' || t.status === statusFilter;
         return matchSearch && matchFilter;
     });
@@ -65,7 +70,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
         router.patch(route('admin.transactions.approve', code), {}, {
             preserveScroll: true,
             onSuccess: page => {
-                toast.success('Pembayaran dikonfirmasi dan akses produk diaktifkan.');
+                toast.success('Pembayaran dikonfirmasi.');
                 if (page.props.flash?.email_warning) toast.error(page.props.flash.email_warning);
                 closeDetail();
             },
@@ -176,7 +181,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                     <div className="admin-table-wrap">
                         <table className="admin-table transactions-table">
                             <thead>
-                                <tr><th>Transaksi</th><th>Pelanggan</th><th>Produk</th><th>Total</th><th>Status</th><th><span className="sr-only">Aksi</span></th></tr>
+                                <tr><th>Transaksi</th><th>Pelanggan</th><th>Item</th><th>Total</th><th>Status</th><th><span className="sr-only">Aksi</span></th></tr>
                             </thead>
                             <tbody>
                                 {filtered.length > 0 ? filtered.map(t => (
@@ -185,8 +190,8 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                             <strong className="transactions-code">{t.id}</strong>
                                             <time>{t.date}</time>
                                         </td>
-                                        <td data-label="Pelanggan"><strong>{t.customer}</strong><span>{t.email || 'Email tidak tersedia'}</span></td>
-                                        <td data-label="Produk" className="transactions-product" title={getProductSummary(t.products)}>
+                                        <td data-label="Pelanggan"><strong>{t.customer}</strong><span>{t.email || t.whatsapp || 'Kontak tidak tersedia'}</span></td>
+                                        <td data-label="Item" className="transactions-product" title={getProductSummary(t.products)}>
                                             {shouldRenderProductList(t.products) ? (
                                                 <ol className="transactions-product-list">
                                                     {t.products.map((product, index) => <li key={`${t.id}-${product}-${index}`}>{product}</li>)}
@@ -251,7 +256,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                     <div className="detail-section-label"><User size={18} aria-hidden="true" /> Informasi pelanggan</div>
                                     <div className="detail-grid">
                                         <div><span>Nama Lengkap</span><strong>{selectedTrx.customer}</strong></div>
-                                        <div><span>Email</span><strong>{selectedTrx.email || 'Email tidak tersedia'}</strong></div>
+                                        <div><span>{selectedTrx.isConsultation ? 'WhatsApp' : 'Email'}</span><strong>{selectedTrx.isConsultation ? selectedTrx.whatsapp : (selectedTrx.email || 'Email tidak tersedia')}</strong></div>
                                     </div>
                                 </div>
 
@@ -316,7 +321,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                     {showRejectForm ? <><button className="btn-modal-cancel" disabled={processingAction} onClick={() => { setShowRejectForm(false); setRejectionReason(''); }}>Batal</button><button className="btn-modal-save transaction-reject" disabled={processingAction} onClick={() => handleReject(selectedTrx.id)}>{processingAction ? 'Mengirim…' : 'Kirim penolakan'}</button></> : <><button className="btn-modal-cancel transaction-reject" disabled={processingAction} onClick={() => setShowRejectForm(true)}>Tolak bukti</button><button className="btn-modal-save transaction-approve" disabled={processingAction} onClick={() => handleConfirm(selectedTrx.id)}>{processingAction ? 'Memverifikasi…' : 'Konfirmasi pembayaran'}</button></>}
                                 </div>
                             )}
-                            {selectedTrx.status === 'Berhasil' && <div className="modal-actions transaction-detail-actions"><button className="btn-modal-save transaction-resend" disabled={processingAction} onClick={() => handleResendEmail(selectedTrx.id)}><Mail size={18} aria-hidden="true" /> {processingAction ? 'Mengirim…' : 'Kirim ulang email akses'}</button></div>}
+                            {selectedTrx.status === 'Berhasil' && !selectedTrx.isConsultation && <div className="modal-actions transaction-detail-actions"><button className="btn-modal-save transaction-resend" disabled={processingAction} onClick={() => handleResendEmail(selectedTrx.id)}><Mail size={18} aria-hidden="true" /> {processingAction ? 'Mengirim…' : 'Kirim ulang email akses'}</button></div>}
                         </div>
                     </div>
                 )}

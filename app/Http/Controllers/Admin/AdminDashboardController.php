@@ -82,7 +82,9 @@ class AdminDashboardController extends Controller
             ],
             'salesData' => $salesData,
             // fetch last 5 transactions
-            'recentTransactions' => Transaction::with(['user', 'items.product'])->latest()->take(5)->get()
+            'recentTransactions' => Transaction::with(['user', 'items.product'])
+                ->where('purpose', Transaction::PURPOSE_PRODUCT)
+                ->latest()->take(5)->get()
         ]);
     }
 }

@@ -1,7 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     LayoutDashboard, Package, FileBox, Receipt, Users,
-    MessageSquare, FileEdit, CreditCard, Bot, LogOut, ChevronRight, Menu, Megaphone, Settings
+    MessageSquare, FileEdit, CreditCard, Bot, LogOut, ChevronRight, Menu, Megaphone, Settings, CalendarDays
 } from 'lucide-react';
 import { useContent } from '../Contexts/ContentContext';
 import { getStorageUrl } from '../Utils/helpers';
@@ -17,6 +17,7 @@ const menuGroups = [
         label: 'Operasional',
         items: [
             { href: route('admin.transactions.index'), icon: Receipt, label: 'Transaksi' },
+            { href: route('admin.consultations.index'), icon: CalendarDays, label: 'Konsultasi' },
             { href: route('admin.products.index'), icon: Package, label: 'Produk' },
             { href: route('admin.categories.index'), icon: FileBox, label: 'Kategori' },
             { href: route('admin.users.index'), icon: Users, label: 'Pengguna' },

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 
 class TransactionFinalizer
 {
@@ -22,7 +23,7 @@ class TransactionFinalizer
     ): array {
         $finalized = DB::transaction(function () use ($transaction, $status, $paymentType, $payload, $guard) {
             $locked = Transaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
-            $locked->load(['user', 'items.product.category', 'payment.paymentMethod']);
+            $locked->load(['user', 'items.product.category', 'payment.paymentMethod', 'consultationAppointment']);
 
             if ($locked->status === 'success') {
                 return null;
@@ -30,6 +31,13 @@ class TransactionFinalizer
 
             if ($guard) {
                 $guard($locked);
+            }
+
+            if ($status === 'success'
+                && $locked->purpose === Transaction::PURPOSE_CONSULTATION_DEPOSIT
+                && ($locked->consultationAppointment?->status !== 'deposit_review'
+                    || ! $locked->consultationAppointment->deposit_due_at?->isFuture())) {
+                throw ValidationException::withMessages(['transaction' => 'DP hanya dapat disetujui saat bukti sedang diperiksa dan batas bayar masih aktif.']);
             }
 
             $locked->update([
@@ -54,6 +62,12 @@ class TransactionFinalizer
                 return null;
             }
 
+            if ($locked->purpose === Transaction::PURPOSE_CONSULTATION_DEPOSIT) {
+                $locked->consultationAppointment?->update(['status' => 'booked']);
+
+                return $locked->fresh()->load(['payment.paymentMethod', 'consultationAppointment']);
+            }
+
             foreach ($locked->items as $item) {
                 if (! $item->product_id) {
                     continue;
@@ -73,6 +87,10 @@ class TransactionFinalizer
 
         if (! $finalized) {
             return ['changed' => false, 'email_sent' => true];
+        }
+
+        if ($finalized->purpose !== Transaction::PURPOSE_PRODUCT) {
+            return ['changed' => true, 'email_sent' => true];
         }
 
         return [

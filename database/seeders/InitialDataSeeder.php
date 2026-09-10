@@ -201,7 +201,8 @@ class InitialDataSeeder extends Seeder
                 'heroTitleLine2' => 'Akselerasi Karir Anda',
                 'heroSubtitle' => 'Pelajari keterampilan digital terbaru dari para mentor berpengalaman. Ebook, Video Kelas, Webinar, dan Kelas Offline tersedia untuk membantu perjalanan sukses Anda.',
                 'ctaPrimary' => 'Jelajahi Produk',
-                'ctaSecondary' => 'Lihat Paket Bundling'
+                'ctaSecondary' => 'Lihat Paket Bundling',
+                'consultation' => config('consultation.public'),
             ],
             'about' => [
                 'heroTitle' => 'Mencerdaskan Generasi Digital',

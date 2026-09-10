@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\WebpEncoder;
@@ -178,6 +179,12 @@ class AdminSettingController extends Controller
 
     public function saveContent(Request $request)
     {
+        if (! $request->has('home.consultation')) {
+            $homeInput = $request->input('home', []);
+            $homeInput['consultation'] = config('consultation.public');
+            $request->merge(['home' => $homeInput]);
+        }
+
         $request->validate([
             'home' => 'required|array',
             'home.faqTitle' => 'nullable|string|max:160',
@@ -193,6 +200,27 @@ class AdminSettingController extends Controller
             'home.heroCards.*.subtitle' => 'nullable|string|max:300',
             'home.heroCards.*.image' => 'nullable|string|max:2048',
             'home.heroCards.*.url' => ['nullable', 'string', 'max:2048', 'regex:/^(\/(?!\/)|https?:\/\/)/i'],
+            'home.consultation' => 'required|array',
+            'home.consultation.title' => 'required|string|max:160',
+            'home.consultation.subtitle' => 'required|string|max:500',
+            'home.consultation.scheduleLabel' => 'required|string|max:120',
+            'home.consultation.ctaLabel' => 'required|string|max:80',
+            'home.consultation.packages' => 'required|array|size:4',
+            'home.consultation.packages.*.slug' => 'required|string|max:80|distinct',
+            'home.consultation.packages.*.name' => 'required|string|max:120',
+            'home.consultation.packages.*.icon' => 'required|string|max:80',
+            'home.consultation.packages.*.durationLabel' => 'required|string|max:80',
+            'home.consultation.packages.*.priceLabel' => 'required|string|max:120',
+            'home.consultation.packages.*.popular' => 'required|boolean',
+            'home.consultation.packages.*.description' => 'required|string|max:300',
+            'home.consultation.packages.*.benefits' => 'required|array|min:1|max:8',
+            'home.consultation.packages.*.benefits.*' => 'required|string|max:180',
+            'home.consultation.packages.*.options' => 'required|array|min:1|max:4',
+            'home.consultation.packages.*.options.*.key' => 'required|string|max:80',
+            'home.consultation.packages.*.options.*.label' => 'required|string|max:120',
+            'home.consultation.packages.*.options.*.durationMinutes' => 'required|integer|min:15|max:240',
+            'home.consultation.packages.*.options.*.totalPrice' => 'required|integer|min:1000|max:100000000',
+            'home.consultation.packages.*.options.*.depositAmount' => 'required|integer|min:500|max:50000000',
             'about' => 'required|array',
             'contact' => 'required|array',
             'contact.pageTitle' => 'nullable|string|max:80',
@@ -251,6 +279,15 @@ class AdminSettingController extends Controller
 
         $branding = $request->input('branding');
         $home = $request->input('home');
+        foreach ($home['consultation']['packages'] as $package) {
+            foreach ($package['options'] as $option) {
+                if ((int) $option['depositAmount'] * 2 !== (int) $option['totalPrice']) {
+                    throw ValidationException::withMessages([
+                        'home.consultation.packages' => 'DP setiap pilihan konsultasi harus tepat 50% dari harga total.',
+                    ]);
+                }
+            }
+        }
         $about = $request->input('about');
         $oldBranding = null;
         $oldHome = null;
@@ -383,6 +420,7 @@ class AdminSettingController extends Controller
             DB::table('user_products')->delete();
             TransactionItem::query()->delete();
             Transaction::query()->delete();
+            DB::table('consultation_appointments')->delete();
             Product::query()->delete();
             Category::query()->delete();
 

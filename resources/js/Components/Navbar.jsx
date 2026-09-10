@@ -66,6 +66,7 @@ export default function Navbar({ previewMode = false }) {
     const navLinks = [
         { name: 'home', href: route('home'), label: home.navHomeLabel, previewId: 'preview-home-nav-home' },
         { name: 'products', href: route('products'), label: home.navProductsLabel, previewId: 'preview-home-nav-products' },
+        { name: 'consultations.*', href: route('consultations.index'), label: home.navConsultationLabel || 'Konsultasi', previewId: 'preview-home-nav-consultation' },
         { name: 'ads', href: route('ads'), label: 'Promo' },
         { name: 'about', href: route('about'), label: home.navAboutLabel, previewId: 'preview-home-nav-about' },
         { name: 'contact', href: route('contact'), label: home.navContactLabel, previewId: 'preview-home-nav-contact' },

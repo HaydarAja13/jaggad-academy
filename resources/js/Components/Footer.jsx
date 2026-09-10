@@ -16,6 +16,7 @@ export default function Footer() {
         { id: 'preview-home-footer-product-offline', label: home.footerProductOfflineLabel, href: route('products', { category: 'offline' }) },
     ];
     const companyLinks = [
+        { id: 'preview-home-footer-consultation', label: home.navConsultationLabel || 'Konsultasi', href: route('consultations.index') },
         { id: 'preview-home-footer-about', label: home.footerAboutLabel, href: route('about') },
         { id: 'preview-home-footer-contact', label: home.footerContactLabel, href: route('contact') },
     ];

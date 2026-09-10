@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Product;
+use App\Models\ConsultationAppointment;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Services\TransactionFinalizer;
@@ -215,6 +216,76 @@ class CheckoutController extends Controller
         }
 
         return back()->with('success', 'Bukti transfer baru berhasil dikirim dan menunggu verifikasi admin.');
+    }
+
+    public function uploadConsultationProof(Request $request, ConsultationAppointment $consultationAppointment)
+    {
+        $validated = $request->validate([
+            'payment_method_id' => 'required|exists:payment_methods,id',
+            'proof' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120|dimensions:max_width=8000,max_height=8000',
+        ]);
+        $paymentMethod = PaymentMethod::query()
+            ->whereKey($validated['payment_method_id'])
+            ->where('type', PaymentMethod::TYPE_BANK_TRANSFER)
+            ->where('status', true)
+            ->first();
+        if (! $paymentMethod) {
+            throw ValidationException::withMessages(['payment_method_id' => 'Rekening pembayaran sedang tidak tersedia.']);
+        }
+
+        $proofPath = $this->saveImageAsWebp($request->file('proof'), 'payments');
+        $oldProof = null;
+        try {
+            DB::transaction(function () use ($consultationAppointment, $paymentMethod, $proofPath, &$oldProof) {
+                $appointment = ConsultationAppointment::whereKey($consultationAppointment->id)->lockForUpdate()->firstOrFail();
+                if ($appointment->status !== 'awaiting_deposit' || ! $appointment->deposit_due_at?->isFuture()) {
+                    throw ValidationException::withMessages(['proof' => 'Link pembayaran sudah kedaluwarsa atau booking tidak lagi menunggu DP.']);
+                }
+
+                $transaction = $appointment->transactions()
+                    ->where('purpose', Transaction::PURPOSE_CONSULTATION_DEPOSIT)
+                    ->where('status', 'pending')
+                    ->latest()
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                $payment = $transaction->payment;
+                if ($payment && $payment->status !== 'rejected') {
+                    throw ValidationException::withMessages(['proof' => 'Bukti pembayaran sudah dikirim dan sedang diperiksa.']);
+                }
+
+                if ($payment) {
+                    $oldProof = $payment->proof_image;
+                    $payment->update([
+                        'payment_method_id' => $paymentMethod->id,
+                        'amount' => $appointment->deposit_amount,
+                        'proof_image' => $proofPath,
+                        'status' => 'pending',
+                        'rejection_reason' => null,
+                    ]);
+                } else {
+                    Payment::create([
+                        'transaction_id' => $transaction->id,
+                        'payment_method_id' => $paymentMethod->id,
+                        'amount' => $appointment->deposit_amount,
+                        'proof_image' => $proofPath,
+                        'status' => 'pending',
+                    ]);
+                }
+
+                $appointment->update(['status' => 'deposit_review']);
+            });
+        } catch (\Throwable $exception) {
+            Storage::disk('local')->delete($proofPath);
+            throw $exception;
+        }
+
+        if ($oldProof && $oldProof !== $proofPath) {
+            foreach (['local', 'public'] as $disk) {
+                Storage::disk($disk)->delete($oldProof);
+            }
+        }
+
+        return back()->with('success', 'Bukti DP berhasil dikirim dan sedang diperiksa admin.');
     }
 
     public function proof(Request $request, Payment $payment)

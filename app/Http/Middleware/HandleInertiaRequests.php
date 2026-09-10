@@ -32,6 +32,12 @@ class HandleInertiaRequests extends Middleware
     {
         $contentData = SiteContent::where('key', 'site_content')->first();
         $dbContent = $contentData ? json_decode($contentData->value, true) : null;
+        $savedConsultation = data_get($dbContent, 'home.consultation', []);
+        data_set(
+            $dbContent,
+            'home.consultation',
+            array_replace(config('consultation.public'), is_array($savedConsultation) ? $savedConsultation : []),
+        );
 
         $purchasedProductIds = [];
         if ($request->user()) {
@@ -65,6 +71,7 @@ class HandleInertiaRequests extends Middleware
                 'email_warning' => $request->session()->get('email_warning'),
                 'snap_token' => $request->session()->get('snap_token'),
                 'trx_code' => $request->session()->get('trx_code'),
+                'booking_code' => $request->session()->get('booking_code'),
             ],
         ];
     }

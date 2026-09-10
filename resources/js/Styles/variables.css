@@ -91,7 +91,8 @@
   --transition-slow: 0.4s ease;
 
   /* ── Layout ── */
-  --container-width: 1280px;
+  /* Public shell width: 1280px × 1.15. Admin uses its own sidebar/layout sizing. */
+  --container-width: 1472px;
   --navbar-height: 60px;
   --sidebar-width: 264px;
   --sidebar-collapsed-width: 88px;

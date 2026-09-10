@@ -37,7 +37,7 @@ class PublicController extends Controller
         $stats = [
             'users' => User::where('role', 'customer')->count(),
             'products' => Product::count(),
-            'sales' => Transaction::where('status', 'success')->count(),
+            'sales' => Transaction::where('purpose', Transaction::PURPOSE_PRODUCT)->where('status', 'success')->count(),
         ];
 
         return Inertia::render('Guest/Welcome', [

@@ -31,6 +31,16 @@
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
+        @if(request()->routeIs('consultations.*'))
+        <!--
+        THESIS: Consultation is a composed decision desk where a guest can compare four honest packages and request one precise offline appointment without ecommerce clutter.
+        OWN-WORLD: Cool-white fields, warm rules, ink-black Chillax headings, Synonym copy, and one deep-maroon package and action mass.
+        STORY: Compare scope and duration, understand the 50% deposit, request a valid evening schedule, then wait for personal WhatsApp confirmation.
+        FIRST VIEWPORT: An editorial introduction and schedule rule lead directly into the four-package board; the booking form follows with a persistent financial summary on wide screens.
+        FORM: Approved JAGGAD consultation desk direction, plan-2026-09-10.
+        FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+        -->
+        @endif
         @if(request()->routeIs('products.detail'))
         <!--
         THESIS: A familiar product-detail layout makes the media, product facts, and purchase action immediately legible without oversized marketing theatrics.

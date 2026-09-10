@@ -1,6 +1,6 @@
 # Alur Transaksi JAGGAD Academy
 
-Dokumen ini menggambarkan implementasi source code per 7 September 2026. Sumber kebenaran nominal adalah database/config server; browser tidak dipercaya untuk harga atau status pembayaran.
+Dokumen ini menggambarkan implementasi source code per 10 September 2026. Sumber kebenaran nominal adalah database/config server; browser tidak dipercaya untuk harga atau status pembayaran.
 
 ## 1. Gambaran umum
 
@@ -114,7 +114,28 @@ Admin dapat:
 
 Approve berulang tidak menggandakan akses atau statistik.
 
-## 6. TransactionFinalizer
+## 6. Konsultasi offline
+
+Konsultasi adalah domain appointment terpisah dari katalog produk. Customer tidak perlu login dan status disampaikan manual melalui WhatsApp.
+
+1. Guest memilih paket/opsi dan mengajukan satu jadwal minimal 24 jam sebelumnya.
+2. Backend membaca ulang durasi, harga total, dan DP 50% dari CMS; angka browser diabaikan.
+3. Jadwal hanya valid Selasa–Sabtu pukul 19.00–23.00 WIB dan sesi wajib selesai sebelum jam tutup.
+4. Admin memilih mentor dan lokasi, lalu sistem menolak rentang yang bertabrakan untuk mentor yang sama.
+5. Setelah approve, sistem membuat transaksi DP pending dan link bertanda tangan yang kedaluwarsa dalam 24 jam.
+6. Customer memilih rekening transfer aktif dan mengunggah bukti melalui link tersebut.
+7. Admin memverifikasi DP pada halaman transaksi. Finalizer mengubah appointment menjadi `booked` tanpa memberi akses produk atau mengirim receipt produk.
+8. Setelah pertemuan, admin mencatat pelunasan tepat sebesar harga total dikurangi DP beserta metode bayar.
+
+Aturan perubahan:
+
+- Customer dapat reschedule satu kali, minimal 24 jam sebelum sesi; admin tetap menjalankan pemeriksaan bentrok.
+- Reschedule oleh JAGGAD/mentor tidak memakai kuota customer.
+- Pembatalan atau no-show customer membuat DP hangus.
+- Pembatalan oleh JAGGAD/mentor dapat dijadwal ulang atau dicatat sebagai refund DP penuh; transfer refund tetap manual.
+- Scheduler melepas hold yang belum dibayar setelah batas DP lewat.
+
+## 7. TransactionFinalizer
 
 Semua jalur sukses—verify browser, webhook, dan approve admin—melewati `TransactionFinalizer`.
 
@@ -133,7 +154,7 @@ Setelah commit:
 - Meta CAPI Purchase dikirim;
 - kegagalan salah satu integrasi dicatat tetapi tidak mencabut akses.
 
-## 7. Email dan Meta
+## 8. Email dan Meta
 
 - Receipt dikirim untuk transaksi sukses dan dapat dikirim ulang admin.
 - Email penolakan dikirim pada penolakan bukti manual.
@@ -142,7 +163,7 @@ Setelah commit:
 - Email dan telepon di-hash SHA-256 sebelum dikirim ke Meta.
 - Graph API version dapat dikonfigurasi dan default saat audit adalah v26.0.
 
-## 8. Materi dan progress
+## 9. Materi dan progress
 
 - Endpoint publik menghapus `materials[*].link` dari payload produk.
 - Halaman learning memeriksa kepemilikan `user_products`.
@@ -151,7 +172,7 @@ Setelah commit:
 - Materi kosong/tanpa link tidak dapat ditandai selesai.
 - Admin hanya boleh menyimpan link materi HTTP/HTTPS.
 
-## 9. Invariant keamanan
+## 10. Invariant keamanan
 
 Perubahan transaksi harus mempertahankan semua aturan berikut:
 
@@ -164,10 +185,12 @@ Perubahan transaksi harus mempertahankan semua aturan berikut:
 - Nominal/order Midtrans harus sama dengan database.
 - `capture` bukan sukses tanpa fraud accept.
 - Bukti transfer dan link materi tidak boleh menjadi asset publik.
+- Link pembayaran konsultasi harus bertanda tangan dan memiliki waktu kedaluwarsa.
+- Bentrok konsultasi diperiksa per mentor di dalam lock yang menyerialkan perubahan jadwal.
 - Kegagalan provider eksternal tidak boleh merusak data yang sudah committed.
 - User inactive tidak boleh melanjutkan session.
 
-## 10. Matriks pengujian sebelum live
+## 11. Matriks pengujian sebelum live
 
 | Skenario | Otomatis | Wajib sandbox/live |
 |---|---:|---:|
@@ -183,13 +206,18 @@ Perubahan transaksi harus mempertahankan semua aturan berikut:
 | Privasi bukti antar-user | Ya | Ya |
 | Receipt/reset/rejection email | Sebagian | Ya |
 | Pixel/CAPI deduplication | Payload diuji | Ya, Test Events |
+| Harga/DP konsultasi dimanipulasi | Ya | Opsional |
+| Jadwal di luar jam layanan / bentrok mentor | Ya | Ya |
+| Link DP tanpa signature / kedaluwarsa | Ya | Ya |
+| Reschedule, pelunasan, pembatalan, refund | Ya | Ya |
 
-## 11. Batasan yang disengaja
+## 12. Batasan yang disengaja
 
 - Package belum memiliki CRUD admin; perubahan dilakukan melalui config dan deploy.
 - Tidak ada quantity; satu transaksi mempunyai paling banyak satu unit tiap produk.
 - Belum ada refund/chargeback otomatis, coupon, pajak/invoice fiskal, atau rekonsiliasi settlement.
 - Webinar/kelas offline belum memiliki seat inventory.
 - Email verification akun sengaja nonaktif.
+- WhatsApp dan refund konsultasi tetap manual; belum ada WhatsApp Business API atau payout otomatis.
 
 Jika fitur di atas dibutuhkan untuk peluncuran, masukkan sebagai blocker bisnis sebelum go-live. Checklist infrastruktur dan sign-off berada di `docs/PRODUCTION_READINESS_CHECKLIST.md`.

@@ -19,7 +19,7 @@ class AdminTransactionController extends Controller
 {
     public function index()
     {
-        $transactions = Transaction::with(['user', 'items.product', 'payment.paymentMethod'])
+        $transactions = Transaction::with(['user', 'items.product', 'payment.paymentMethod', 'consultationAppointment'])
             ->latest()
             ->paginate(20);
 
@@ -47,6 +47,10 @@ class AdminTransactionController extends Controller
             return back()->with('info', 'Transaksi ini sudah pernah diverifikasi.');
         }
 
+        if ($transaction->purpose === Transaction::PURPOSE_CONSULTATION_DEPOSIT) {
+            return back()->with('success', 'DP terverifikasi. Jadwal konsultasi sekarang berstatus terkonfirmasi.');
+        }
+
         $response = back()->with('success', 'Pembayaran terverifikasi dan akses produk telah diaktifkan.');
         return $result['email_sent']
             ? $response
@@ -61,7 +65,7 @@ class AdminTransactionController extends Controller
 
         $rejectedTransaction = DB::transaction(function () use ($transaction, $validated) {
             $lockedTransaction = Transaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
-            $lockedTransaction->load(['user', 'items.product', 'payment.paymentMethod']);
+            $lockedTransaction->load(['user', 'items.product', 'payment.paymentMethod', 'consultationAppointment']);
 
             if ($lockedTransaction->status !== 'pending' || !$lockedTransaction->payment || $lockedTransaction->payment->status !== 'pending') {
                 throw ValidationException::withMessages(['transaction' => 'Transaksi ini tidak lagi menunggu verifikasi.']);
@@ -72,8 +76,20 @@ class AdminTransactionController extends Controller
                 'rejection_reason' => trim($validated['reason']),
             ]);
 
-            return $lockedTransaction->refresh()->load(['user', 'items.product', 'payment.paymentMethod']);
+            if ($lockedTransaction->purpose === Transaction::PURPOSE_CONSULTATION_DEPOSIT) {
+                $expired = ! $lockedTransaction->consultationAppointment?->deposit_due_at?->isFuture();
+                $lockedTransaction->consultationAppointment?->update(['status' => $expired ? 'expired' : 'awaiting_deposit']);
+                if ($expired) {
+                    $lockedTransaction->update(['status' => 'expired']);
+                }
+            }
+
+            return $lockedTransaction->refresh()->load(['user', 'items.product', 'payment.paymentMethod', 'consultationAppointment']);
         });
+
+        if ($rejectedTransaction->purpose === Transaction::PURPOSE_CONSULTATION_DEPOSIT) {
+            return back()->with('success', 'Bukti DP ditolak. Hubungi customer melalui WhatsApp agar mengunggah ulang sebelum batas waktu.');
+        }
 
         try {
             Mail::to($rejectedTransaction->user->email)->send(new PaymentRejectedMail($rejectedTransaction));
@@ -88,7 +104,7 @@ class AdminTransactionController extends Controller
 
     public function resendAccessEmail(Transaction $transaction)
     {
-        if ($transaction->status !== 'success') {
+        if ($transaction->purpose !== Transaction::PURPOSE_PRODUCT || $transaction->status !== 'success') {
             throw ValidationException::withMessages(['transaction' => 'Email akses hanya dapat dikirim untuk transaksi terverifikasi.']);
         }
 
@@ -113,7 +129,7 @@ class AdminTransactionController extends Controller
 
     public function exportCsv()
     {
-        $transactions = Transaction::with(['user', 'items.product', 'payment.paymentMethod'])
+        $transactions = Transaction::with(['user', 'items.product', 'payment.paymentMethod', 'consultationAppointment'])
             ->latest()
             ->get();
 
@@ -135,12 +151,14 @@ class AdminTransactionController extends Controller
             foreach ($transactions as $t) {
                 $row['ID'] = $t->transaction_code;
                 $row['Tanggal'] = $t->created_at->format('Y-m-d H:i');
-                $row['Pelanggan'] = $t->user->name ?? 'N/A';
+                $row['Pelanggan'] = $t->user->name ?? $t->consultationAppointment?->customer_name ?? 'N/A';
                 $row['Email'] = $t->user->email ?? 'N/A';
-                $row['Produk'] = $t->items->map(fn($i) => $i->product?->name ?? 'Produk dihapus')->join(', ');
+                $row['Produk'] = $t->purpose === Transaction::PURPOSE_PRODUCT
+                    ? $t->items->map(fn($i) => $i->product?->name ?? 'Produk dihapus')->join(', ')
+                    : trim(($t->consultationAppointment?->package_name ?? 'Konsultasi').' · '.($t->purpose === Transaction::PURPOSE_CONSULTATION_DEPOSIT ? 'DP' : 'Pelunasan'));
                 $row['Total'] = $t->total_amount;
                 $row['Status'] = $t->status;
-                $row['Metode'] = $t->payment->paymentMethod->bank_name ?? 'Gateway/Lainnya';
+                $row['Metode'] = $t->payment?->paymentMethod?->bank_name ?? $t->payment_type ?? 'Gateway/Lainnya';
 
                 fputcsv($file, array_values($row));
             }

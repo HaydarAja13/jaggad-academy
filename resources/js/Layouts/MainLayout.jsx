@@ -6,7 +6,7 @@ import { useContent } from '../Contexts/ContentContext';
 export default function MainLayout({ children, hideNavbar = false, hideFooter = false, previewMode = false }) {
     const { content } = useContent();
     const whatsappNumber = (content?.contact?.phone || '').replace(/[^0-9]/g, '');
-    const showWhatsappButton = whatsappNumber && !route().current('contact');
+    const showWhatsappButton = whatsappNumber && !route().current('contact') && !route().current('consultations.*');
 
     return (
         <div className="guest-theme min-h-screen bg-[var(--color-bg)] flex flex-col">

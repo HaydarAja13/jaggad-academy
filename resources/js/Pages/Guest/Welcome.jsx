@@ -6,6 +6,7 @@ import {
     ShoppingBag
 } from 'lucide-react';
 import ProductCard from '../../Components/ProductCard';
+import ConsultationPackages from '../../Components/ConsultationPackages';
 import promoActivities from '../../Data/promoActivities.json';
 import MainLayout from '../../Layouts/MainLayout';
 import { activityDelay, buildActivities, pickNextActivityIndex } from '../../Utils/activityRotation';
@@ -329,6 +330,8 @@ export default function Welcome({ products = [], toastProducts = [], categories 
                     ) : <p id="preview-home-format-empty" className="format-board__empty">{home.catEmptyText}</p>}
                 </div>
             </section>
+
+            <ConsultationPackages consultation={home.consultation} compact />
 
             {/* Why JAGGAD */}
             <section className="why-showcase">

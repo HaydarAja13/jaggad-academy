@@ -6,9 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
+    public const PURPOSE_PRODUCT = 'product_purchase';
+    public const PURPOSE_CONSULTATION_DEPOSIT = 'consultation_deposit';
+    public const PURPOSE_CONSULTATION_BALANCE = 'consultation_balance';
+
     protected $fillable = [
         'transaction_code',
+        'purpose',
         'user_id',
+        'consultation_appointment_id',
         'total_amount',
         'status',
         'snap_token',
@@ -35,5 +41,10 @@ class Transaction extends Model
     public function payment()
     {
         return $this->hasOne(Payment::class);
+    }
+
+    public function consultationAppointment()
+    {
+        return $this->belongsTo(ConsultationAppointment::class);
     }
 }
