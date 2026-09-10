@@ -81,7 +81,8 @@ class ConsultationManager
             ->when($ignoreAppointmentId, fn ($query) => $query->where('id', '!=', $ignoreAppointmentId))
             ->get()
             ->contains(function (ConsultationAppointment $appointment) use ($start, $end) {
-                $existingStart = $appointment->scheduled_start_at;
+                // Timestamps are persisted in UTC; do not let APP_TIMEZONE reinterpret them on read.
+                $existingStart = Carbon::parse($appointment->getRawOriginal('scheduled_start_at'), 'UTC');
                 $existingEnd = $existingStart->copy()->addMinutes($appointment->duration_minutes);
 
                 return $existingStart->lt($end) && $existingEnd->gt($start);
