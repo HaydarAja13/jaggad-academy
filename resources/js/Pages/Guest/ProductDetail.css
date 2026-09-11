@@ -61,9 +61,10 @@
 
 .pd-price { display: grid; gap: 4px; padding: 20px 0 16px; }
 .pd-price > span { color: #67555c; font-size: 16px; }
-.pd-price > strong { font-family: var(--font-display); font-size: 2rem; line-height: 1; letter-spacing: -.03em; }
+.pd-price > strong { color: #171316; font-family: var(--font-display); font-size: 2rem; font-weight: var(--font-semibold); font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -.03em; }
 .pd-price div { display: flex; align-items: center; gap: 9px; margin-top: 5px; }
-.pd-price del { color: #67555c; font-size: 16px; }
+.pd-price del { color: #171316; font-family: var(--font-display); font-size: 2rem; font-weight: var(--font-semibold); font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -.03em; text-decoration-color: #660810; text-decoration-thickness: 4px; white-space: nowrap; }
+.pd-price div strong { color: #660810; font-size: var(--text-xl); font-weight: var(--font-medium); font-variant-numeric: tabular-nums; line-height: 1.2; white-space: nowrap; }
 .pd-price b { padding: 5px 9px; border-radius: 999px; background: #f0e7e9; color: #660810; font-size: 16px; }
 
 .pd-actions { display: grid; gap: 10px; }

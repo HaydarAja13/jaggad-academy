@@ -181,7 +181,7 @@ export default function Ads({ previewMode = false, customData = null, dbAds, dbP
 
                                             <div className="promo-card__purchase">
                                                 <div className="promo-card__price-block">
-                                                    {normalPrice > price && <span className="promo-card__old-price">{formatCurrency(normalPrice)}</span>}
+                                                    {normalPrice > price && <del className="promo-card__old-price">{formatCurrency(normalPrice)}</del>}
                                                     <strong>{formatCurrency(price)}</strong>
                                                     {discount > 0 && <span>Hemat {formatCurrency(normalPrice - price)}</span>}
                                                 </div>

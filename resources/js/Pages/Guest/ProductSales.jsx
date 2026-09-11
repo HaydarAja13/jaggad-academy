@@ -96,7 +96,7 @@ function ProductStory({ product, onCheckout, openFaq, setOpenFaq }) {
                     <div id="sales-hero-image" className="sales-offer__media">{product.thumbnail ? <img src={product.thumbnail} alt={product.title} /> : <BookOpen size={64} aria-hidden="true" />}{product.badge && <span>{product.badge}</span>}</div>
                     <div className="sales-offer__body">
                         <p id="sales-offer-label">{product.sales.offer.label}</p>
-                        <div className="sales-offer__price"><strong>{formatCurrency(product.price)}</strong>{product.originalPrice > product.price && <del>{formatCurrency(product.originalPrice)}</del>}</div>
+                        <div className="sales-offer__price">{product.originalPrice > product.price && <del>{formatCurrency(product.originalPrice)}</del>}<strong>{formatCurrency(product.price)}</strong></div>
                         {product.originalPrice > product.price && <span className="sales-offer__saving">Hemat {formatCurrency(product.originalPrice - product.price)}</span>}
                         {product.quotaText && <p id="sales-offer-quota" className="sales-offer__note">{product.quotaText}</p>}
                         <button id="sales-offer-cta" type="button" onClick={onCheckout}>{product.sales.offer.cta} <ArrowRight size={19} /></button>

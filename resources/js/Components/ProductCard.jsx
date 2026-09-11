@@ -91,8 +91,8 @@ export default function ProductCard({ product, className = '', previewIdPrefix }
                 <div className="product-card__footer">
                     {isPurchased ? <strong className="product-card__access"><CheckCircle2 size={18} aria-hidden="true" /> Akses aktif</strong> : (
                         <div className="product-card__price">
-                            <span className="price-current">{formatCurrency(price)}</span>
-                            {originalPrice > price && <span className="price-original">{formatCurrency(originalPrice)}</span>}
+                            {originalPrice > price && <del className="price-original">{formatCurrency(originalPrice)}</del>}
+                            <strong className="price-current">{formatCurrency(price)}</strong>
                         </div>
                     )}
 

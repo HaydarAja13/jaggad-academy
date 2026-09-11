@@ -58,7 +58,7 @@
     color: #660810;
     font-family: var(--font-display);
     font-size: 1rem;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: -0.02em;
 }
 
@@ -262,7 +262,7 @@
 .sales-offer__price strong {
     font-family: var(--font-display);
     font-size: 2rem;
-    font-weight: 800;
+    font-weight: var(--font-semibold);
     line-height: 1;
     letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
@@ -273,6 +273,30 @@
 .sales-offer__note {
     color: #ffffff;
     font-size: 1rem;
+}
+
+.sales-offer__price:has(del) {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sales-offer__price:has(del) del {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: var(--font-semibold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    text-decoration-thickness: 4px;
+    white-space: nowrap;
+}
+
+.sales-offer__price:has(del) strong {
+    font-size: var(--text-xl);
+    font-weight: var(--font-medium);
+    line-height: 1.2;
+    white-space: nowrap;
 }
 
 .sales-offer__saving {

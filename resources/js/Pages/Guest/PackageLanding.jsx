@@ -38,8 +38,8 @@ export default function PackageLanding({ slug, serverPackage }) {
                         <h1 className="pkg-hero__title">{pkg.title}</h1>
                         <p className="pkg-hero__subtitle">{pkg.subtitle}</p>
                         <div className="pkg-hero__price">
+                            <del className="hero-price-original">{formatCurrency(pkg.originalPrice)}</del>
                             <span className="hero-price-current">{formatCurrency(pkg.price)}</span>
-                            <span className="hero-price-original">{formatCurrency(pkg.originalPrice)}</span>
                             <span className="hero-save">Hemat {formatCurrency(pkg.originalPrice - pkg.price)}</span>
                         </div>
                         <button className="btn-hero-primary" onClick={handleBuy}>
@@ -127,8 +127,8 @@ export default function PackageLanding({ slug, serverPackage }) {
                         <h2>Siap Memulai?</h2>
                         <p>Bergabunglah dengan ribuan pelajar yang telah berhasil bersama JAGGAD ACADEMY</p>
                         <div className="pkg-cta__price">
-                            <span>{formatCurrency(pkg.price)}</span>
                             <del>{formatCurrency(pkg.originalPrice)}</del>
+                            <span>{formatCurrency(pkg.price)}</span>
                         </div>
                         <button className="btn-hero-primary" onClick={handleBuy}>
                             Beli {pkg.title} Sekarang <ArrowRight size={18} />

@@ -66,7 +66,7 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
                         <h1 id="product-title">{title}</h1>
                         <p className="pd-intro">{product.short_description || description}</p>
                         <div className="pd-facts" aria-label="Ringkasan produk"><span><BookOpen size={18} /> {materials.length || '—'} bagian{pageCount ? ` · ${pageCount} halaman` : ''}</span><span><Check size={18} /> Materi digital</span></div>
-                        <div className="pd-price"><span>Harga</span><strong>{formatCurrency(price)}</strong>{originalPrice > price && <div><del>{formatCurrency(originalPrice)}</del><b>Hemat {discount}%</b></div>}</div>
+                        <div className="pd-price"><span>Harga</span>{originalPrice > price ? <><del>{formatCurrency(originalPrice)}</del><div><strong>{formatCurrency(price)}</strong><b>Hemat {discount}%</b></div></> : <strong>{formatCurrency(price)}</strong>}</div>
                         <div className="pd-actions">{action}</div>
                         <p className="pd-purchase__note">Detail pembayaran ditampilkan sebelum checkout.</p>
                     </aside>

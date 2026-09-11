@@ -54,21 +54,30 @@
 .pkg-hero__price {
     display: flex;
     align-items: center;
+    flex-direction: column;
     justify-content: center;
-    gap: var(--space-3);
+    gap: 6px;
     margin-bottom: var(--space-8);
     flex-wrap: wrap;
 }
 
 .hero-price-current {
-    font-size: var(--text-4xl);
-    font-weight: var(--font-extrabold);
+    color: var(--color-accent);
+    font-size: var(--text-xl);
+    font-weight: var(--font-medium);
+    font-variant-numeric: tabular-nums;
 }
 
 .hero-price-original {
-    font-size: var(--text-xl);
-    color: var(--color-text-muted);
-    text-decoration: line-through;
+    color: #171316;
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: var(--font-semibold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    text-decoration-color: var(--color-accent);
+    text-decoration-thickness: 4px;
 }
 
 .hero-save {
@@ -274,17 +283,27 @@
 .pkg-cta__price {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    flex-direction: column;
+    gap: 6px;
 }
 
 .pkg-cta__price span {
-    font-size: var(--text-3xl);
-    font-weight: var(--font-extrabold);
+    color: var(--color-accent);
+    font-size: var(--text-xl);
+    font-weight: var(--font-medium);
+    font-variant-numeric: tabular-nums;
 }
 
 .pkg-cta__price del {
-    font-size: var(--text-xl);
-    color: var(--color-text-muted);
+    color: #171316;
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: var(--font-semibold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    text-decoration-color: var(--color-accent);
+    text-decoration-thickness: 4px;
 }
 
 @media (max-width: 768px) {
