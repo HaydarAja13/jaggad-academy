@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ConsultationBookingTest extends TestCase
@@ -67,6 +68,40 @@ class ConsultationBookingTest extends TestCase
             'purpose' => Transaction::PURPOSE_CONSULTATION_DEPOSIT,
             'total_amount' => 100000,
         ]);
+    }
+
+    public function test_admin_queue_orders_oldest_requests_and_flags_active_time_conflicts(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $start = $this->validStart();
+        $first = $this->appointment('KON-FIRST-QUEUE', $start);
+        $second = $this->appointment('KON-SECOND-QUEUE', $start->copy()->addMinutes(15));
+
+        $first->update([
+            'scheduled_start_at' => $start->copy()->utc(),
+            'mentor_key' => 'mentor-1',
+            'mentor_name' => 'Mentor JAGGAD',
+            'location' => 'JAGGAD Studio',
+            'status' => 'booked',
+        ]);
+        $first->forceFill(['created_at' => now()->subMinutes(10)])->save();
+        $second->update([
+            'scheduled_start_at' => $start->copy()->addMinutes(15)->utc(),
+            'mentor_key' => 'mentor-2',
+            'mentor_name' => 'Mentor Kedua',
+            'location' => 'JAGGAD Studio',
+            'status' => 'booked',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.consultations.index', ['search' => 'KON-', 'conflict' => 1]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/AdminConsultations')
+                ->has('appointments.data', 2)
+                ->where('appointments.data.0.booking_code', 'KON-FIRST-QUEUE')
+                ->has('appointments.data.0.conflicts', 1)
+                ->where('appointments.data.0.conflicts.0.booking_code', 'KON-SECOND-QUEUE')
+                ->where('filters.conflict', true));
     }
 
     public function test_signed_payment_link_accepts_proof_and_approval_is_idempotent(): void

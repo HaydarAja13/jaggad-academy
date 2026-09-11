@@ -65,6 +65,7 @@ class AdminSettingController extends Controller
                 $validated[$secret] = $existingSettings[$secret];
             }
         }
+        $validated['midtrans_is_production'] = filter_var($validated['midtrans_is_production'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         SiteContent::updateOrCreate(
             ['key' => 'site_settings'],
@@ -279,6 +280,10 @@ class AdminSettingController extends Controller
 
         $branding = $request->input('branding');
         $home = $request->input('home');
+        foreach ($home['consultation']['packages'] as &$package) {
+            $package['popular'] = filter_var($package['popular'], FILTER_VALIDATE_BOOLEAN);
+        }
+        unset($package);
         foreach ($home['consultation']['packages'] as $package) {
             foreach ($package['options'] as $option) {
                 if ((int) $option['depositAmount'] * 2 !== (int) $option['totalPrice']) {

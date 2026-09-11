@@ -331,9 +331,7 @@ export default function Welcome({ products = [], toastProducts = [], categories 
                 </div>
             </section>
 
-            <ConsultationPackages consultation={home.consultation} compact />
-
-            {/* Why JAGGAD */}
+        {/* Why JAGGAD */}
             <section className="why-showcase">
                 <div className="container">
                     <header className="showcase-heading">
@@ -393,9 +391,11 @@ export default function Welcome({ products = [], toastProducts = [], categories 
                         {home.featuredCtaLabel || 'Lihat Semua Produk'} <ArrowRight size={18} />
                     </Link>
                 </div>
-            </section>
+        </section>
 
-            {homeFaqs.length > 0 && (
+        <ConsultationPackages consultation={home.consultation} compact />
+
+        {homeFaqs.length > 0 && (
                 <section className="home-faq" aria-labelledby="preview-home-faq-title">
                     <div className="container home-faq__layout">
                         <header className="home-faq__intro">

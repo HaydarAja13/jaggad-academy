@@ -28,6 +28,7 @@ const availableIcons = {
     Video, Mic, MessageSquare, Globe, Star, Heart, Rocket, Trophy, Lightbulb, TrendingUp,
     ShieldCheck, Clock, AlertTriangle, AlertCircle, Info, HelpCircle
 };
+const isChecked = value => value === true || value === 1 || value === '1' || value === 'true';
 
 const BLOCK_TYPES = [
     { type: 'image',   label: 'Gambar Tunggal',    icon: ImageIcon,          color: '#3b82f6' },
@@ -744,7 +745,7 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <div className="cms-consultation-packages">
                                         {(content.home.consultation?.packages || []).map((item, packageIndex) => (
                                             <section className="cms-consultation-package" key={item.slug}>
-                                                <div className="cms-consultation-package__heading"><strong>Paket {packageIndex + 1} · {item.slug}</strong><label><input type="checkbox" checked={Boolean(item.popular)} onChange={event => updateConsultationPackage(packageIndex, 'popular', event.target.checked)} /> Populer</label></div>
+                                                <div className="cms-consultation-package__heading"><strong>Paket {packageIndex + 1} · {item.slug}</strong><label><input type="checkbox" checked={isChecked(item.popular)} onChange={event => updateConsultationPackage(packageIndex, 'popular', event.target.checked)} /> Populer</label></div>
                                                 <label>Nama</label>
                                                 <input data-preview-id={`preview-home-consultation-${packageIndex}-name`} value={item.name || ''} onChange={event => updateConsultationPackage(packageIndex, 'name', event.target.value)} />
                                                 <label>Label durasi</label>

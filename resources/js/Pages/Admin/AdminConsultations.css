@@ -1,80 +1,799 @@
 @import "../../Styles/variables.css";
 
-.admin-consultations { max-width: 1440px; margin: 0 auto; padding: 40px; color: #171316; }
-.admin-consultations__header { display: flex; justify-content: space-between; gap: 32px; align-items: flex-end; margin-bottom: 36px; }
-.admin-consultations__header h1 { margin: 0 0 8px; font-family: var(--font-display); font-size: var(--text-4xl); }
-.admin-consultations__header p, .admin-consultations__section-heading p { margin: 0; color: #67555c; line-height: 1.6; }
-.admin-consultations__hours { display: flex; align-items: center; gap: 9px; color: #660810; font-weight: 700; white-space: nowrap; }
-.admin-consultations__list, .consultation-settings { margin-bottom: 40px; border: 1px solid #ded4d7; border-radius: 16px; background: #fff; overflow: hidden; }
-.admin-consultations__section-heading { display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 24px 28px; border-bottom: 1px solid #ded4d7; }
-.admin-consultations__section-heading h2 { margin: 0; font-family: var(--font-display); font-size: var(--text-2xl); }
-.admin-consultations__section-heading > span { color: #67555c; font-variant-numeric: tabular-nums; }
-
-.appointment-row { border-bottom: 1px solid #ded4d7; }
-.appointment-row:last-of-type { border-bottom: 0; }
-.appointment-row summary { display: grid; grid-template-columns: 150px 1.1fr 1fr 170px; gap: 22px; align-items: center; min-height: 82px; padding: 16px 28px; cursor: pointer; list-style: none; }
-.appointment-row summary::-webkit-details-marker { display: none; }
-.appointment-row summary:hover { background: #f7f3f4; }
-.appointment-row summary > span:not(.appointment-status) { display: grid; gap: 4px; min-width: 0; }
-.appointment-row summary strong, .appointment-row summary small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.appointment-row summary small { color: #67555c; }
-.appointment-status { justify-self: start; padding: 7px 11px; border-radius: 9999px; background: #f7f3f4; color: #660810; font-weight: 700; }
-.appointment-status--booked, .appointment-status--completed { background: color-mix(in srgb, var(--color-success) 12%, #fff); color: #171316; }
-.appointment-status--rejected, .appointment-status--cancelled, .appointment-status--no_show { background: color-mix(in srgb, var(--color-error) 10%, #fff); color: #9b111b; }
-.appointment-row__body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(420px, .9fr); gap: 40px; padding: 32px 28px; background: #f7f3f4; }
-.appointment-row__body h3 { margin: 0 0 20px; font-family: var(--font-display); font-size: var(--text-xl); }
-.appointment-details dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; margin: 0; }
-.appointment-details dl div { display: grid; gap: 3px; }
-.appointment-details dt { color: #67555c; }
-.appointment-details dd { margin: 0; font-weight: 600; line-height: 1.55; }
-.appointment-details__need { grid-column: 1 / -1; }
-.appointment-quick-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
-.appointment-quick-actions a, .appointment-quick-actions button, .appointment-actions__link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 14px; border: 1px solid #d8cdd1; border-radius: 9999px; background: #fff; color: #660810; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
-
-.appointment-actions { display: grid; gap: 16px; padding: 28px; border-radius: 16px; background: #fff; box-shadow: 0 18px 48px rgba(55, 30, 38, .11); }
-.appointment-actions h3 { margin-bottom: 2px; }
-.appointment-actions p { margin: 0; color: #67555c; line-height: 1.6; }
-.appointment-actions label, .consultation-settings label { display: grid; gap: 7px; color: #171316; font-weight: 600; }
-.appointment-actions input, .appointment-actions select, .appointment-actions textarea, .consultation-settings input { width: 100%; min-height: 48px; padding: 11px 13px; border: 1px solid #d8cdd1; border-radius: 10px; background: #fff; color: #171316; font: inherit; }
-.appointment-actions textarea { resize: vertical; }
-.appointment-actions__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.appointment-actions > button, .consultation-settings form > button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 11px 16px; border: 0; border-radius: 9999px; background: #660810; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
-.appointment-actions button.secondary, .consultation-mentors button.secondary { border: 1px solid #d8cdd1; background: #fff; color: #660810; }
-.appointment-actions button.danger { color: #9b111b; }
-.appointment-actions button:focus-visible, .appointment-actions input:focus-visible, .appointment-actions select:focus-visible, .appointment-actions textarea:focus-visible, .consultation-settings button:focus-visible, .consultation-settings input:focus-visible { outline: 3px solid #9b111b; outline-offset: 2px; }
-
-.admin-consultations__empty { display: grid; justify-items: center; gap: 8px; padding: 64px 24px; color: #67555c; text-align: center; }
-.admin-consultations__empty h3, .admin-consultations__empty p { margin: 0; }
-.admin-consultations__pagination { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; border-top: 1px solid #ded4d7; }
-.admin-consultations__pagination a { display: flex; align-items: center; gap: 6px; color: #660810; font-weight: 700; text-decoration: none; }
-
-.consultation-settings { padding-bottom: 28px; }
-.consultation-settings form { display: grid; gap: 28px; padding: 28px; }
-.consultation-settings__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.consultation-mentors { display: grid; gap: 12px; padding-top: 24px; border-top: 1px solid #ded4d7; }
-.consultation-mentors > div:first-child { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
-.consultation-mentors h3 { margin: 0; font-family: var(--font-display); font-size: var(--text-xl); }
-.consultation-mentors button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 9999px; cursor: pointer; }
-.consultation-mentor { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto 44px; gap: 12px; align-items: center; }
-.consultation-mentor > label { display: flex; grid-template-columns: none; flex-direction: row; align-items: center; gap: 8px; white-space: nowrap; }
-.consultation-mentor > label input { width: 18px; min-height: 18px; height: 18px; accent-color: #660810; }
-.consultation-mentor > button { color: #9b111b; background: #f7f3f4; }
-.consultation-settings form > button { justify-self: start; min-width: 210px; }
-
-@media (max-width: 1100px) {
-    .appointment-row summary { grid-template-columns: 140px 1fr 1fr; }
-    .appointment-row summary > span:last-child { display: none; }
-    .appointment-row__body { grid-template-columns: 1fr; }
+.admin-consultations {
+    width: 100%;
+    max-width: 1520px;
+    min-width: 0;
+    color: #171316;
 }
 
-@media (max-width: 760px) {
-    .admin-consultations { padding: 24px 16px; }
-    .admin-consultations__header { align-items: flex-start; flex-direction: column; }
-    .appointment-row summary { grid-template-columns: 1fr; gap: 8px; padding: 20px; }
-    .appointment-row summary > span:last-child { display: grid; }
-    .appointment-row__body { padding: 24px 20px; }
-    .appointment-details dl, .appointment-actions__pair, .consultation-settings__grid { grid-template-columns: 1fr; }
-    .consultation-mentor { grid-template-columns: 20px 1fr 44px; }
+.admin-consultations ::selection {
+    background: rgba(102, 8, 16, .18);
+    color: #171316;
+}
+
+.consultations-header,
+.consultations-filter-heading,
+.consultations-list-header,
+.consultations-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-width: 0;
+}
+
+.consultations-header > div:first-child,
+.consultations-filter-heading > div,
+.consultations-list-header > div,
+.consultations-section-heading > div {
+    min-width: 0;
+}
+
+.consultations-header h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-4xl);
+    letter-spacing: -.03em;
+}
+
+.consultations-header p,
+.consultations-filter-heading p,
+.consultations-list-header p,
+.consultations-section-heading p {
+    max-width: 72ch;
+    margin: 6px 0 0;
+    color: #67555c;
+    line-height: 1.55;
+}
+
+.consultations-hours {
+    min-height: 44px;
+    padding: 10px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    flex: 0 0 auto;
+    border: 1px solid #ded4d7;
+    border-radius: 999px;
+    background: #fff;
+    color: #660810;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+.consultations-overview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid #ded4d7;
+    border-radius: 16px;
+    background: #fff;
+    overflow: clip;
+}
+
+.consultations-overview > :is(div, button) {
+    min-width: 0;
+    min-height: 92px;
+    padding: 18px 24px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: center;
+    align-items: center;
+    gap: 3px 10px;
+    border: 0;
+    border-right: 1px solid #ded4d7;
+    border-radius: 0;
+    background: #fff;
+    color: #67555c;
+    text-align: left;
+}
+
+.consultations-overview > :last-child { border-right: 0; }
+.consultations-overview > div strong { grid-column: 1 / -1; }
+
+.consultations-overview strong {
+    color: #171316;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.consultations-overview span {
+    grid-column: 1 / -1;
+    overflow-wrap: anywhere;
+    color: #67555c;
+    font-weight: 400;
+}
+
+.consultations-overview button {
+    cursor: pointer;
+    color: #660810;
+    transition: background-color .18s ease;
+}
+
+.consultations-overview button strong,
+.consultations-overview button span { grid-column: 2; }
+.consultations-overview button strong { color: currentColor; }
+.consultations-overview button:hover,
+.consultations-overview button.active { background: #f7f3f4; }
+
+.consultations-filter-panel,
+.consultations-list,
+.consultation-settings {
+    min-width: 0;
+    border: 1px solid #ded4d7;
+    border-radius: 16px;
+    background: #fff;
+}
+
+.consultations-filter-heading,
+.consultations-list-header,
+.consultations-section-heading {
+    padding: 20px 24px;
+    border-bottom: 1px solid #ded4d7;
+}
+
+.consultations-filter-heading h2,
+.consultations-list-header h2,
+.consultations-section-heading h2,
+.consultation-mentors h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    letter-spacing: -.02em;
+}
+
+.consultations-reset {
+    min-height: 44px;
+    padding: 9px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    flex: 0 0 auto;
+    border: 1px solid #d8cdd1;
+    border-radius: 10px;
+    background: #fff;
+    color: #660810;
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.consultations-reset:hover { background: #f7f3f4; }
+
+.consultations-filters {
+    width: 100%;
+    min-width: 0;
+    padding: 20px 24px 24px;
+    display: grid;
+    gap: 20px;
+}
+
+.consultations-filters__primary {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.8fr) minmax(190px, .8fr) auto;
+    align-items: end;
+    gap: 16px;
+    min-width: 0;
+}
+
+.consultations-filter-field {
+    min-width: 0;
+    margin: 0 !important;
+    display: grid !important;
+    gap: 8px;
+}
+
+.consultations-filter-field > span:first-child {
+    color: #171316;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.consultations-filter-field :is(input, select),
+.consultations-filter-actions button {
+    width: 100%;
+    min-width: 0;
+    height: 48px;
+    min-height: 48px;
+    box-sizing: border-box;
+    border: 1px solid #d8cdd1;
+    border-radius: 10px;
+    background-color: #fff;
+    color: #171316;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.consultations-filter-field :is(input, select) { padding: 0 14px; }
+
+.consultations-filter-field select {
+    padding-right: 40px;
+    cursor: pointer;
+}
+
+.consultations-search-control {
+    position: relative;
+    min-width: 0;
+    display: block;
+}
+
+.consultations-search-control svg {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    color: #67555c;
+    pointer-events: none;
+}
+
+.consultations-search-control input { padding-left: 43px; }
+
+.consultations-filter-actions {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    gap: 10px;
+}
+
+.consultations-filter-actions button {
+    width: auto;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-color: #660810;
+    background: #660810;
+    color: #fff;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.consultations-filter-actions button.secondary {
+    border-color: #d8cdd1;
+    background: #fff;
+    color: #660810;
+    font-weight: 500;
+}
+
+.consultations-filter-actions button.secondary:hover,
+.consultations-filter-actions button.secondary.active { background: #f7f3f4; }
+.consultations-filter-actions button:not(.secondary):hover { background: #8c101a; }
+
+.consultations-filter-count {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #660810;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.consultations-filters__advanced {
+    min-width: 0;
+    padding-top: 20px;
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr) minmax(180px, 1fr) minmax(250px, 1.35fr);
+    align-items: end;
+    gap: 16px;
+    border-top: 1px solid #ded4d7;
+}
+
+.consultations-conflict-filter {
+    min-width: 0;
+    min-height: 48px;
+    margin: 0 !important;
+    padding: 0;
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    color: #171316 !important;
+    font-weight: 400 !important;
+    cursor: pointer;
+}
+
+.consultations-filters :is(input, select, button):focus-visible,
+.consultations-reset:focus-visible,
+.consultations-overview button:focus-visible {
+    border-color: #660810;
+    outline: 3px solid rgba(102, 8, 16, .2);
+    outline-offset: 2px;
+}
+
+.consultations-result-count {
+    min-height: 34px;
+    padding: 6px 10px;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #f7f3f4;
+    color: #660810;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.consultations-list { overflow: clip; }
+.consultations-list .admin-table-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.consultations-list .admin-table-wrap::-webkit-scrollbar,
+.consultation-detail::-webkit-scrollbar { height: 10px; width: 10px; }
+.consultations-list .admin-table-wrap::-webkit-scrollbar-thumb,
+.consultation-detail::-webkit-scrollbar-thumb { border: 3px solid #fff; border-radius: 999px; background: #d8cdd1; }
+
+.consultations-table { min-width: 1080px; color: #171316; }
+
+.consultations-table th {
+    padding: 13px 18px;
+    border-right: 0;
+    border-bottom: 1px solid #ded4d7;
+    background: #f7f3f4;
+    color: #67555c;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.consultations-table td {
+    padding: 17px 18px;
+    border-right: 0;
+    color: #67555c;
+    vertical-align: top;
+}
+
+.consultations-table tbody tr:hover { background: #fbfcff; }
+.consultations-table tr.has-conflict { background: #f7f3f4; }
+.consultations-table tr.has-conflict:hover { background: #f7f3f4; }
+.consultations-table td > :is(strong, span, time) { display: block; }
+.consultations-table td > strong { color: #171316; font-weight: 600; overflow-wrap: anywhere; }
+.consultations-table td > span,
+.consultations-table time { margin-top: 3px; color: #67555c; line-height: 1.45; overflow-wrap: anywhere; }
+.consultations-table td:nth-child(1) { min-width: 185px; }
+.consultations-table td:nth-child(2) { min-width: 205px; }
+.consultations-table td:nth-child(3) { min-width: 230px; }
+.consultations-table td:nth-child(4) { min-width: 165px; }
+.consultations-table td:nth-child(5) { min-width: 180px; }
+
+.consultation-status,
+.consultation-conflict-badge {
+    width: fit-content;
+    min-height: 30px;
+    padding: 5px 9px;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.consultation-status { background: #f7f3f4; color: #660810; }
+.consultation-status--booked,
+.consultation-status--completed { background: color-mix(in srgb, var(--color-success) 14%, #fff); color: var(--color-success); }
+.consultation-status--deposit_review,
+.consultation-status--awaiting_deposit { background: color-mix(in srgb, var(--color-warning) 20%, #fff); color: #660810; }
+.consultation-status--rejected,
+.consultation-status--cancelled,
+.consultation-status--no_show,
+.consultation-status--expired { background: color-mix(in srgb, var(--color-error) 12%, #fff); color: var(--color-error); }
+
+.consultation-conflict-badge {
+    margin-top: 8px !important;
+    background: color-mix(in srgb, var(--color-warning) 20%, #fff);
+    color: #660810 !important;
+}
+
+.consultation-detail-button,
+.consultation-quick-actions :is(a, button),
+.consultation-action-link {
+    min-height: 42px;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid #d8cdd1;
+    border-radius: 10px;
+    background: #fff;
+    color: #660810;
+    font: inherit;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.consultation-detail-button:hover,
+.consultation-quick-actions :is(a, button):hover,
+.consultation-action-link:hover { border-color: #660810; background: #f7f3f4; }
+
+.consultations-empty {
+    min-height: 290px;
+    padding: 32px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #67555c;
+    text-align: center;
+}
+
+.consultations-empty h3,
+.consultations-empty p { margin: 0; }
+.consultations-empty h3 { color: #171316; }
+
+.consultations-empty button {
+    min-height: 42px;
+    margin-top: 8px;
+    padding: 8px 13px;
+    border-radius: 10px;
+    background: #f7f3f4;
+    color: #660810;
+    font-weight: 500;
+}
+
+.consultations-pagination {
+    min-height: 72px;
+    padding: 12px 20px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    border-top: 1px solid #ded4d7;
+    color: #67555c;
+}
+
+.consultations-pagination :is(a, .disabled) {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #660810;
+    font-weight: 500;
+}
+
+.consultations-pagination :is(a, .disabled):last-child { justify-self: end; }
+.consultations-pagination .disabled { color: #67555c; opacity: .55; }
+
+.consultation-settings { padding-bottom: 28px; overflow: clip; }
+
+.consultation-settings form {
+    padding: 28px;
+    display: grid;
+    gap: 28px;
+}
+
+.consultation-settings__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.consultation-settings label,
+.consultation-action-panel label {
+    min-width: 0;
+    margin: 0;
+    display: grid;
+    gap: 7px;
+    color: #171316;
+    font-weight: 500;
+}
+
+.consultation-settings input,
+.consultation-action-panel :is(input, select, textarea) {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 11px 13px;
+    border: 1px solid #d8cdd1;
+    border-radius: 10px;
+    background: #fff;
+    color: #171316;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.consultation-settings form > button,
+.consultation-action-panel > button {
+    min-height: 48px;
+    padding: 11px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 999px;
+    background: #660810;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.consultation-settings form > button { min-width: 210px; justify-self: start; }
+.consultation-settings form > button:disabled { opacity: .55; cursor: wait; }
+
+.consultation-mentors {
+    padding-top: 24px;
+    display: grid;
+    gap: 12px;
+    border-top: 1px solid #ded4d7;
+}
+
+.consultation-mentors > div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.consultation-mentors button {
+    min-height: 44px;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.consultation-mentors button.secondary,
+.consultation-action-panel button.secondary { border: 1px solid #d8cdd1; background: #fff; color: #660810; }
+
+.consultation-mentor {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto 44px;
+    align-items: center;
+    gap: 12px;
+}
+
+.consultation-mentor > label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.consultation-mentor > label input {
+    width: 18px;
+    min-height: 18px;
+    height: 18px;
+    padding: 0;
+    accent-color: #660810;
+}
+
+.consultation-mentor > button { background: #f7f3f4; color: #9b111b; }
+
+.consultation-modal-overlay {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    padding: 32px;
+    display: grid;
+    place-items: center;
+    overflow-y: auto;
+    background: rgba(23, 19, 22, .58);
+}
+
+.consultation-detail {
+    width: min(1240px, 100%);
+    max-height: min(92vh, 980px);
+    overflow-y: auto;
+    border-radius: 16px;
+    background: #fff;
+    color: #171316;
+    box-shadow: 0 24px 60px rgba(55, 30, 38, .16);
+}
+
+.consultation-detail > header {
+    padding: 28px 32px;
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    border-bottom: 1px solid #ded4d7;
+}
+
+.consultation-detail > header h2 { margin: 10px 0 4px; font-family: var(--font-display); font-size: var(--text-xl); }
+.consultation-detail > header p { margin: 0; color: #67555c; }
+
+.consultation-detail > header button {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border: 1px solid #ded4d7;
+    border-radius: 10px;
+    background: #fff;
+    color: #67555c;
+}
+
+.consultation-detail__body {
+    padding: 32px;
+    display: grid;
+    grid-template-columns: minmax(0, .85fr) minmax(420px, 1.15fr);
+    gap: 32px;
+}
+
+.consultation-detail__section,
+.consultation-action-panel { min-width: 0; }
+
+.consultation-detail__section h3,
+.consultation-action-panel h3,
+.consultation-conflict-alert h3 { margin: 0 0 14px; font-family: var(--font-display); font-size: var(--text-lg); }
+
+.consultation-detail__section dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 28px;
+}
+
+.consultation-detail__section dl div { min-width: 0; display: grid; gap: 4px; }
+.consultation-detail__section .wide { grid-column: 1 / -1; }
+.consultation-detail__section dt { color: #67555c; }
+.consultation-detail__section dd { margin: 0; font-weight: 400; line-height: 1.55; overflow-wrap: anywhere; }
+.consultation-quick-actions { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; }
+
+.consultation-conflict-alert {
+    grid-column: 1 / -1;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    border: 1px solid #d8cdd1;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--color-warning) 20%, #fff);
+    color: #660810;
+}
+
+.consultation-conflict-alert p { margin: 0; line-height: 1.5; }
+.consultation-conflict-alert ol { margin: 12px 0 0; padding-left: 20px; }
+.consultation-conflict-alert li { padding: 5px 0; }
+.consultation-conflict-alert li span { display: block; margin-top: 2px; overflow-wrap: anywhere; }
+
+.consultation-action-panel {
+    padding: 28px;
+    display: grid;
+    align-content: start;
+    gap: 18px;
+    border-radius: 16px;
+    background: #f7f3f4;
+}
+
+.consultation-action-panel > p { margin: -8px 0 2px; color: #67555c; line-height: 1.55; }
+.consultation-action-pair { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.consultation-action-panel textarea { resize: vertical; }
+.consultation-action-panel button.danger { color: var(--color-error); }
+
+.consultation-action-panel :is(button, input, select, textarea):focus-visible,
+.consultation-detail > header button:focus-visible,
+.consultation-detail-button:focus-visible { outline: 3px solid rgba(102, 8, 16, .22); outline-offset: 2px; }
+
+@media (max-width: 1180px) {
+    .consultations-filters__primary { grid-template-columns: minmax(0, 1.4fr) minmax(190px, .6fr); }
+    .consultations-filter-actions { grid-column: 1 / -1; justify-content: end; }
+    .consultation-settings__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .consultations-table { min-width: 0; }
+    .consultations-table thead { display: none; }
+    .consultations-table,
+    .consultations-table tbody { display: block; width: 100%; }
+    .consultations-table tbody { padding: 16px; background: #f7f3f4; }
+    .consultations-table tr {
+        width: 100%;
+        padding: 18px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px 24px;
+        border: 1px solid #ded4d7;
+        border-radius: 16px;
+        background: #fff;
+    }
+    .consultations-table tr + tr { margin-top: 14px; }
+    .consultations-table tr.has-conflict { background: #f7f3f4; }
+    .consultations-table td {
+        min-width: 0 !important;
+        padding: 0;
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr);
+        align-content: start;
+        gap: 3px 12px;
+        border: 0;
+    }
+    .consultations-table td::before {
+        content: attr(data-label);
+        grid-column: 1;
+        grid-row: 1 / span 20;
+        color: #67555c;
+        font-weight: 500;
+    }
+    .consultations-table td > * { grid-column: 2; }
+    .consultations-table td[data-label="Aksi"] { align-items: start; }
+    .consultations-table td[colspan] { grid-column: 1 / -1; display: block; }
+    .consultations-table td[colspan]::before { display: none; }
+}
+
+@media (max-width: 900px) {
+    .consultations-header,
+    .consultations-filter-heading,
+    .consultations-list-header { align-items: stretch; flex-direction: column; }
+    .consultations-hours,
+    .consultations-reset,
+    .consultations-result-count { align-self: flex-start; white-space: normal; }
+    .consultations-filters__advanced { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .consultations-conflict-filter { grid-column: 1 / -1; }
+    .consultation-detail__body { grid-template-columns: 1fr; }
+    .consultation-conflict-alert { grid-column: auto; }
+}
+
+@media (max-width: 720px) {
+    .admin-consultations { padding: 20px 16px; gap: 18px; }
+    .consultations-header h1 { font-size: var(--text-3xl); }
+    .consultations-overview { grid-template-columns: 1fr; }
+    .consultations-overview > :is(div, button) { min-height: 76px; border-right: 0; border-bottom: 1px solid #ded4d7; }
+    .consultations-overview > :last-child { border-bottom: 0; }
+    .consultations-filter-heading,
+    .consultations-list-header,
+    .consultations-section-heading { padding: 18px; }
+    .consultations-filters { padding: 18px; }
+    .consultations-filters__primary,
+    .consultations-filters__advanced { grid-template-columns: minmax(0, 1fr); }
+    .consultations-filter-actions { grid-column: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; }
+    .consultations-filter-actions button { width: 100%; padding-inline: 10px; }
+    .consultations-conflict-filter { grid-column: auto; }
+    .consultations-table tbody { padding: 12px; }
+    .consultations-table tr { grid-template-columns: 1fr; padding: 16px; gap: 15px; }
+    .consultations-table td { grid-template-columns: minmax(96px, .42fr) minmax(0, 1fr); gap: 8px; text-align: right; }
+    .consultations-table td > * { justify-self: end; }
+    .consultations-table td::before { text-align: left; }
+    .consultation-conflict-badge { max-width: 100%; text-align: left; }
+    .consultations-pagination { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .consultations-pagination > span:not(.disabled) { grid-column: 1 / -1; grid-row: 1; text-align: center; }
+    .consultations-pagination :is(a, .disabled) { grid-row: 2; }
+    .consultation-settings { padding-bottom: 20px; }
+    .consultation-settings form { padding: 20px; }
+    .consultation-settings__grid,
+    .consultation-action-pair,
+    .consultation-detail__section dl { grid-template-columns: 1fr; }
+    .consultation-detail__section .wide { grid-column: auto; }
+    .consultation-mentor { grid-template-columns: 20px minmax(0, 1fr) 44px; }
     .consultation-mentor > label { grid-column: 2; }
     .consultation-mentor > button { grid-column: 3; grid-row: 1; }
+    .consultation-settings form > button { width: 100%; min-width: 0; }
+    .consultation-modal-overlay { padding: 10px; }
+    .consultation-detail > header,
+    .consultation-detail__body { padding: 20px; }
+    .consultation-detail > header { align-items: flex-start; }
+    .consultation-conflict-alert { padding: 14px; }
+    .consultation-action-panel { padding: 20px; }
+}
+
+@media (max-width: 480px) {
+    .consultations-filter-actions { grid-template-columns: 1fr; }
+    .consultation-mentors > div:first-child { align-items: stretch; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .consultations-overview button { transition: none; }
 }

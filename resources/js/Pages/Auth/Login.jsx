@@ -93,7 +93,6 @@ export default function Login({ status, canResetPassword }) {
                                 name="remember" 
                                 checked={data.remember} 
                                 onChange={(e) => setData('remember', e.target.checked)}
-                                className="rounded bg-white border-zinc-300 text-red-600 focus:ring-red-600 mr-2"
                             />
                             <span className="text-xs text-zinc-600">Ingat Saya</span>
                         </label>

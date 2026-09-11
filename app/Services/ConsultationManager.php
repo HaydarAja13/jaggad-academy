@@ -89,6 +89,45 @@ class ConsultationManager
             });
     }
 
+    public function conflictMap(): array
+    {
+        $appointments = ConsultationAppointment::query()
+            ->whereIn('status', ['requested', 'awaiting_deposit', 'deposit_review', 'booked'])
+            ->orderBy('created_at')
+            ->get();
+        $conflicts = [];
+
+        // ponytail: O(n²) is sufficient for the small admin booking queue; move this overlap scan into SQL when volume grows materially.
+        foreach ($appointments as $index => $appointment) {
+            $start = Carbon::parse($appointment->getRawOriginal('scheduled_start_at') ?: $appointment->getRawOriginal('requested_start_at'), 'UTC');
+            $end = $start->copy()->addMinutes($appointment->duration_minutes);
+
+            foreach ($appointments->slice($index + 1) as $other) {
+                $otherStart = Carbon::parse($other->getRawOriginal('scheduled_start_at') ?: $other->getRawOriginal('requested_start_at'), 'UTC');
+                $otherEnd = $otherStart->copy()->addMinutes($other->duration_minutes);
+
+                if (! $start->lt($otherEnd) || ! $otherStart->lt($end)) {
+                    continue;
+                }
+
+                foreach ([$appointment, $other] as $source) {
+                    $target = $source->is($appointment) ? $other : $appointment;
+                    $targetStart = $source->is($appointment) ? $otherStart : $start;
+                    $conflicts[$source->id][] = [
+                        'booking_code' => $target->booking_code,
+                        'customer_name' => $target->customer_name,
+                        'status' => $target->status,
+                        'scheduled_start_at' => $targetStart->toIso8601String(),
+                        'duration_minutes' => $target->duration_minutes,
+                        'created_at' => $target->created_at->toIso8601String(),
+                    ];
+                }
+            }
+        }
+
+        return $conflicts;
+    }
+
     public function normalizeWhatsapp(string $value): string
     {
         $digits = preg_replace('/\D+/', '', $value);

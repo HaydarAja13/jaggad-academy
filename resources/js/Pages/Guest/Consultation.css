@@ -43,7 +43,7 @@
 .consultation-form input:focus, .consultation-form select:focus, .consultation-form textarea:focus { border-color: #660810; outline: 3px solid rgba(102, 8, 16, .15); outline-offset: 1px; }
 .consultation-form small, .consultation-form__error { color: #9b111b; font-weight: 600; }
 .consultation-policy { display: flex !important; grid-template-columns: none !important; flex-direction: row; gap: 12px !important; align-items: flex-start; color: #67555c !important; font-weight: 400 !important; }
-.consultation-policy input { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; accent-color: #660810; }
+.consultation-policy input { flex: 0 0 auto; margin-top: 2px; }
 .consultation-policy span { line-height: 1.6; }
 .consultation-form > button { min-height: 54px; padding: 13px 20px; border: 0; border-radius: 9999px; background: #660810; color: #fff; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 12px 28px rgba(102, 8, 16, .2); transition: background-color .2s ease, transform .2s ease; }
 .consultation-form > button:hover:not(:disabled) { background: #9b111b; transform: translateY(-2px); }

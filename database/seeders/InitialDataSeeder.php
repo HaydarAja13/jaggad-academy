@@ -65,12 +65,14 @@ class InitialDataSeeder extends Seeder
         $catOffline = \App\Models\Category::create(['name' => 'Kelas Offline', 'slug' => 'offline', 'description' => 'Pengalaman belajar langsung', 'image' => 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80&w=400']);
 
         // 3. Products
-        \App\Models\Product::create([
+        \App\Models\Product::updateOrCreate(['slug' => 'ebook-strategi-bisnis-digital-2024'], [
             'name' => 'Ebook: Strategi Bisnis Digital 2024',
             'slug' => 'ebook-strategi-bisnis-digital-2024',
             'category_id' => $catEbook->id,
             'price' => 149000,
             'normal_price' => 299000,
+            'rating' => 4.8,
+            'total_ratings' => 234,
             'sold_count' => 0,
             'image' => 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&q=80',
             'badge' => 'Bestseller',
@@ -88,12 +90,14 @@ class InitialDataSeeder extends Seeder
             ]),
         ]);
 
-        \App\Models\Product::create([
+        \App\Models\Product::updateOrCreate(['slug' => 'video-kelas-instagram-marketing-mastery'], [
             'name' => 'Video Kelas: Instagram Marketing Mastery',
             'slug' => 'video-kelas-instagram-marketing-mastery',
             'category_id' => $catVideo->id,
             'price' => 299000,
             'normal_price' => 599000,
+            'rating' => 4.9,
+            'total_ratings' => 567,
             'sold_count' => 0,
             'image' => 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400&q=80',
             'badge' => 'Terpopuler',
@@ -111,16 +115,21 @@ class InitialDataSeeder extends Seeder
             ]),
         ]);
 
-        \App\Models\Product::create([
+        \App\Models\Product::updateOrCreate(['slug' => 'webinar-financial-planning-untuk-freelancer'], [
             'name' => 'Webinar: Financial Planning untuk Freelancer',
             'slug' => 'webinar-financial-planning-untuk-freelancer',
             'category_id' => $catWebinar->id,
             'price' => 99000,
             'normal_price' => 199000,
+            'rating' => 4.7,
+            'total_ratings' => 123,
             'sold_count' => 0,
             'image' => 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&q=80',
             'badge' => 'Live',
             'featured' => true,
+            'start_at' => '2026-10-17 09:00:00',
+            'end_at' => '2026-10-17 12:00:00',
+            'location' => 'Zoom Live',
             'short_description' => 'Pelajari cara mengelola keuangan secara cerdas sebagai freelancer bersama pakar finansial.',
             'description' => 'Webinar interaktif 3 jam bersama certified financial planner yang akan membantu Anda mengatur keuangan freelance secara optimal.',
             'benefits' => json_encode(['Sesi live 3 jam interaktif', 'Recording tersedia setelah webinar', 'Template tracking keuangan', 'Q&A session langsung', 'Certificate of attendance']),
@@ -131,16 +140,21 @@ class InitialDataSeeder extends Seeder
             ]),
         ]);
 
-        \App\Models\Product::create([
+        \App\Models\Product::updateOrCreate(['slug' => 'kelas-offline-digital-marketing-bootcamp'], [
             'name' => 'Kelas Offline: Digital Marketing Bootcamp',
             'slug' => 'kelas-offline-digital-marketing-bootcamp',
             'category_id' => $catOffline->id,
             'price' => 1500000,
             'normal_price' => 2500000,
+            'rating' => 5.0,
+            'total_ratings' => 89,
             'sold_count' => 0,
             'image' => 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400&q=80',
             'badge' => 'Premium',
             'featured' => true,
+            'start_at' => '2026-11-07 09:00:00',
+            'end_at' => '2026-11-09 17:00:00',
+            'location' => 'JAGGAD Digital Hub, Jakarta Selatan',
             'short_description' => 'Bootcamp intensif 3 hari di Jakarta untuk menguasai digital marketing secara menyeluruh.',
             'description' => 'Program bootcamp offline terbaik yang dirancang untuk memberikan pengalaman belajar langsung dengan mentor berpengalaman dan networking dengan sesama peserta.',
             'benefits' => json_encode(['3 hari intensif di Jakarta', 'Makan siang & coffee break included', 'Materi cetak eksklusif', 'Networking dengan 50+ peserta', 'Sertifikat internasional']),
@@ -151,12 +165,14 @@ class InitialDataSeeder extends Seeder
             ]),
         ]);
 
-        \App\Models\Product::create([
+        \App\Models\Product::updateOrCreate(['slug' => 'ebook-seo-mastery-guide'], [
             'name' => 'Ebook: SEO Mastery Guide',
             'slug' => 'ebook-seo-mastery-guide',
             'category_id' => $catEbook->id,
             'price' => 129000,
             'normal_price' => 249000,
+            'rating' => 4.6,
+            'total_ratings' => 189,
             'sold_count' => 0,
             'image' => 'https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=400&q=80',
             'badge' => 'New',
@@ -172,12 +188,14 @@ class InitialDataSeeder extends Seeder
             ]),
         ]);
 
-        \App\Models\Product::create([
+        \App\Models\Product::updateOrCreate(['slug' => 'video-kelas-copywriting-yang-menjual'], [
             'name' => 'Video Kelas: Copywriting yang Menjual',
             'slug' => 'video-kelas-copywriting-yang-menjual',
             'category_id' => $catVideo->id,
             'price' => 249000,
             'normal_price' => 449000,
+            'rating' => 4.8,
+            'total_ratings' => 312,
             'sold_count' => 0,
             'image' => 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&q=80',
             'badge' => null,

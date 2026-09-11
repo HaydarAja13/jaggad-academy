@@ -5,6 +5,8 @@ import AdminLayout from '../../Layouts/AdminLayout';
 import toast from 'react-hot-toast';
 import './Admin.css';
 
+const isChecked = value => value === true || value === 1 || value === '1' || value === 'true';
+
 export default function AdminSettings({ dbSettings }) {
     const [data, setData] = useState({
         google_client_id: dbSettings?.google_client_id || '',
@@ -12,7 +14,7 @@ export default function AdminSettings({ dbSettings }) {
         google_redirect_url: dbSettings?.google_redirect_url || window.location.origin + '/auth/google/callback',
         midtrans_server_key: dbSettings?.midtrans_server_key || '',
         midtrans_client_key: dbSettings?.midtrans_client_key || '',
-        midtrans_is_production: dbSettings?.midtrans_is_production ?? false,
+        midtrans_is_production: isChecked(dbSettings?.midtrans_is_production),
         meta_pixel_id: dbSettings?.meta_pixel_id || '',
         meta_access_token: dbSettings?.meta_access_token || '',
         mail_mailer: dbSettings?.mail_mailer || 'smtp',
@@ -147,13 +149,12 @@ export default function AdminSettings({ dbSettings }) {
                                     <p>QRIS, Virtual Account, dan kartu kredit secara otomatis.</p>
                                 </div>
                             </div>
-                            <label className="toggle-switch" title={data.midtrans_is_production ? 'Mode Live aktif' : 'Mode Sandbox aktif'}>
+                            <label title={isChecked(data.midtrans_is_production) ? 'Mode Live aktif' : 'Mode Sandbox aktif'}>
                                 <input
                                     type="checkbox"
-                                    checked={data.midtrans_is_production}
+                                    checked={isChecked(data.midtrans_is_production)}
                                     onChange={e => setData({...data, midtrans_is_production: e.target.checked})}
                                 />
-                                <span className="toggle-slider"></span>
                             </label>
                         </div>
                         <div className="settings-section-body">

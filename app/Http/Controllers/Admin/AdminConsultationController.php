@@ -8,6 +8,7 @@ use App\Models\SiteContent;
 use App\Models\Transaction;
 use App\Services\ConsultationManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -16,14 +17,43 @@ use Inertia\Inertia;
 
 class AdminConsultationController extends Controller
 {
-    public function index(ConsultationManager $consultations)
+    public function index(Request $request, ConsultationManager $consultations)
     {
         $consultations->expireOverdue();
         $settings = $consultations->settings();
-        $appointments = ConsultationAppointment::with(['transactions' => fn ($query) => $query->latest(), 'transactions.payment.paymentMethod'])
-            ->latest('requested_start_at')
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'status' => ['nullable', Rule::in(['requested', 'awaiting_deposit', 'deposit_review', 'booked', 'completed', 'rejected', 'expired', 'cancelled', 'no_show', 'refunded'])],
+            'mentor' => ['nullable', 'string', 'max:120'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'conflict' => ['nullable', 'boolean'],
+        ]);
+        $conflicts = $consultations->conflictMap();
+        $date = ! empty($filters['date']) ? Carbon::createFromFormat('Y-m-d', $filters['date'], 'Asia/Jakarta') : null;
+
+        $appointments = ConsultationAppointment::query()
+            ->with(['transactions' => fn ($query) => $query->latest(), 'transactions.payment.paymentMethod'])
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $search = '%'.trim($search).'%';
+                $query->where(fn ($query) => $query->where('booking_code', 'like', $search)
+                    ->orWhere('customer_name', 'like', $search)
+                    ->orWhere('whatsapp', 'like', $search)
+                    ->orWhere('package_name', 'like', $search)
+                    ->orWhere('mentor_name', 'like', $search));
+            })
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['mentor'] ?? null, fn ($query, $mentor) => $query->where('mentor_name', $mentor))
+            ->when($date, function ($query) use ($date) {
+                $start = $date->copy()->startOfDay()->utc();
+                $end = $date->copy()->endOfDay()->utc();
+                $query->where(fn ($query) => $query->whereBetween('scheduled_start_at', [$start, $end])
+                    ->orWhere(fn ($query) => $query->whereNull('scheduled_start_at')->whereBetween('requested_start_at', [$start, $end])));
+            })
+            ->when($request->boolean('conflict'), fn ($query) => $query->whereIn('id', array_keys($conflicts) ?: [0]))
+            ->oldest('created_at')
             ->paginate(20)
-            ->through(function (ConsultationAppointment $appointment) use ($consultations) {
+            ->withQueryString()
+            ->through(function (ConsultationAppointment $appointment) use ($consultations, $conflicts) {
                 $paymentLink = $consultations->paymentUrl($appointment);
                 $schedule = $appointment->scheduled_start_at?->timezone('Asia/Jakarta')->translatedFormat('l, d F Y · H.i');
                 $message = $paymentLink
@@ -32,6 +62,7 @@ class AdminConsultationController extends Controller
 
                 $appointment->setAttribute('payment_link', $paymentLink);
                 $appointment->setAttribute('whatsapp_url', $consultations->whatsappUrl($appointment, $message));
+                $appointment->setAttribute('conflicts', $conflicts[$appointment->id] ?? []);
 
                 return $appointment;
             });
@@ -39,6 +70,19 @@ class AdminConsultationController extends Controller
         return Inertia::render('Admin/AdminConsultations', [
             'appointments' => $appointments,
             'consultationSettings' => $settings,
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+                'status' => $filters['status'] ?? '',
+                'mentor' => $filters['mentor'] ?? '',
+                'date' => $filters['date'] ?? '',
+                'conflict' => $request->boolean('conflict'),
+            ],
+            'mentorOptions' => ConsultationAppointment::query()->whereNotNull('mentor_name')->distinct()->orderBy('mentor_name')->pluck('mentor_name')->values(),
+            'summary' => [
+                'total' => ConsultationAppointment::count(),
+                'active' => ConsultationAppointment::whereIn('status', ['requested', 'awaiting_deposit', 'deposit_review', 'booked'])->count(),
+                'conflicts' => count($conflicts),
+            ],
         ]);
     }
 
@@ -64,7 +108,7 @@ class AdminConsultationController extends Controller
         $validated['mentors'] = collect($validated['mentors'])->map(fn (array $mentor) => [
             'key' => $mentor['key'] ?: (string) Str::uuid(),
             'name' => trim($mentor['name']),
-            'active' => (bool) $mentor['active'],
+            'active' => filter_var($mentor['active'], FILTER_VALIDATE_BOOLEAN),
         ])->values()->all();
 
         SiteContent::updateOrCreate(
