@@ -3,7 +3,7 @@ import { Head, Link } from '@inertiajs/react';
 import { 
     ArrowRight, BookOpen, Video, Mic, MapPin, Users, Star, Zap, Shield, Award,
     Target, Eye, CheckCircle, MessageSquare, Globe, Heart, Rocket, Trophy, Lightbulb, TrendingUp,
-    ShoppingBag
+    ShoppingBag, Download
 } from 'lucide-react';
 import ProductCard from '../../Components/ProductCard';
 import ConsultationPackages from '../../Components/ConsultationPackages';
@@ -363,6 +363,38 @@ export default function Welcome({ products = [], toastProducts = [], categories 
                                 </article>
                             ))}
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Katalog Jaggad */}
+            <section className="catalog-showcase" aria-labelledby="catalog-showcase-title">
+                <div className="container">
+                    <header className="showcase-heading">
+                        <h2 id="catalog-showcase-title">Katalog Jaggad</h2>
+                        <p>Jelajahi pilihan belajar JAGGAD, temukan program yang sesuai dengan tujuan Anda, lalu pilih langkah berikutnya.</p>
+                    </header>
+
+                    <div className="catalog-showcase__frame">
+                        <div className="catalog-showcase__viewer">
+                            <iframe
+                                src="https://heyzine.com/flip-book/8b8ca31426.html"
+                                title="Katalog digital JAGGAD Academy"
+                                allow="autoplay; fullscreen; clipboard-write"
+                                allowFullScreen
+                                scrolling="no"
+                                loading="lazy"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="catalog-showcase__actions">
+                        <a className="catalog-showcase__download" href="https://drive.google.com/file/d/1HlVWZr721ETu8jDDSHRTqhj0C85gjtH9/view?usp=sharing" target="_blank" rel="noopener noreferrer">
+                            Download Katalog <Download size={20} aria-hidden="true" />
+                        </a>
+                        <a className="catalog-showcase__open" href="https://heyzine.com/flip-book/8b8ca31426.html" target="_blank" rel="noopener noreferrer">
+                            Buka flipbook di tab baru <ArrowRight size={18} aria-hidden="true" />
+                        </a>
                     </div>
                 </div>
             </section>

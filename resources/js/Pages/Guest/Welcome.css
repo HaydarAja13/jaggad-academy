@@ -1013,6 +1013,114 @@
     color: rgba(255, 255, 255, 0.78);
 }
 
+/* Katalog Jaggad */
+.catalog-showcase {
+    padding: clamp(82px, 9vw, 124px) 0;
+    background: #fbfcff;
+}
+
+.catalog-showcase .showcase-heading {
+    max-width: 700px;
+}
+
+.catalog-showcase__frame {
+    width: min(100%, 1200px);
+    margin: 0 auto;
+    padding: clamp(10px, 2vw, 24px);
+    border-radius: 24px;
+    background: var(--color-accent);
+    box-shadow: 0 26px 64px rgba(55, 30, 38, 0.16);
+}
+
+.catalog-showcase__viewer {
+    height: clamp(420px, 45vw, 600px);
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: #f7f3f4;
+}
+
+.catalog-showcase__viewer iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.catalog-showcase__actions {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    width: min(100%, 340px);
+    margin: 30px auto 0;
+}
+
+.catalog-showcase__download {
+    min-height: 54px;
+    padding: 13px 23px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    box-shadow: 0 12px 28px rgba(102, 8, 16, 0.18);
+    transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.catalog-showcase__download:hover {
+    color: #fff;
+    background: var(--color-accent-hover);
+    transform: translateY(-2px);
+}
+
+.catalog-showcase__open {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-accent);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+}
+
+.catalog-showcase__open:hover {
+    color: var(--color-accent-hover);
+}
+
+.catalog-showcase__download:focus-visible,
+.catalog-showcase__open:focus-visible {
+    outline: 3px solid var(--color-accent-hover);
+    outline-offset: 4px;
+}
+
+@media (max-width: 768px) {
+    .catalog-showcase__viewer {
+        height: clamp(360px, 72vw, 440px);
+    }
+}
+
+@media (max-width: 480px) {
+    .catalog-showcase__download {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .catalog-showcase__download {
+        transition-duration: 0.01ms;
+    }
+
+    .catalog-showcase__download:hover {
+        transform: none;
+    }
+}
+
 .featured-showcase .showcase-heading {
     margin-bottom: 24px;
 }
