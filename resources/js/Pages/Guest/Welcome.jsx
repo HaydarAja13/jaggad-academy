@@ -376,24 +376,15 @@ export default function Welcome({ products = [], toastProducts = [], categories 
                     </header>
 
                     <div className="catalog-showcase__frame">
-                        <div className="catalog-showcase__viewer">
-                            <iframe
-                                src="https://heyzine.com/flip-book/8b8ca31426.html"
-                                title="Katalog digital JAGGAD Academy"
-                                allow="autoplay; fullscreen; clipboard-write"
-                                allowFullScreen
-                                scrolling="no"
-                                loading="lazy"
-                            />
-                        </div>
+                        <figure className="catalog-showcase__viewer">
+                            <img src="/jaggad-catalogue.png" alt="QR code untuk membuka katalog JAGGAD Academy" loading="lazy" />
+                            <figcaption>Pindai QR code untuk membuka katalog.</figcaption>
+                        </figure>
                     </div>
 
                     <div className="catalog-showcase__actions">
                         <a className="catalog-showcase__download" href="https://drive.google.com/file/d/1HlVWZr721ETu8jDDSHRTqhj0C85gjtH9/view?usp=sharing" target="_blank" rel="noopener noreferrer">
                             Download Katalog <Download size={20} aria-hidden="true" />
-                        </a>
-                        <a className="catalog-showcase__open" href="https://heyzine.com/flip-book/8b8ca31426.html" target="_blank" rel="noopener noreferrer">
-                            Buka flipbook di tab baru <ArrowRight size={18} aria-hidden="true" />
                         </a>
                     </div>
                 </div>
