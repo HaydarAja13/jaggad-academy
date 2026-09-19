@@ -4251,8 +4251,8 @@
     pointer-events: none;
 }
 
-.product-info-form .product-money-input input {
-    padding-left: 64px;
+.modal-form .product-money-input input:not([type='checkbox']):not([type='radio']) {
+    padding: 12px 16px 12px 64px;
     font-variant-numeric: tabular-nums;
 }
 
