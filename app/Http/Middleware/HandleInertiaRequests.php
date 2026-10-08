@@ -71,6 +71,7 @@ class HandleInertiaRequests extends Middleware
                 'email_warning' => $request->session()->get('email_warning'),
                 'snap_token' => $request->session()->get('snap_token'),
                 'trx_code' => $request->session()->get('trx_code'),
+                'free_claim' => $request->session()->get('free_claim'),
                 'booking_code' => $request->session()->get('booking_code'),
             ],
         ];

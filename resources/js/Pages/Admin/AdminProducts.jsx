@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Package, Pencil, Plus, Search, Trash2 } from 'lucide-react';
-import { formatPrice, getStorageUrl } from '../../Utils/helpers';
+import { formatPrice, formatPriceOrFree, getStorageUrl } from '../../Utils/helpers';
 import AdminLayout from '../../Layouts/AdminLayout';
 import toast from 'react-hot-toast';
 import './Admin.css';
@@ -9,6 +9,7 @@ import './Admin.css';
 export default function AdminProducts({ dbProducts = [] }) {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
+    const [status, setStatus] = useState('all');
     const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     const items = dbProducts.map(dbP => ({
@@ -17,6 +18,7 @@ export default function AdminProducts({ dbProducts = [] }) {
         title: dbP.name,
         category: dbP.category?.name || 'Tidak Ada',
         price: dbP.price,
+        status: dbP.status || 'draft',
         sold: Number(dbP.sold_count || 0),
         thumbnail: getStorageUrl(dbP.image)
     }));
@@ -25,13 +27,24 @@ export default function AdminProducts({ dbProducts = [] }) {
     const query = search.trim().toLowerCase();
     const filtered = items.filter(product => (
         (category === 'all' || product.category === category)
+        && (status === 'all' || product.status === status)
         && [product.title, product.slug, product.category].some(value => value.toLowerCase().includes(query))
     ));
     const totalSold = items.reduce((total, product) => total + product.sold, 0);
-    const hasFilters = Boolean(query) || category !== 'all';
+    const draftCount = items.filter(product => product.status === 'draft').length;
+    const hasFilters = Boolean(query) || category !== 'all' || status !== 'all';
 
     const openAdd = () => router.get(route('admin.products.create'));
     const openEdit = (p) => router.get(route('admin.products.edit', p.slug));
+
+    const toggleStatus = (p) => {
+        const next = p.status === 'published' ? 'draft' : 'published';
+        router.patch(route('admin.products.status', p.slug), { status: next }, {
+            preserveScroll: true,
+            onSuccess: () => toast.success(next === 'published' ? 'Produk dipublish' : 'Produk dikembalikan ke draft'),
+            onError: () => toast.error('Gagal mengubah status produk'),
+        });
+    };
 
     useEffect(() => {
         if (!deleteConfirm) return undefined;
@@ -74,7 +87,7 @@ export default function AdminProducts({ dbProducts = [] }) {
                     </button>
                 </header>
 
-                <section className="products-summary" aria-label="Ringkasan produk">
+                <section className="products-summary products-summary--four" aria-label="Ringkasan produk">
                     <div>
                         <strong>{items.length}</strong>
                         <span>Total produk</span>
@@ -86,6 +99,10 @@ export default function AdminProducts({ dbProducts = [] }) {
                     <div>
                         <strong>{totalSold.toLocaleString('id-ID')}</strong>
                         <span>Total terjual</span>
+                    </div>
+                    <div>
+                        <strong>{draftCount.toLocaleString('id-ID')}</strong>
+                        <span>Draft (tersembunyi)</span>
                     </div>
                 </section>
 
@@ -113,12 +130,20 @@ export default function AdminProducts({ dbProducts = [] }) {
                                     {categories.map(item => <option key={item} value={item}>{item}</option>)}
                                 </select>
                             </label>
+                            <label className="products-select">
+                                <span className="sr-only">Filter status</span>
+                                <select value={status} onChange={event => setStatus(event.target.value)}>
+                                    <option value="all">Semua status</option>
+                                    <option value="published">Publish</option>
+                                    <option value="draft">Draft</option>
+                                </select>
+                            </label>
                         </div>
                     </div>
                     <div className="admin-table-wrap">
                         <table className="admin-table products-table">
                             <thead>
-                                <tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Terjual</th><th>Aksi</th></tr>
+                                <tr><th>Produk</th><th>Kategori</th><th>Status</th><th>Harga</th><th>Terjual</th><th>Aksi</th></tr>
                             </thead>
                             <tbody>
                                 {filtered.map(p => (
@@ -137,13 +162,26 @@ export default function AdminProducts({ dbProducts = [] }) {
                                             </div>
                                         </td>
                                         <td data-label="Kategori"><span className="product-category">{p.category}</span></td>
-                                        <td data-label="Harga"><strong className="product-price">{formatPrice(p.price)}</strong></td>
+                                        <td data-label="Status">
+                                            <span className={`product-status product-status--${p.status}`}>
+                                                {p.status === 'published' ? 'Publish' : 'Draft'}
+                                            </span>
+                                        </td>
+                                        <td data-label="Harga"><strong className="product-price">{formatPriceOrFree(p.price)}</strong></td>
                                         <td data-label="Terjual"><span className="product-sold">{p.sold.toLocaleString('id-ID')}</span></td>
                                         <td data-label="Aksi">
                                             <div className="product-actions">
                                                 <button type="button" className="product-edit" onClick={() => openEdit(p)}>
                                                     <Pencil size={16} aria-hidden="true" />
                                                     Edit
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={p.status === 'published' ? 'product-unpublish' : 'product-publish'}
+                                                    onClick={() => toggleStatus(p)}
+                                                    title={p.status === 'published' ? 'Kembalikan ke draft (sembunyikan)' : 'Publish (tampilkan & bisa dibeli)'}
+                                                >
+                                                    {p.status === 'published' ? 'Draft-kan' : 'Publish'}
                                                 </button>
                                                 <button type="button" className="product-delete" onClick={() => setDeleteConfirm(p)} aria-label={`Hapus ${p.title}`}>
                                                     <Trash2 size={17} aria-hidden="true" />
@@ -154,13 +192,13 @@ export default function AdminProducts({ dbProducts = [] }) {
                                 ))}
                                 {filtered.length === 0 && (
                                     <tr>
-                                        <td colSpan="5">
+                                        <td colSpan="6">
                                             <div className="products-empty">
                                                 <Search size={28} aria-hidden="true" />
                                                 <h3>Produk tidak ditemukan</h3>
-                                                <p>Coba kata kunci atau kategori lain.</p>
+                                                <p>Coba kata kunci, kategori, atau status lain.</p>
                                                 {hasFilters && (
-                                                    <button type="button" onClick={() => { setSearch(''); setCategory('all'); }}>
+                                                    <button type="button" onClick={() => { setSearch(''); setCategory('all'); setStatus('all'); }}>
                                                         Reset filter
                                                     </button>
                                                 )}

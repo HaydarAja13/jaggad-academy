@@ -8,6 +8,12 @@ export const formatCurrency = (amount) => {
 
 export const formatPrice = formatCurrency;
 
+export const isFreePrice = (amount) => Number(amount || 0) === 0;
+
+export const isFreeProduct = (product) => isFreePrice(product?.price);
+
+export const formatPriceOrFree = (amount) => (isFreePrice(amount) ? 'FREE' : formatCurrency(amount));
+
 
 export const getCategoryLabel = (categoryId) => {
     const categories = {

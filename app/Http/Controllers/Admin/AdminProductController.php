@@ -47,6 +47,7 @@ class AdminProductController extends Controller
             'category' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'originalPrice' => 'nullable|numeric|min:0',
+            'status' => 'nullable|in:draft,published',
             'description' => 'nullable|string',
             'longDescription' => 'nullable|string',
             'badge' => 'nullable|string|max:255',
@@ -99,6 +100,7 @@ class AdminProductController extends Controller
             'category_id' => $data['category'] ?? null,
             'price' => $data['price'],
             'normal_price' => $data['originalPrice'] ?? null,
+            'status' => $data['status'] ?? Product::STATUS_DRAFT,
             'image' => $imagePath,
             'badge' => $data['badge'] ?? null,
             'short_description' => $data['description'] ?? null,
@@ -131,6 +133,7 @@ class AdminProductController extends Controller
             'category' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'originalPrice' => 'nullable|numeric|min:0',
+            'status' => 'nullable|in:draft,published',
             'description' => 'nullable|string',
             'longDescription' => 'nullable|string',
             'badge' => 'nullable|string|max:255',
@@ -186,6 +189,7 @@ class AdminProductController extends Controller
             'category_id' => $data['category'] ?? null,
             'price' => $data['price'],
             'normal_price' => $data['originalPrice'] ?? null,
+            'status' => $data['status'] ?? $product->status ?? Product::STATUS_DRAFT,
             'image' => $imagePath,
             'badge' => $data['badge'] ?? null,
             'short_description' => $data['description'] ?? null,
@@ -199,6 +203,22 @@ class AdminProductController extends Controller
         ]);
 
         return redirect()->route('admin.products.index')->with('success', 'Produk berhasil diperbarui.');
+    }
+
+    public function toggleStatus(Request $request, Product $product)
+    {
+        $data = $request->validate([
+            'status' => 'required|in:draft,published',
+        ]);
+
+        $product->update(['status' => $data['status']]);
+
+        return back()->with(
+            'success',
+            $product->status === Product::STATUS_PUBLISHED
+                ? 'Produk berhasil dipublish dan sudah dapat dibeli.'
+                : 'Produk dikembalikan ke draft dan disembunyikan dari katalog.'
+        );
     }
 
     public function destroy(Product $product)

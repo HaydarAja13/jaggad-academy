@@ -5,7 +5,7 @@ import {
     CreditCard, Eye, Package, ReceiptText, Upload, UserRound, X,
 } from 'lucide-react';
 import { useContent } from '../../Contexts/ContentContext';
-import { formatCurrency, getStorageUrl } from '../../Utils/helpers';
+import { formatCurrency, formatPriceOrFree, getStorageUrl } from '../../Utils/helpers';
 import MainLayout from '../../Layouts/MainLayout';
 import toast from 'react-hot-toast';
 import './User.css';
@@ -250,7 +250,7 @@ export default function UserDashboard({ auth, purchasedProducts = [], transactio
                                 <article className="learner-transaction" key={transaction.id}>
                                     <div className="learner-transaction__identity"><strong>{transaction.id}</strong><span>{transaction.date}</span></div>
                                     <p className="learner-transaction__products">{transaction.products}</p>
-                                    <strong className="learner-transaction__amount">{formatCurrency(transaction.amount)}</strong>
+                                    <strong className="learner-transaction__amount">{formatPriceOrFree(transaction.amount)}</strong>
                                     <span className={`learner-status ${statusClass(transaction.status)}`}>{transaction.status}</span>
                                     <div className="learner-transaction__actions">
                                         <button type="button" onClick={() => setSelectedTrx(transaction)}><Eye size={17} aria-hidden="true" /> {copy.detailLabel}</button>
@@ -282,13 +282,13 @@ export default function UserDashboard({ auth, purchasedProducts = [], transactio
                         <div className="learner-modal__body">
                             <div className="learner-detail-block">
                                 <h3><Package size={17} aria-hidden="true" /> Item pembelian</h3>
-                                <div><span>{selectedTrx.products}</span><strong>{formatCurrency(selectedTrx.amount)}</strong></div>
+                                <div><span>{selectedTrx.products}</span><strong>{formatPriceOrFree(selectedTrx.amount)}</strong></div>
                             </div>
                             <div className="learner-detail-block">
                                 <h3><CreditCard size={17} aria-hidden="true" /> Informasi pembayaran</h3>
                                 <dl className="learner-payment-detail">
                                     <div><dt>Metode</dt><dd>{selectedTrx.bank}</dd></div>
-                                    <div><dt>Total bayar</dt><dd>{formatCurrency(selectedTrx.amount)}</dd></div>
+                                    <div><dt>Total bayar</dt><dd>{formatPriceOrFree(selectedTrx.amount)}</dd></div>
                                     {selectedTrx.payload?.transaction_id && <div><dt>ID Midtrans</dt><dd>{selectedTrx.payload.transaction_id}</dd></div>}
                                     {selectedTrx.payload?.transaction_status && <div><dt>Status gateway</dt><dd>{selectedTrx.payload.transaction_status.toUpperCase()}</dd></div>}
                                     {selectedTrx.payload?.va_numbers?.[0] && <div className="is-wide"><dt>Virtual account {selectedTrx.payload.va_numbers[0].bank?.toUpperCase()}</dt><dd>{selectedTrx.payload.va_numbers[0].va_number}</dd></div>}

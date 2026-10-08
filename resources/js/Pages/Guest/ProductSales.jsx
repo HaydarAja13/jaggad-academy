@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, LockKeyhole } from 'lucide-react';
-import { formatCurrency, getCategoryLabel, getStorageUrl } from '../../Utils/helpers';
+import { formatCurrency, formatPriceOrFree, isFreePrice, getCategoryLabel, getStorageUrl } from '../../Utils/helpers';
 import { normalizeSalesContent, toArray } from '../../Utils/salesContent';
 import { useCart } from '../../Contexts/CartContext';
 import MainLayout from '../../Layouts/MainLayout';
@@ -31,7 +31,7 @@ function SalesHeader({ product, onCheckout, actionLabel }) {
     return <header className="sales-header">
         <div className="sales-header__inner">
             <Link href={route('products.detail', product.slug || product.id)} className="sales-header__back" aria-label="Kembali ke detail produk"><ArrowLeft size={19} aria-hidden="true" /><span>JAGGAD</span></Link>
-            <div className="sales-header__product"><strong>{product.title}</strong><span>{formatCurrency(product.price)}</span></div>
+            <div className="sales-header__product"><strong>{product.title}</strong><span>{formatPriceOrFree(product.price)}</span></div>
             <div className="sales-header__actions">
                 {seconds > 0 && <div id="sales-header-timer" className="sales-header__timer" aria-label={`Penawaran berakhir dalam ${time}`}><span>Sisa waktu</span><strong>{time}</strong></div>}
                 <button id="sales-header-cta" type="button" onClick={onCheckout}>{actionLabel} <ArrowRight size={18} aria-hidden="true" /></button>
@@ -96,8 +96,8 @@ function ProductStory({ product, onCheckout, openFaq, setOpenFaq }) {
                     <div id="sales-hero-image" className="sales-offer__media">{product.thumbnail ? <img src={product.thumbnail} alt={product.title} /> : <BookOpen size={64} aria-hidden="true" />}{product.badge && <span>{product.badge}</span>}</div>
                     <div className="sales-offer__body">
                         <p id="sales-offer-label">{product.sales.offer.label}</p>
-                        <div className="sales-offer__price">{product.originalPrice > product.price && <del>{formatCurrency(product.originalPrice)}</del>}<strong>{formatCurrency(product.price)}</strong></div>
-                        {product.originalPrice > product.price && <span className="sales-offer__saving">Hemat {formatCurrency(product.originalPrice - product.price)}</span>}
+                        <div className="sales-offer__price">{!isFreePrice(product.price) && product.originalPrice > product.price && <del>{formatCurrency(product.originalPrice)}</del>}<strong>{formatPriceOrFree(product.price)}</strong></div>
+                        {!isFreePrice(product.price) && product.originalPrice > product.price && <span className="sales-offer__saving">Hemat {formatCurrency(product.originalPrice - product.price)}</span>}
                         {product.quotaText && <p id="sales-offer-quota" className="sales-offer__note">{product.quotaText}</p>}
                         <button id="sales-offer-cta" type="button" onClick={onCheckout}>{product.sales.offer.cta} <ArrowRight size={19} /></button>
                         <small id="sales-offer-trust"><LockKeyhole size={16} aria-hidden="true" /> {product.sales.offer.trustNote}</small>
@@ -113,7 +113,7 @@ function ProductStory({ product, onCheckout, openFaq, setOpenFaq }) {
             {product.blocks.length > 0 && <div className="sales-managed-content">{product.blocks.map((block, index) => <LandingBlock key={index} block={block} index={index} title={product.title} onCheckout={onCheckout} openFaq={openFaq} setOpenFaq={setOpenFaq} faqCopy={product.sales.faq} />)}</div>}
         </main>
 
-        <section className="sales-close" aria-labelledby="sales-close-title"><div><h2 id="sales-close-title">{product.sales.closing.title}</h2><p id="sales-close-description">{product.sales.closing.description}</p></div><button id="sales-close-cta" type="button" onClick={onCheckout}>{product.sales.closing.cta} · {formatCurrency(product.price)} <ArrowRight size={19} /></button></section>
+        <section className="sales-close" aria-labelledby="sales-close-title"><div><h2 id="sales-close-title">{product.sales.closing.title}</h2><p id="sales-close-description">{product.sales.closing.description}</p></div><button id="sales-close-cta" type="button" onClick={onCheckout}>{product.sales.closing.cta} · {formatPriceOrFree(product.price)} <ArrowRight size={19} /></button></section>
     </>;
 }
 
@@ -129,9 +129,9 @@ function PurchaseConfirmation({ product, purchased, onBack, onContinue }) {
             </section>
             <aside className="sales-confirm__order" aria-label="Ringkasan pesanan">
                 <h2 id="sales-confirm-order-title">{copy.orderTitle}</h2>
-                <div><span>Harga produk</span><span>{formatCurrency(product.originalPrice > product.price ? product.originalPrice : product.price)}</span></div>
-                {product.originalPrice > product.price && <div className="sales-confirm__discount"><span>Potongan harga</span><span>−{formatCurrency(product.originalPrice - product.price)}</span></div>}
-                <div className="sales-confirm__total"><span>Total</span><strong>{formatCurrency(product.price)}</strong></div>
+                <div><span>Harga produk</span><span>{formatPriceOrFree(product.originalPrice > product.price ? product.originalPrice : product.price)}</span></div>
+                {!isFreePrice(product.price) && product.originalPrice > product.price && <div className="sales-confirm__discount"><span>Potongan harga</span><span>−{formatCurrency(product.originalPrice - product.price)}</span></div>}
+                <div className="sales-confirm__total"><span>Total</span><strong>{formatPriceOrFree(product.price)}</strong></div>
                 <button id="sales-confirm-cta" type="button" onClick={onContinue}>{purchased ? copy.ownedCta : copy.payCta} <ArrowRight size={19} /></button>
                 <p id="sales-confirm-trust"><LockKeyhole size={16} /> {copy.trustNote}</p>
             </aside>
@@ -159,6 +159,7 @@ export default function ProductSales({ product: dbProduct, previewMode = false, 
         category: dbProduct.category?.slug || dbProduct.category || 'ebook',
         price: Number(dbProduct.price || 0),
         originalPrice: Number(dbProduct.normal_price || dbProduct.originalPrice || 0),
+        status: dbProduct.status || 'published',
         thumbnail: getStorageUrl(sales.hero.image || dbProduct.image || dbProduct.thumbnail),
         description: sales.hero.description,
         badge: dbProduct.badge,
@@ -177,6 +178,10 @@ export default function ProductSales({ product: dbProduct, previewMode = false, 
     };
 
     const continuePurchase = () => {
+        if ((product.status || 'published') === 'draft') {
+            toast.error('Produk ini masih draft dan belum tersedia untuk dibeli.');
+            return;
+        }
         if (purchased) return router.get(route('dashboard.learning', product.slug || product.id));
         addToCart({
             ...product,

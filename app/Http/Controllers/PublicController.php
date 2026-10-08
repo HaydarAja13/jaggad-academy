@@ -27,17 +27,17 @@ class PublicController extends Controller
             ->values();
 
         $featuredProducts = $featuredIds->isEmpty()
-            ? Product::with('category')->latest()->take(6)->get()
-            : Product::with('category')->whereIn('id', $featuredIds)->get()
+            ? Product::with('category')->published()->latest()->take(6)->get()
+            : Product::with('category')->published()->whereIn('id', $featuredIds)->get()
                 ->sortBy(fn ($product) => $featuredIds->search($product->id))
                 ->values();
         $featuredProducts->each(fn (Product $product) => $this->hideMaterialLinks($product));
 
-        $categories = Category::withCount('products')->get();
+        $categories = Category::withCount(['products as products_count' => fn ($query) => $query->published()])->get();
 
         $stats = [
             'users' => User::where('role', 'customer')->count(),
-            'products' => Product::count(),
+            'products' => Product::published()->count(),
             'sales' => Transaction::query()
                 ->when(Schema::hasColumn('transactions', 'purpose'), fn ($query) => $query->where('purpose', Transaction::PURPOSE_PRODUCT))
                 ->where('status', 'success')
@@ -49,6 +49,7 @@ class PublicController extends Controller
             'canRegister' => Route::has('register'),
             'products' => $featuredProducts,
             'toastProducts' => Product::query()
+                ->published()
                 ->whereNotNull('name')
                 ->where('name', '!=', '')
                 ->latest()
@@ -60,7 +61,7 @@ class PublicController extends Controller
 
     public function products(Request $request)
     {
-        $products = Product::with('category')->latest()->get();
+        $products = Product::with('category')->published()->latest()->get();
         $products->each(fn (Product $product) => $this->hideMaterialLinks($product));
         $categories = Category::all();
 
@@ -73,11 +74,14 @@ class PublicController extends Controller
 
     public function productDetail(Product $product)
     {
+        abort_unless($product->isPublished(), 404);
+
         $product->load('category');
         $this->hideMaterialLinks($product);
 
         // Similar products
         $similarProducts = Product::with('category')
+            ->published()
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->take(3)
@@ -92,6 +96,8 @@ class PublicController extends Controller
 
     public function productSales(Product $product)
     {
+        abort_unless($product->isPublished(), 404);
+
         $product->load('category');
         $this->hideMaterialLinks($product);
 
@@ -103,7 +109,7 @@ class PublicController extends Controller
     public function promo()
     {
         $adsData = SiteContent::where('key', 'ads_promo')->first();
-        $products = Product::with('category')->get();
+        $products = Product::with('category')->published()->get();
         $products->each(fn (Product $product) => $this->hideMaterialLinks($product));
 
         return Inertia::render('Guest/Ads', [

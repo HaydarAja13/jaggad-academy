@@ -139,6 +139,13 @@ class AdminSettingController extends Controller
             'selectedProductIds.*' => 'integer|distinct|exists:products,id',
         ]);
 
+        $draftCount = Product::whereIn('id', $validated['selectedProductIds'] ?? [])->draft()->count();
+        if ($draftCount > 0) {
+            throw ValidationException::withMessages([
+                'selectedProductIds' => 'Produk berstatus draft tidak dapat ditampilkan di halaman promo. Publish produk terlebih dahulu.',
+            ]);
+        }
+
         $existing = SiteContent::where('key', 'ads_promo')->first();
         $oldContent = $existing ? (json_decode($existing->value, true) ?: []) : [];
         $oldImage = data_get($oldContent, 'hero.image', $oldContent['heroImage'] ?? null);

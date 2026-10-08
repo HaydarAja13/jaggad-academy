@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Star, BookOpen, Video, Mic, MapPin, CheckCircle2 } from 'lucide-react';
-import { formatCurrency, getCategoryLabel, getStorageUrl } from '../Utils/helpers';
+import { formatCurrency, formatPriceOrFree, isFreeProduct, getCategoryLabel, getStorageUrl } from '../Utils/helpers';
 import { useContent } from '../Contexts/ContentContext';
 import './ProductCard.css';
 
@@ -91,8 +91,12 @@ export default function ProductCard({ product, className = '', previewIdPrefix }
                 <div className="product-card__footer">
                     {isPurchased ? <strong className="product-card__access"><CheckCircle2 size={18} aria-hidden="true" /> Akses aktif</strong> : (
                         <div className="product-card__price">
-                            {originalPrice > price && <del className="price-original">{formatCurrency(originalPrice)}</del>}
-                            <strong className="price-current">{formatCurrency(price)}</strong>
+                            {isFreeProduct(product)
+                                ? <strong className="price-current">FREE</strong>
+                                : <>
+                                    {originalPrice > price && <del className="price-original">{formatCurrency(originalPrice)}</del>}
+                                    <strong className="price-current">{formatCurrency(price)}</strong>
+                                </>}
                         </div>
                     )}
 

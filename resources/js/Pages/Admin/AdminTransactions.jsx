@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Search, Eye, CheckCircle, XCircle, Clock, Download, User, Package, CreditCard, ChevronLeft, ChevronRight, Mail } from 'lucide-react';
-import { formatPrice, getStorageUrl } from '../../Utils/helpers';
+import { formatPrice, formatPriceOrFree, getStorageUrl } from '../../Utils/helpers';
 import AdminLayout from '../../Layouts/AdminLayout';
 import toast from 'react-hot-toast';
 import './Admin.css';
@@ -41,7 +41,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
         status: dbT.status === 'success' ? 'Berhasil' : dbT.payment?.status === 'rejected' && dbT.status === 'pending' ? 'Perlu perbaikan' : (['failed', 'expired', 'refunded'].includes(dbT.status) ? 'Gagal' : 'Pending'),
         rawStatus: dbT.status,
         date: new Date(dbT.created_at).toLocaleDateString('id-ID'),
-        payment: dbT.payment_type ? dbT.payment_type.toUpperCase() : (dbT.payment?.payment_method?.bank_name || 'Gateway Pembayaran'),
+        payment: dbT.payment_type === 'free_claim' ? 'Gratis (FREE)' : (dbT.payment_type ? dbT.payment_type.toUpperCase() : (dbT.payment?.payment_method?.bank_name || 'Gateway Pembayaran')),
         proof: dbT.payment?.proof_url || getStorageUrl(dbT.payment?.proof_image),
         paymentStatus: dbT.payment?.status,
         rejectionReason: dbT.payment?.rejection_reason,
@@ -200,7 +200,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                                 getProductSummary(t.products)
                                             )}
                                         </td>
-                                        <td data-label="Total" className="transactions-amount">{formatPrice(t.amount)}</td>
+                                        <td data-label="Total" className="transactions-amount">{formatPriceOrFree(t.amount)}</td>
                                         <td data-label="Status">
                                             <span className={`status-badge ${statusTone(t.status)}`}>
                                                 {t.status}
@@ -270,7 +270,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                         ) : (
                                             <strong>{getProductSummary(selectedTrx.products)}</strong>
                                         )}
-                                        <strong>{formatPrice(selectedTrx.amount)}</strong>
+                                        <strong>{formatPriceOrFree(selectedTrx.amount)}</strong>
                                     </div>
                                 </div>
 
@@ -278,7 +278,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                     <div className="detail-section-label"><CreditCard size={18} aria-hidden="true" /> Pembayaran</div>
                                     <div className="detail-grid">
                                         <div><span>Metode</span><strong>{selectedTrx.payment}</strong></div>
-                                        <div><span>Jumlah Bayar</span><strong>{formatPrice(selectedTrx.amount)}</strong></div>
+                                        <div><span>Jumlah Bayar</span><strong>{formatPriceOrFree(selectedTrx.amount)}</strong></div>
                                     </div>
 
                                     {selectedTrx.payload ? (

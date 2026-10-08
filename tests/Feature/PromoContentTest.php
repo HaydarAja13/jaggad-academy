@@ -19,7 +19,7 @@ class PromoContentTest extends TestCase
     {
         Storage::fake('public');
         $admin = User::factory()->create(['role' => 'admin']);
-        $product = Product::create(['name' => 'Kelas Promo', 'price' => 149000, 'normal_price' => 299000]);
+        $product = Product::create(['name' => 'Kelas Promo', 'price' => 149000, 'normal_price' => 299000, 'status' => 'published']);
         $payload = $this->promoPayload($product->id);
         $payload['heroImageFile'] = UploadedFile::fake()->image('promo.jpg', 1600, 900);
 
@@ -49,7 +49,7 @@ class PromoContentTest extends TestCase
 
     public function test_public_promo_receives_saved_content_and_products(): void
     {
-        $product = Product::create(['name' => 'Kelas Promo', 'price' => 149000]);
+        $product = Product::create(['name' => 'Kelas Promo', 'price' => 149000, 'status' => 'published']);
         SiteContent::create(['key' => 'ads_promo', 'value' => json_encode($this->promoPayload($product->id))]);
 
         $this->get(route('ads'))->assertInertia(fn (Assert $page) => $page

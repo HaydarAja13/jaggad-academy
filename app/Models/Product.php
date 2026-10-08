@@ -7,6 +7,9 @@ use Illuminate\Support\Str;
 
 class Product extends Model
 {
+    public const STATUS_DRAFT = 'draft';
+    public const STATUS_PUBLISHED = 'published';
+
     protected $fillable = [
         'name',
         'slug',
@@ -18,6 +21,7 @@ class Product extends Model
         'sold_count',
         'image',
         'badge',
+        'status',
         'featured',
         'short_description',
         'description',
@@ -75,6 +79,26 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function scopePublished($query)
+    {
+        return $query->where('status', self::STATUS_PUBLISHED);
+    }
+
+    public function scopeDraft($query)
+    {
+        return $query->where('status', self::STATUS_DRAFT);
+    }
+
+    public function isPublished(): bool
+    {
+        return ($this->status ?? self::STATUS_DRAFT) === self::STATUS_PUBLISHED;
+    }
+
+    public function isDraft(): bool
+    {
+        return ! $this->isPublished();
     }
 
     public function users()

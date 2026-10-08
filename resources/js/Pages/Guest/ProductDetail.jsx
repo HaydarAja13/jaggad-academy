@@ -3,7 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, MapPin, ShoppingCart } from 'lucide-react';
 import { products } from '../../Data/products';
 import ProductCard from '../../Components/ProductCard';
-import { formatCurrency, getCategoryLabel, getStorageUrl } from '../../Utils/helpers';
+import { formatCurrency, formatPriceOrFree, isFreePrice, getCategoryLabel, getStorageUrl } from '../../Utils/helpers';
 import { useCart } from '../../Contexts/CartContext';
 import MainLayout from '../../Layouts/MainLayout';
 import toast from 'react-hot-toast';
@@ -39,9 +39,20 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
     const pageCount = materials.reduce((total, item) => total + Number(item.pages || 0), 0);
     const inCart = isInCart(product.id);
     const isPurchased = auth?.purchased_products?.includes(product.id);
+    const isDraft = (product.status || 'published') === 'draft';
     const formatDate = date => new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    const buy = () => router.get(route('products.sales', product.slug || product.id));
+    const buy = () => {
+        if (isDraft) {
+            toast.error('Produk ini masih draft dan belum tersedia untuk dibeli.');
+            return;
+        }
+        router.get(route('products.sales', product.slug || product.id));
+    };
     const add = () => {
+        if (isDraft) {
+            toast.error('Produk ini masih draft dan belum tersedia untuk dibeli.');
+            return;
+        }
         if (!auth.user) {
             toast.error('Masuk terlebih dahulu untuk menambahkan produk ke keranjang.');
             return router.get(route('login'));
@@ -49,7 +60,10 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
         addToCart(product);
         toast.success('Produk ditambahkan ke keranjang.');
     };
-    const action = isPurchased ? <button className="pd-button pd-button--primary" onClick={() => router.get(route('dashboard.learning', product.slug || product.id))}>Buka materi <ArrowRight size={18} /></button> : <><button className="pd-button pd-button--primary" onClick={buy}>Beli sekarang <ArrowRight size={18} /></button><button className="pd-cart" onClick={add} disabled={inCart}><ShoppingCart size={18} />{inCart ? 'Sudah di keranjang' : 'Tambah ke keranjang'}</button></>;
+    const isFree = isFreePrice(price);
+    const action = isDraft
+        ? <div className="pd-draft-notice"><strong>Segera hadir</strong><span>Produk ini masih dalam tahap persiapan dan belum tersedia untuk dibeli.</span></div>
+        : isPurchased ? <button className="pd-button pd-button--primary" onClick={() => router.get(route('dashboard.learning', product.slug || product.id))}>Buka materi <ArrowRight size={18} /></button> : <><button className="pd-button pd-button--primary" onClick={buy}>{isFree ? 'Dapatkan Gratis' : 'Beli sekarang'} <ArrowRight size={18} /></button><button className="pd-cart" onClick={add} disabled={inCart}><ShoppingCart size={18} />{inCart ? 'Sudah di keranjang' : 'Tambah ke keranjang'}</button></>;
 
     return <MainLayout>
         <Head title={`${title} - JAGGAD ACADEMY`} />
@@ -66,7 +80,7 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
                         <h1 id="product-title">{title}</h1>
                         <p className="pd-intro">{product.short_description || description}</p>
                         <div className="pd-facts" aria-label="Ringkasan produk"><span><BookOpen size={18} /> {materials.length || '—'} bagian{pageCount ? ` · ${pageCount} halaman` : ''}</span><span><Check size={18} /> Materi digital</span></div>
-                        <div className="pd-price"><span>Harga</span>{originalPrice > price ? <><del>{formatCurrency(originalPrice)}</del><div><strong>{formatCurrency(price)}</strong><b>Hemat {discount}%</b></div></> : <strong>{formatCurrency(price)}</strong>}</div>
+                        <div className="pd-price"><span>Harga</span>{isFreePrice(price) ? <strong>FREE</strong> : originalPrice > price ? <><del>{formatCurrency(originalPrice)}</del><div><strong>{formatCurrency(price)}</strong><b>Hemat {discount}%</b></div></> : <strong>{formatCurrency(price)}</strong>}</div>
                         <div className="pd-actions">{action}</div>
                         <p className="pd-purchase__note">Detail pembayaran ditampilkan sebelum checkout.</p>
                     </aside>
@@ -76,7 +90,7 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
                 {materials.length > 0 && <section className="pd-materials" aria-labelledby="materials-title"><div className="pd-section-heading"><h2 id="materials-title">Isi materi</h2><p>Susunan materi yang akan Anda pelajari.</p></div><ol>{materials.map((material, index) => <li key={`${material.title}-${index}`}><span>{String(index + 1).padStart(2, '0')}</span><strong>{material.title}</strong><em>{material.pages ? `${material.pages} halaman` : material.videos ? `${material.videos} video` : material.duration || ''}</em></li>)}</ol></section>}
             </div>
             {similarProducts.length > 0 && <section className="pd-related"><div className="container pd-related__layout"><div className="pd-section-heading"><h2>Produk terkait</h2><p>Materi lain dalam kategori yang sama.</p><Link href={route('products')} className="pd-related__link">Lihat semua produk <ArrowRight size={18} /></Link></div><div className="pd-related__grid">{similarProducts.map(item => <ProductCard key={item.id} product={item} className="product-card--related" />)}</div></div></section>}
-            {!isPurchased && <div className="pd-mobile-buy"><span>{formatCurrency(price)}</span><button onClick={buy}>Beli sekarang <ArrowRight size={17} /></button></div>}
+            {!isPurchased && !isDraft && <div className="pd-mobile-buy"><span>{formatPriceOrFree(price)}</span><button onClick={buy}>{isFreePrice(price) ? 'Dapatkan Gratis' : 'Beli sekarang'} <ArrowRight size={17} /></button></div>}
         </main>
     </MainLayout>;
 }

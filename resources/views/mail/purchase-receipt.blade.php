@@ -222,14 +222,18 @@
     <div class="header" style="border-bottom: none;">
         <div class="brand">{{ $siteName }}</div>
         <div class="header-subtitle">{{ $siteTagline }}</div>
-        <div class="success-badge">✓ &nbsp;Pembayaran Berhasil</div>
+        <div class="success-badge">✓ &nbsp;{{ (float) $transaction->total_amount <= 0 ? 'Produk Gratis Aktif' : 'Pembayaran Berhasil' }}</div>
     </div>
 
     <!-- BODY -->
     <div class="body">
         <p class="greeting">Halo, {{ $transaction->user->name }}! 🎉</p>
         <p class="greeting-sub">
-            Terima kasih telah berbelanja di {{ $siteName }}. Pembayaran Anda telah kami terima dan produk berikut sudah aktif di akun Anda. Selamat belajar!
+            @if((float) $transaction->total_amount <= 0)
+                Terima kasih telah bergabung di {{ $siteName }}. Produk gratis berikut sudah aktif di akun Anda. Selamat belajar!
+            @else
+                Terima kasih telah berbelanja di {{ $siteName }}. Pembayaran Anda telah kami terima dan produk berikut sudah aktif di akun Anda. Selamat belajar!
+            @endif
         </p>
 
         <!-- Order Info -->
@@ -277,7 +281,7 @@
                             <div class="product-category">{{ $item->product->category->name }}</div>
                         @endif
                     </td>
-                    <td>Rp {{ number_format($item->price, 0, ',', '.') }}</td>
+                    <td>{{ (float) $item->price <= 0 ? 'FREE' : 'Rp '.number_format($item->price, 0, ',', '.') }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -285,8 +289,8 @@
 
         <!-- Total -->
         <div class="total-row">
-            <span class="total-label">Total Pembayaran</span>
-            <span class="total-amount">Rp {{ number_format($transaction->total_amount, 0, ',', '.') }}</span>
+            <span class="total-label">{{ (float) $transaction->total_amount <= 0 ? 'Total (Gratis)' : 'Total Pembayaran' }}</span>
+            <span class="total-amount">{{ (float) $transaction->total_amount <= 0 ? 'FREE' : 'Rp '.number_format($transaction->total_amount, 0, ',', '.') }}</span>
         </div>
 
         <!-- CTA -->

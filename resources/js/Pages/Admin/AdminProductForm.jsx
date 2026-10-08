@@ -35,7 +35,9 @@ export default function AdminProductForm({ dbCategories = [], product }) {
         _method: isEdit ? 'PUT' : 'POST',
         title: product?.name || '', 
         category: product?.category_id || (dbCategories[0]?.id || ''), 
-        price: product?.price ? Math.round(parseFloat(product.price)) : '', 
+        status: product?.status || 'draft',
+        price: product?.price !== undefined && product?.price !== null && product?.price !== '' ? Math.round(parseFloat(product.price)) : '',
+
         originalPrice: product?.normal_price ? Math.round(parseFloat(product.normal_price)) : '',
         description: product?.short_description || '', 
         longDescription: product?.description || '', 
@@ -136,7 +138,7 @@ export default function AdminProductForm({ dbCategories = [], product }) {
 
 
     const handleSave = () => {
-        if (!form.title || !form.price) return toast.error('Lengkapi data wajib produk (Judul & Harga)');
+        if (!form.title || form.price === '' || form.price === null || form.price === undefined) return toast.error('Lengkapi data wajib produk (Judul & Harga)');
         if (form.startAt && form.endAt && new Date(form.endAt) < new Date(form.startAt)) {
             return toast.error('Waktu selesai tidak boleh mendahului waktu mulai');
         }
@@ -145,6 +147,7 @@ export default function AdminProductForm({ dbCategories = [], product }) {
         fd.append('_method', isEdit ? 'PUT' : 'POST');
         fd.append('title', form.title);
         fd.append('category', form.category || '');
+        fd.append('status', form.status || 'draft');
         fd.append('price', form.price);
         fd.append('originalPrice', form.originalPrice || '');
         fd.append('description', form.description || '');
@@ -258,6 +261,17 @@ export default function AdminProductForm({ dbCategories = [], product }) {
                                 </div>
                             </div>
 
+                            <div className="product-form-grid product-form-grid--two">
+                                <div className="form-group">
+                                    <label>Status Publikasi *</label>
+                                    <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                                        <option value="draft">Draft — disembunyikan dari katalog & tidak bisa dibeli</option>
+                                        <option value="published">Publish — tampil di katalog & bisa dibeli</option>
+                                    </select>
+                                    {form.status === 'draft' && <p className="form-hint">Produk draft tidak tampil di halaman utama, katalog, promo, dan tidak bisa di-checkout sampai dipublish.</p>}
+                                </div>
+                            </div>
+
                             <div className="product-form-grid product-form-grid--three">
                                 <div className="form-group">
                                     <label>Waktu Mulai (Opsional)</label>
@@ -284,6 +298,7 @@ export default function AdminProductForm({ dbCategories = [], product }) {
                                         <span>Rp</span>
                                         <input type="text" inputMode="numeric" value={formatNumberWithDots(form.price)} onChange={e => setForm({ ...form, price: parseNumberFromDots(e.target.value) })} placeholder="0" />
                                     </div>
+                                    <p className="form-hint">Isi 0 untuk produk GRATIS — otomatis berlabel FREE dan bisa diklaim tanpa pembayaran.</p>
                                 </div>
                                 <div className="form-group">
                                     <div className="product-form-label-row">

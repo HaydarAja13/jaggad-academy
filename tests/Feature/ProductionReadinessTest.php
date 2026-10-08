@@ -51,7 +51,7 @@ class ProductionReadinessTest extends TestCase
         Storage::fake('local');
         $user = User::factory()->create();
         foreach (config('packages.starter-pack.products') as $slug) {
-            Product::create(['name' => $slug, 'slug' => $slug, 'price' => 999999]);
+            Product::create(['name' => $slug, 'slug' => $slug, 'price' => 999999, 'status' => 'published']);
         }
         $method = PaymentMethod::create(['type' => 'bank_transfer', 'bank_name' => 'BCA', 'account_name' => 'JAGGAD', 'account_number' => '123', 'status' => true]);
 
@@ -73,7 +73,7 @@ class ProductionReadinessTest extends TestCase
         $this->get(route('packages.landing', 'starter-pack'))->assertNotFound();
 
         foreach (config('packages.starter-pack.products') as $slug) {
-            Product::create(['name' => $slug, 'slug' => $slug, 'price' => 250000]);
+            Product::create(['name' => $slug, 'slug' => $slug, 'price' => 250000, 'status' => 'published']);
         }
 
         $this->get(route('packages.landing', 'starter-pack'))
@@ -90,7 +90,7 @@ class ProductionReadinessTest extends TestCase
             'services.midtrans.client_key' => 'client-key',
         ]);
         $user = User::factory()->create();
-        $product = Product::create(['name' => 'Kelas Midtrans', 'price' => 149000]);
+        $product = Product::create(['name' => 'Kelas Midtrans', 'price' => 149000, 'status' => 'published']);
         $method = PaymentMethod::create([
             'type' => PaymentMethod::TYPE_MIDTRANS,
             'bank_name' => 'Midtrans',
@@ -177,6 +177,7 @@ class ProductionReadinessTest extends TestCase
         $this->assertNull($product->badge);
         $this->assertNull($product->short_description);
         $this->assertNull($product->description);
+        $this->assertSame('draft', $product->status);
     }
 
     public function test_verified_user_can_access_protected_routes(): void
@@ -213,6 +214,7 @@ class ProductionReadinessTest extends TestCase
         $product = Product::create([
             'name' => 'Materi Privat',
             'price' => 1000,
+            'status' => 'published',
             'materials' => [['title' => 'Bab Rahasia', 'link' => 'https://example.com/private']],
         ]);
 

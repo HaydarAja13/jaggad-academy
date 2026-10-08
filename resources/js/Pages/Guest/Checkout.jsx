@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, Building2, Check, CheckCircle2, Copy, CreditCard, Lock, ReceiptText, ShieldCheck, ShoppingBag, Trash2, Upload, UserRound } from 'lucide-react';
 import { useCart } from '../../Contexts/CartContext';
-import { formatCurrency, getStorageUrl } from '../../Utils/helpers';
+import { formatCurrency, formatPriceOrFree, getStorageUrl } from '../../Utils/helpers';
 import MainLayout from '../../Layouts/MainLayout';
 import toast from 'react-hot-toast';
 import { useMetaPixel } from '../../Utils/useMetaPixel';
@@ -44,6 +44,7 @@ export default function Checkout({ auth, dbPaymentMethods = [] }) {
     const selectedPayment = activeMethods.find(method => method.id === selectedMethod);
     const availableMethods = activeMethods.filter(method => method.enabled);
     const total = getTotal();
+    const isFreeOrder = cartItems.length > 0 && Number(total) === 0;
 
     const copyAccountNumber = async method => {
         try {
@@ -55,9 +56,45 @@ export default function Checkout({ auth, dbPaymentMethods = [] }) {
         }
     };
 
+    const handleFreeClaim = () => {
+        if (!form.name || !form.email || !form.phone) return toast.error('Lengkapi nama, email, dan nomor HP.');
+        setProcessing(true);
+        router.post(route('checkout.process'), {
+            phone: form.phone,
+            cart: cartItems.map(item => item.type === 'package'
+                ? { package_slug: item.package_slug }
+                : { id: item.id }),
+        }, {
+            preserveScroll: true,
+            onSuccess: page => {
+                const { trx_code, free_claim } = page.props.flash || {};
+                setProcessing(false);
+                if (free_claim || trx_code) {
+                    if (cartItems.length === 1 && cartItems[0].slug) {
+                        clearCart();
+                        toast.success('Produk gratis berhasil dibuka! Materi sudah tersedia.');
+                        router.visit(route('dashboard.learning', cartItems[0].slug));
+                        return;
+                    }
+                    clearCart();
+                    toast.success('Produk gratis berhasil dibuka! Materi sudah tersedia di dashboard.');
+                    router.visit(route('dashboard'));
+                }
+            },
+            onError: errors => {
+                setProcessing(false);
+                Object.values(errors).forEach(error => toast.error(error));
+            },
+        });
+    };
+
     const handleOrder = event => {
         event?.preventDefault();
         if (!form.name || !form.email || !form.phone) return toast.error('Lengkapi nama, email, dan nomor HP.');
+        if (isFreeOrder) {
+            handleFreeClaim();
+            return;
+        }
         trackInitiateCheckout(cartItems, total);
         setStep(2);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -143,20 +180,20 @@ export default function Checkout({ auth, dbPaymentMethods = [] }) {
     return <MainLayout>
         <Head title="Checkout - JAGGAD ACADEMY" />
         <main className="checkout-page">
-            <header className="checkout-header"><div className="container checkout-header__inner"><Link href={route('products')} className="checkout-back"><ArrowLeft size={18} /> Kembali ke katalog</Link><div className="checkout-header__row"><div><h1>Keranjang & checkout</h1><p>Periksa pesanan, lengkapi data, lalu pilih metode pembayaran.</p></div><ol className="checkout-progress" aria-label="Progres checkout"><li className={step === 1 ? 'active' : 'done'}><span>{step > 1 ? <Check size={18} /> : '1'}</span><div><strong>Data pemesan</strong><small>Informasi kontak</small></div></li><li className={step === 2 ? 'active' : ''}><span>2</span><div><strong>Pembayaran</strong><small>Pilih metode</small></div></li></ol></div></div></header>
+            <header className="checkout-header"><div className="container checkout-header__inner"><Link href={route('products')} className="checkout-back"><ArrowLeft size={18} /> Kembali ke katalog</Link><div className="checkout-header__row"><div><h1>Keranjang & checkout</h1><p>{isFreeOrder ? 'Lengkapi data diri, produk gratis langsung terbuka tanpa pembayaran.' : 'Periksa pesanan, lengkapi data, lalu pilih metode pembayaran.'}</p></div>{!isFreeOrder && <ol className="checkout-progress" aria-label="Progres checkout"><li className={step === 1 ? 'active' : 'done'}><span>{step > 1 ? <Check size={18} /> : '1'}</span><div><strong>Data pemesan</strong><small>Informasi kontak</small></div></li><li className={step === 2 ? 'active' : ''}><span>2</span><div><strong>Pembayaran</strong><small>Pilih metode</small></div></li></ol>}</div></div></header>
 
             <div className="container checkout-layout">
                 <div className="checkout-work">
-                    {step === 1 && <form className="checkout-panel" onSubmit={handleOrder}><div className="checkout-panel__heading"><span><UserRound size={22} /></span><div><h2>Data pemesan</h2><p>Pastikan informasi berikut aktif dan dapat dihubungi.</p></div></div><div className="checkout-fields"><label className="checkout-field"><span>Nama lengkap</span><input required autoComplete="name" value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} placeholder="Nama lengkap Anda" /></label><label className="checkout-field"><span>Email</span><input required autoComplete="email" type="email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} placeholder="nama@email.com" /></label><label className="checkout-field"><span>Nomor HP</span><input required autoComplete="tel" type="tel" value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} placeholder="08xx xxxx xxxx" /></label></div><div className="checkout-panel__footer"><p><ShieldCheck size={18} /> Data digunakan untuk memproses pesanan Anda.</p><button className="checkout-button checkout-button--primary" type="submit">Lanjut ke pembayaran <ArrowRight size={18} style={{ color: '#fff' }} /></button></div></form>}
+                    {step === 1 && <form className="checkout-panel" onSubmit={handleOrder}><div className="checkout-panel__heading"><span><UserRound size={22} /></span><div><h2>Data pemesan</h2><p>{isFreeOrder ? 'Isi identitas untuk membuka produk gratis Anda.' : 'Pastikan informasi berikut aktif dan dapat dihubungi.'}</p></div></div><div className="checkout-fields"><label className="checkout-field"><span>Nama lengkap</span><input required autoComplete="name" value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} placeholder="Nama lengkap Anda" /></label><label className="checkout-field"><span>Email</span><input required autoComplete="email" type="email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} placeholder="nama@email.com" /></label><label className="checkout-field"><span>Nomor HP</span><input required autoComplete="tel" type="tel" value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} placeholder="08xx xxxx xxxx" /></label></div><div className="checkout-panel__footer"><p><ShieldCheck size={18} /> {isFreeOrder ? 'Tanpa pembayaran, tanpa upload bukti.' : 'Data digunakan untuk memproses pesanan Anda.'}</p><button className="checkout-button checkout-button--primary" type="submit" disabled={processing}>{isFreeOrder ? (processing ? 'Membuka produk…' : 'Ambil Produk Gratis') : <>Lanjut ke pembayaran <ArrowRight size={18} style={{ color: '#fff' }} /></>}</button></div></form>}
 
-                    {step === 2 && <section className="checkout-panel"><div className="checkout-panel__heading"><span><CreditCard size={22} /></span><div><h2>Metode pembayaran</h2><p>Pilih satu metode yang paling nyaman untuk Anda.</p></div></div>{activeMethods.length > 0 ? <div className="payment-methods-grid">{activeMethods.map(method => <div key={method.id} className={`payment-option ${selectedMethod === method.id ? 'selected' : ''} ${method.enabled ? '' : 'disabled'}`}><button type="button" className="payment-option__select" disabled={!method.enabled} onClick={() => { setSelectedMethod(method.id); setProofFile(null); }} aria-pressed={selectedMethod === method.id}><span className="payment-icon"><method.icon size={21} /></span><span className="payment-copy"><strong>{method.label}</strong><small>{method.isManual ? 'Verifikasi oleh admin setelah bukti dikirim' : method.enabled ? 'QRIS, Virtual Account, dan kartu' : 'Pembayaran otomatis sedang disiapkan'}</small></span>{method.enabled ? <span className="payment-radio" aria-hidden="true">{selectedMethod === method.id && <Check size={14} />}</span> : <span className="payment-maintenance">Dalam pemeliharaan</span>}</button>{selectedMethod === method.id && method.isManual && <div className="bank-details"><span><small>Nomor rekening</small><b>{method.accNo}</b><small>Atas nama {method.accName}</small></span><button type="button" onClick={() => copyAccountNumber(method)}><Copy size={17} aria-hidden="true" /> {copiedAccount === method.id ? 'Tersalin' : 'Salin'}</button></div>}</div>)}</div> : <div className="checkout-notice">Metode pembayaran belum tersedia. Silakan hubungi admin JAGGAD Academy.</div>}
+                    {step === 2 && !isFreeOrder && <section className="checkout-panel"><div className="checkout-panel__heading"><span><CreditCard size={22} /></span><div><h2>Metode pembayaran</h2><p>Pilih satu metode yang paling nyaman untuk Anda.</p></div></div>{activeMethods.length > 0 ? <div className="payment-methods-grid">{activeMethods.map(method => <div key={method.id} className={`payment-option ${selectedMethod === method.id ? 'selected' : ''} ${method.enabled ? '' : 'disabled'}`}><button type="button" className="payment-option__select" disabled={!method.enabled} onClick={() => { setSelectedMethod(method.id); setProofFile(null); }} aria-pressed={selectedMethod === method.id}><span className="payment-icon"><method.icon size={21} /></span><span className="payment-copy"><strong>{method.label}</strong><small>{method.isManual ? 'Verifikasi oleh admin setelah bukti dikirim' : method.enabled ? 'QRIS, Virtual Account, dan kartu' : 'Pembayaran otomatis sedang disiapkan'}</small></span>{method.enabled ? <span className="payment-radio" aria-hidden="true">{selectedMethod === method.id && <Check size={14} />}</span> : <span className="payment-maintenance">Dalam pemeliharaan</span>}</button>{selectedMethod === method.id && method.isManual && <div className="bank-details"><span><small>Nomor rekening</small><b>{method.accNo}</b><small>Atas nama {method.accName}</small></span><button type="button" onClick={() => copyAccountNumber(method)}><Copy size={17} aria-hidden="true" /> {copiedAccount === method.id ? 'Tersalin' : 'Salin'}</button></div>}</div>)}</div> : <div className="checkout-notice">Metode pembayaran belum tersedia. Silakan hubungi admin JAGGAD Academy.</div>}
 
                         {selectedPayment?.isManual && <div className="proof-upload-section"><h3>Unggah bukti transfer</h3><label className={`proof-upload-label ${proofFile ? 'has-file' : ''}`}>{proofFile ? <>{proofFile.type.startsWith('image/') ? <img src={URL.createObjectURL(proofFile)} alt="Pratinjau bukti pembayaran" className="proof-preview-image" /> : <CheckCircle2 size={32} />}<strong>{proofFile.name}</strong><span>Klik untuk mengganti file</span></> : <><Upload size={30} /><strong>Pilih bukti transfer</strong><span>JPG atau PNG, maksimal 5 MB</span></>}<input type="file" accept="image/jpeg,image/png" onChange={event => setProofFile(event.target.files?.[0] || null)} /></label></div>}
 
                         <div className="checkout-actions"><button className="checkout-button checkout-button--secondary" type="button" onClick={() => setStep(1)} disabled={processing}><ArrowLeft size={18} /> Kembali</button><button className="checkout-button checkout-button--primary" type="button" onClick={handlePay} disabled={processing || availableMethods.length === 0}><Lock size={18} /> {processing ? 'Memproses pembayaran…' : `Kirim bukti & konfirmasi ${formatCurrency(total)}`}</button></div></section>}
                 </div>
 
-                <aside className="checkout-summary"><section className="checkout-summary__panel"><div className="checkout-summary__heading"><div><ReceiptText size={21} /><h2>Ringkasan pesanan</h2></div><span>{cartItems.length} produk</span></div><div className="order-items">{cartItems.map(item => { const image = getStorageUrl(item.image || item.thumbnail); const name = item.name || item.title; return <article className="order-item" key={item.id}>{image ? <img src={image} alt="" /> : <div className="order-item__placeholder"><ShoppingBag size={20} /></div>}<div className="order-item__copy"><h3>{name}</h3><strong>{formatCurrency(item.price)}</strong></div>{step === 1 && <button type="button" className="btn-remove-item" onClick={() => removeFromCart(item.id)} aria-label={`Hapus ${name} dari keranjang`}><Trash2 size={18} /></button>}</article>; })}</div><div className="order-totals"><div><span>Subtotal</span><strong>{formatCurrency(total)}</strong></div><div className="order-total"><span>Total pembayaran</span><strong>{formatCurrency(total)}</strong></div></div><p className="checkout-summary__note"><Lock size={17} /> Pembayaran diproses melalui metode yang Anda pilih.</p></section></aside>
+                <aside className="checkout-summary"><section className="checkout-summary__panel"><div className="checkout-summary__heading"><div><ReceiptText size={21} /><h2>Ringkasan pesanan</h2></div><span>{cartItems.length} produk</span></div><div className="order-items">{cartItems.map(item => { const image = getStorageUrl(item.image || item.thumbnail); const name = item.name || item.title; return <article className="order-item" key={item.id}>{image ? <img src={image} alt="" /> : <div className="order-item__placeholder"><ShoppingBag size={20} /></div>}<div className="order-item__copy"><h3>{name}</h3><strong>{formatPriceOrFree(item.price)}</strong></div>{step === 1 && <button type="button" className="btn-remove-item" onClick={() => removeFromCart(item.id)} aria-label={`Hapus ${name} dari keranjang`}><Trash2 size={18} /></button>}</article>; })}</div><div className="order-totals"><div><span>Subtotal</span><strong>{formatPriceOrFree(total)}</strong></div><div className="order-total"><span>{isFreeOrder ? 'Total (Gratis)' : 'Total pembayaran'}</span><strong>{formatPriceOrFree(total)}</strong></div></div><p className="checkout-summary__note"><Lock size={17} /> {isFreeOrder ? 'Produk gratis — tidak ada pembayaran.' : 'Pembayaran diproses melalui metode yang Anda pilih.'}</p></section></aside>
             </div>
         </main>
     </MainLayout>;

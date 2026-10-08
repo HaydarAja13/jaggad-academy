@@ -38,11 +38,11 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function process(Request $request)
+    public function process(Request $request, TransactionFinalizer $finalizer)
     {
         $validated = $request->validate([
             'phone' => 'required|string|max:32',
-            'payment_method_id' => 'required|exists:payment_methods,id',
+            'payment_method_id' => 'nullable|exists:payment_methods,id',
             'cart' => 'required|array|min:1|max:50',
             'cart.*.id' => 'nullable|required_without:cart.*.package_slug|integer|distinct|exists:products,id',
             'cart.*.package_slug' => 'nullable|required_without:cart.*.id|string|distinct',
@@ -60,6 +60,45 @@ class CheckoutController extends Controller
             throw ValidationException::withMessages([
                 'cart' => 'Anda sudah memiliki produk berikut: '.$ownedProducts->join(', ').'.',
             ]);
+        }
+
+        // Cabang klaim gratis: seluruh isi keranjang berharga Rp 0 (price == 0 dari DB).
+        // Tanpa metode bayar, tanpa Snap, tanpa upload bukti — langsung beri akses.
+        if ((int) $grandTotal === 0) {
+            if (empty($user->phone)) {
+                $user->update(['phone' => $validated['phone']]);
+            }
+
+            $transaction = DB::transaction(function () use ($user, $products, $linePrices) {
+                $transaction = Transaction::create([
+                    'transaction_code' => 'TRX-'.strtoupper(Str::random(8)),
+                    'user_id' => $user->id,
+                    'total_amount' => 0,
+                    'status' => 'pending',
+                ]);
+
+                foreach ($products as $product) {
+                    TransactionItem::create([
+                        'transaction_id' => $transaction->id,
+                        'product_id' => $product->id,
+                        'price' => 0,
+                    ]);
+                }
+
+                return $transaction;
+            });
+
+            $finalizer->apply($transaction, 'success', 'free_claim', ['source' => 'free_claim']);
+
+            return back()->with([
+                'success' => 'Produk gratis berhasil dibuka! Materi sudah tersedia di dashboard.',
+                'trx_code' => $transaction->transaction_code,
+                'free_claim' => true,
+            ]);
+        }
+
+        if (empty($validated['payment_method_id'])) {
+            throw ValidationException::withMessages(['payment_method_id' => 'Pilih metode pembayaran yang tersedia.']);
         }
 
         $paymentMethod = PaymentMethod::findOrFail($validated['payment_method_id']);
@@ -368,6 +407,9 @@ class CheckoutController extends Controller
         foreach ($cart as $item) {
             if (! empty($item['id'])) {
                 $product = Product::findOrFail($item['id']);
+                if ($product->isDraft()) {
+                    throw ValidationException::withMessages(['cart' => 'Produk "'.$product->name.'" belum tersedia untuk dibeli.']);
+                }
                 if ($products->has($product->id)) {
                     throw ValidationException::withMessages(['cart' => 'Produk yang sama tidak boleh muncul lebih dari sekali.']);
                 }
@@ -388,7 +430,7 @@ class CheckoutController extends Controller
             }
 
             $packageProducts = Product::whereIn('slug', $package['products'])->get();
-            if ($packageProducts->count() !== count($package['products'])) {
+            if ($packageProducts->count() !== count($package['products']) || $packageProducts->contains(fn ($product) => $product->isDraft())) {
                 throw ValidationException::withMessages(['cart' => 'Salah satu produk dalam paket tidak tersedia.']);
             }
 

@@ -13,8 +13,8 @@ class HomeToastProductsTest extends TestCase
 
     public function test_home_receives_catalog_products_for_purchase_activity_toast(): void
     {
-        Product::create(['name' => 'Kelas A', 'price' => 100000]);
-        Product::create(['name' => 'Kelas B', 'price' => 200000]);
+        Product::create(['name' => 'Kelas A', 'price' => 100000, 'status' => 'published']);
+        Product::create(['name' => 'Kelas B', 'price' => 200000, 'status' => 'published']);
 
         $this->get(route('home'))->assertInertia(fn (Assert $page) => $page
             ->component('Guest/Welcome')

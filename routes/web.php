@@ -40,7 +40,7 @@ Route::get('/products/{product}/sales', [PublicController::class, 'productSales'
 
 Route::get('/packages/{slug}', function ($slug) {
     $package = config("packages.{$slug}");
-    abort_unless($package && Product::whereIn('slug', $package['products'])->count() === count($package['products']), 404);
+    abort_unless($package && Product::published()->whereIn('slug', $package['products'])->count() === count($package['products']), 404);
 
     return Inertia::render('Guest/PackageLanding', [
         'slug' => $slug,
@@ -81,6 +81,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/products', [AdminProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
         Route::match(['POST', 'PUT'], '/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
+        Route::patch('/products/{product}/status', [AdminProductController::class, 'toggleStatus'])->name('products.status');
         Route::post('/products/{product}/landing-blocks', [AdminProductController::class, 'updateLandingBlocks'])->name('products.landing');
         Route::delete('/products/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
 

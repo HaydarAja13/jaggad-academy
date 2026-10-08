@@ -24,6 +24,9 @@ export function CartProvider({ children }) {
     }, [purchasedIds]);
 
     const addToCart = (product) => {
+        // Draft products are hidden from the catalog and cannot be purchased
+        if ((product.status || 'published') === 'draft') return false;
+
         // Prevent adding already purchased products
         if (purchasedIds.includes(product.id)) return;
 

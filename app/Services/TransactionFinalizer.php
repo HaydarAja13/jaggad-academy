@@ -117,6 +117,11 @@ class TransactionFinalizer
 
     private function trackMetaPurchase(Transaction $transaction): void
     {
+        // Transaksi gratis (Rp 0) tidak dikirim ke Meta agar tidak merusak optimasi iklan.
+        if ((float) $transaction->total_amount <= 0) {
+            return;
+        }
+
         $settings = SiteContent::where('key', 'site_settings')->first();
         $settingsData = $settings ? json_decode($settings->value, true) : [];
         $pixelId = $settingsData['meta_pixel_id'] ?? null;

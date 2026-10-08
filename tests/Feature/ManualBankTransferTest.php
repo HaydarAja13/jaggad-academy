@@ -24,7 +24,7 @@ class ManualBankTransferTest extends TestCase
     {
         Storage::fake('local');
         $customer = User::factory()->create();
-        $product = Product::create(['name' => 'Kelas Aman', 'price' => 149000]);
+        $product = Product::create(['name' => 'Kelas Aman', 'price' => 149000, 'status' => 'published']);
         $method = $this->bankMethod();
 
         $this->actingAs($customer)->post(route('checkout.process'), [
@@ -43,7 +43,7 @@ class ManualBankTransferTest extends TestCase
     public function test_inactive_midtrans_cannot_be_selected_directly(): void
     {
         $customer = User::factory()->create();
-        $product = Product::create(['name' => 'Kelas Aman', 'price' => 149000]);
+        $product = Product::create(['name' => 'Kelas Aman', 'price' => 149000, 'status' => 'published']);
         $midtrans = PaymentMethod::create([
             'type' => PaymentMethod::TYPE_MIDTRANS,
             'bank_name' => 'Midtrans',
@@ -64,7 +64,7 @@ class ManualBankTransferTest extends TestCase
     public function test_customer_cannot_checkout_a_product_they_already_own(): void
     {
         $customer = User::factory()->create();
-        $product = Product::create(['name' => 'Kelas Milik Saya', 'price' => 149000]);
+        $product = Product::create(['name' => 'Kelas Milik Saya', 'price' => 149000, 'status' => 'published']);
         $customer->products()->attach($product->id, ['purchased_at' => now()]);
 
         $this->actingAs($customer)->post(route('checkout.process'), [
