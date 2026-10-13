@@ -14,11 +14,22 @@ const statusOptions = [
     { value: 'Gagal', label: 'Gagal / batal', icon: XCircle, tone: 'failed' },
 ];
 
+// Filter jenis transaksi: penjualan produk, donasi, atau konsultasi.
+const purposeOptions = [
+    { value: 'Semua', label: 'Semua jenis' },
+    { value: 'product_purchase', label: 'Penjualan' },
+    { value: 'donation', label: 'Donasi' },
+    { value: 'consultation', label: 'Konsultasi' },
+];
+
+const purposeLabelOf = t => (t.isConsultation ? 'Konsultasi' : t.purpose === 'donation' ? 'Donasi' : 'Penjualan');
+
 const statusTone = status => status === 'Berhasil' ? 'success' : status === 'Pending' ? 'warning' : status === 'Perlu perbaikan' ? 'revision' : 'error';
 
 export default function AdminTransactions({ dbTransactions = {} }) {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('Semua');
+    const [purposeFilter, setPurposeFilter] = useState('Semua');
     const [selectedTrx, setSelectedTrx] = useState(null);
     const [showRejectForm, setShowRejectForm] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
@@ -31,6 +42,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
         dbId: dbT.id,
         purpose: dbT.purpose || 'product_purchase',
         isConsultation: dbT.purpose?.startsWith('consultation_'),
+        isDonation: dbT.purpose === 'donation',
         customer: dbT.user?.name || dbT.consultation_appointment?.customer_name || 'Pelanggan dihapus',
         email: dbT.user?.email || '',
         whatsapp: dbT.consultation_appointment?.whatsapp || '',
@@ -41,7 +53,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
         status: dbT.status === 'success' ? 'Berhasil' : dbT.payment?.status === 'rejected' && dbT.status === 'pending' ? 'Perlu perbaikan' : (['failed', 'expired', 'refunded'].includes(dbT.status) ? 'Gagal' : 'Pending'),
         rawStatus: dbT.status,
         date: new Date(dbT.created_at).toLocaleDateString('id-ID'),
-        payment: dbT.payment_type === 'free_claim' ? 'Gratis (FREE)' : (dbT.payment_type ? dbT.payment_type.toUpperCase() : (dbT.payment?.payment_method?.bank_name || 'Gateway Pembayaran')),
+        payment: dbT.payment_type === 'free_claim' ? (dbT.purpose === 'donation' ? 'Donasi (Rp0)' : 'Gratis (FREE)') : (dbT.payment_type ? dbT.payment_type.toUpperCase() : (dbT.payment?.payment_method?.bank_name || 'Gateway Pembayaran')),
         proof: dbT.payment?.proof_url || getStorageUrl(dbT.payment?.proof_image),
         paymentStatus: dbT.payment?.status,
         rejectionReason: dbT.payment?.rejection_reason,
@@ -55,7 +67,9 @@ export default function AdminTransactions({ dbTransactions = {} }) {
         const query = search.trim().toLowerCase();
         const matchSearch = !query || [t.customer, t.email, t.whatsapp, t.id, getProductSummary(t.products)].some(value => value.toLowerCase().includes(query));
         const matchFilter = statusFilter === 'Semua' || t.status === statusFilter;
-        return matchSearch && matchFilter;
+        const matchPurpose = purposeFilter === 'Semua'
+            || (purposeFilter === 'consultation' ? t.isConsultation : (!t.isConsultation && t.purpose === purposeFilter));
+        return matchSearch && matchFilter && matchPurpose;
     });
 
     const closeDetail = () => {
@@ -112,7 +126,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
     const countRevision = transactions.filter(t => t.status === 'Perlu perbaikan').length;
     const countGagal = transactions.filter(t => t.status === 'Gagal').length;
     const statusCounts = { Semua: transactions.length, Berhasil: countBerhasil, Pending: countPending, 'Perlu perbaikan': countRevision, Gagal: countGagal };
-    const hasFilters = search.trim() || statusFilter !== 'Semua';
+    const hasFilters = search.trim() || statusFilter !== 'Semua' || purposeFilter !== 'Semua';
     const paginationLinks = dbTransactions.links || [];
     const previousPage = paginationLinks[0];
     const nextPage = paginationLinks[paginationLinks.length - 1];
@@ -176,6 +190,12 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                     {statusOptions.map(option => <option value={option.value} key={option.value}>{option.label}</option>)}
                                 </select>
                             </label>
+                            <label className="transactions-select">
+                                <span className="sr-only">Filter jenis</span>
+                                <select value={purposeFilter} onChange={event => setPurposeFilter(event.target.value)} aria-label="Filter jenis transaksi">
+                                    {purposeOptions.map(option => <option value={option.value} key={option.value}>{option.label}</option>)}
+                                </select>
+                            </label>
                         </div>
                     </div>
                     <div className="admin-table-wrap">
@@ -188,6 +208,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                     <tr key={t.id}>
                                         <td data-label="Transaksi">
                                             <strong className="transactions-code">{t.id}</strong>
+                                            {t.purpose !== 'product_purchase' && <span className="purpose-badge">{purposeLabelOf(t)}</span>}
                                             <time>{t.date}</time>
                                         </td>
                                         <td data-label="Pelanggan"><strong>{t.customer}</strong><span>{t.email || t.whatsapp || 'Kontak tidak tersedia'}</span></td>
@@ -219,7 +240,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                                 <Search size={28} aria-hidden="true" />
                                                 <h3>{hasFilters ? 'Transaksi tidak ditemukan' : 'Belum ada transaksi'}</h3>
                                                 <p>{hasFilters ? 'Coba ubah kata kunci atau filter status.' : 'Transaksi pelanggan akan muncul di sini setelah checkout.'}</p>
-                                                {hasFilters && <button type="button" onClick={() => { setSearch(''); setStatusFilter('Semua'); }}>Reset filter</button>}
+                                                {hasFilters && <button type="button" onClick={() => { setSearch(''); setStatusFilter('Semua'); setPurposeFilter('Semua'); }}>Reset filter</button>}
                                             </div>
                                         </td>
                                     </tr>
@@ -246,7 +267,7 @@ export default function AdminTransactions({ dbTransactions = {} }) {
                                 </div>
                                 <div>
                                     <h2 id="transaction-detail-title" className="modal-detail-id">{selectedTrx.id}</h2>
-                                    <div className="modal-detail-date">{selectedTrx.date} • {selectedTrx.status}</div>
+                                    <div className="modal-detail-date">{selectedTrx.date} • {selectedTrx.status} • {purposeLabelOf(selectedTrx)}</div>
                                 </div>
                                 <button className="btn-icon modal-detail-close" autoFocus onClick={closeDetail} aria-label="Tutup detail transaksi"><XCircle size={22} aria-hidden="true" /></button>
                             </div>

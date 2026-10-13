@@ -12,6 +12,12 @@ export const isFreePrice = (amount) => Number(amount || 0) === 0;
 
 export const isFreeProduct = (product) => isFreePrice(product?.price);
 
+// Produk donasi (pay-what-you-want): nominal bebas diisi pembeli saat checkout.
+export const isDonationProduct = (product) => product?.pricing_type === 'donation';
+
+// Label harga untuk ditampilkan di katalog/landing.
+export const productPriceLabel = (product) => (isDonationProduct(product) ? 'Donasi' : formatPriceOrFree(product?.price));
+
 export const formatPriceOrFree = (amount) => (isFreePrice(amount) ? 'FREE' : formatCurrency(amount));
 
 

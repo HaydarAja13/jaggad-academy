@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Transaction extends Model
 {
     public const PURPOSE_PRODUCT = 'product_purchase';
+    public const PURPOSE_DONATION = 'donation';
     public const PURPOSE_CONSULTATION_DEPOSIT = 'consultation_deposit';
     public const PURPOSE_CONSULTATION_BALANCE = 'consultation_balance';
 

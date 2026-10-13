@@ -46,21 +46,27 @@ class CheckoutController extends Controller
             'cart' => 'required|array|min:1|max:50',
             'cart.*.id' => 'nullable|required_without:cart.*.package_slug|integer|distinct|exists:products,id',
             'cart.*.package_slug' => 'nullable|required_without:cart.*.id|string|distinct',
+            // Nominal donasi bebas (bukan whitelist): Rp 0 sampai batas wajar.
+            'cart.*.donation_amount' => 'nullable|numeric|min:0|max:100000000',
             'active_trx' => 'nullable|string|max:40',
             'proof' => 'nullable|image|mimes:jpg,jpeg,png|max:5120|dimensions:max_width=8000,max_height=8000',
         ]);
 
-        [$products, $linePrices, $itemDetails, $grandTotal] = $this->resolveCart($validated['cart']);
+        [$products, $linePrices, $itemDetails, $grandTotal, $isDonation] = $this->resolveCart($validated['cart']);
 
         $user = $request->user();
         $ownedProducts = $user->products()
             ->whereIn('products.id', $products->keys())
             ->pluck('products.name');
-        if ($ownedProducts->isNotEmpty()) {
+        // Donasi berbayar (nominal > 0) boleh diulang meski produk sudah dimiliki.
+        // Klaim Rp 0 tetap diblokir agar tidak ada transaksi gratis tak berujung.
+        if ($ownedProducts->isNotEmpty() && ! ($isDonation && (int) $grandTotal > 0)) {
             throw ValidationException::withMessages([
                 'cart' => 'Anda sudah memiliki produk berikut: '.$ownedProducts->join(', ').'.',
             ]);
         }
+
+        $purpose = $isDonation ? Transaction::PURPOSE_DONATION : Transaction::PURPOSE_PRODUCT;
 
         // Cabang klaim gratis: seluruh isi keranjang berharga Rp 0 (price == 0 dari DB).
         // Tanpa metode bayar, tanpa Snap, tanpa upload bukti — langsung beri akses.
@@ -69,10 +75,11 @@ class CheckoutController extends Controller
                 $user->update(['phone' => $validated['phone']]);
             }
 
-            $transaction = DB::transaction(function () use ($user, $products, $linePrices) {
+            $transaction = DB::transaction(function () use ($user, $products, $purpose) {
                 $transaction = Transaction::create([
                     'transaction_code' => 'TRX-'.strtoupper(Str::random(8)),
                     'user_id' => $user->id,
+                    'purpose' => $purpose,
                     'total_amount' => 0,
                     'status' => 'pending',
                 ]);
@@ -91,7 +98,9 @@ class CheckoutController extends Controller
             $finalizer->apply($transaction, 'success', 'free_claim', ['source' => 'free_claim']);
 
             return back()->with([
-                'success' => 'Produk gratis berhasil dibuka! Materi sudah tersedia di dashboard.',
+                'success' => $isDonation
+                    ? 'Akses berhasil dibuka! Terima kasih sudah ikut berdonasi Rp 0.'
+                    : 'Produk gratis berhasil dibuka! Materi sudah tersedia di dashboard.',
                 'trx_code' => $transaction->transaction_code,
                 'free_claim' => true,
             ]);
@@ -120,7 +129,7 @@ class CheckoutController extends Controller
 
         $proofPath = $isManual ? $this->saveImageAsWebp($request->file('proof'), 'payments') : null;
         try {
-            $transaction = DB::transaction(function () use ($validated, $user, $grandTotal, $products, $linePrices, $isManual, $proofPath, $paymentMethod) {
+            $transaction = DB::transaction(function () use ($validated, $user, $grandTotal, $products, $linePrices, $isManual, $proofPath, $paymentMethod, $purpose, $isDonation) {
                 $transaction = null;
                 if (! empty($validated['active_trx'])) {
                     $transaction = Transaction::where('transaction_code', $validated['active_trx'])
@@ -135,13 +144,14 @@ class CheckoutController extends Controller
                 }
 
                 if ($transaction) {
-                    $transaction->update(['total_amount' => $grandTotal, 'snap_token' => null]);
+                    $transaction->update(['total_amount' => $grandTotal, 'snap_token' => null, 'purpose' => $purpose]);
                     $transaction->items()->delete();
                     $transaction->payment?->delete();
                 } else {
                     $transaction = Transaction::create([
                         'transaction_code' => 'TRX-'.strtoupper(Str::random(8)),
                         'user_id' => $user->id,
+                        'purpose' => $purpose,
                         'total_amount' => $grandTotal,
                         'status' => 'pending',
                     ]);
@@ -165,6 +175,16 @@ class CheckoutController extends Controller
                     ]);
                 }
 
+                // Model A: donasi memberi akses SEGERA saat checkout.
+                // Verifikasi uang (Midtrans / approve admin) berjalan paralel untuk pelaporan.
+                if ($isDonation) {
+                    foreach ($products as $product) {
+                        $user->products()->syncWithoutDetaching([
+                            $product->id => ['purchased_at' => now()],
+                        ]);
+                    }
+                }
+
                 return $transaction;
             });
         } catch (\Throwable $exception) {
@@ -176,7 +196,9 @@ class CheckoutController extends Controller
 
         if ($isManual) {
             return back()->with([
-                'success' => 'Pesanan berhasil dibuat, silakan tunggu konfirmasi admin!',
+                'success' => $isDonation
+                    ? 'Terima kasih! Donasi tercatat dan akses materi sudah aktif. Verifikasi bukti hanya untuk konfirmasi nominal.'
+                    : 'Pesanan berhasil dibuat, silakan tunggu konfirmasi admin!',
                 'trx_code' => $transaction->transaction_code,
             ]);
         }
@@ -204,7 +226,9 @@ class CheckoutController extends Controller
             $transaction->update(['snap_token' => $snapToken]);
 
             return back()->with([
-                'success' => 'Silakan selesaikan pembayaran!',
+                'success' => $isDonation
+                    ? 'Silakan selesaikan pembayaran donasi — akses materi sudah aktif.'
+                    : 'Silakan selesaikan pembayaran!',
                 'snap_token' => $snapToken,
                 'trx_code' => $transaction->transaction_code,
             ]);
@@ -403,6 +427,8 @@ class CheckoutController extends Controller
         $linePrices = [];
         $itemDetails = [];
         $grandTotal = 0;
+        $hasDonation = false;
+        $hasRegular = false;
 
         foreach ($cart as $item) {
             if (! empty($item['id'])) {
@@ -414,7 +440,17 @@ class CheckoutController extends Controller
                     throw ValidationException::withMessages(['cart' => 'Produk yang sama tidak boleh muncul lebih dari sekali.']);
                 }
 
-                $price = (int) round((float) $product->price);
+                if ($product->isDonation()) {
+                    // Nominal donasi bebas dari browser — sudah divalidasi (numeric, >= 0).
+                    // Harga DB (0) tidak dipakai untuk penagihan.
+                    $hasDonation = true;
+                    $price = (int) round((float) ($item['donation_amount'] ?? 0));
+                } else {
+                    // Selalu pakai harga DB untuk produk harga tetap.
+                    $hasRegular = true;
+                    $price = (int) round((float) $product->price);
+                }
+
                 $products->put($product->id, $product);
                 $linePrices[$product->id] = $price;
                 $itemDetails[] = ['id' => $product->id, 'price' => $price, 'quantity' => 1, 'name' => $product->name];
@@ -434,6 +470,7 @@ class CheckoutController extends Controller
                 throw ValidationException::withMessages(['cart' => 'Salah satu produk dalam paket tidak tersedia.']);
             }
 
+            $hasRegular = true;
             $basePrice = intdiv((int) $package['price'], $packageProducts->count());
             $remainder = (int) $package['price'] - ($basePrice * $packageProducts->count());
             foreach ($packageProducts->values() as $index => $product) {
@@ -448,6 +485,12 @@ class CheckoutController extends Controller
             $grandTotal += (int) $package['price'];
         }
 
-        return [$products, $linePrices, $itemDetails, $grandTotal];
+        if ($hasDonation && $hasRegular) {
+            throw ValidationException::withMessages([
+                'cart' => 'Produk donasi harus di-checkout terpisah dari produk lain. Selesaikan donasi terlebih dahulu.',
+            ]);
+        }
+
+        return [$products, $linePrices, $itemDetails, $grandTotal, $hasDonation];
     }
 }

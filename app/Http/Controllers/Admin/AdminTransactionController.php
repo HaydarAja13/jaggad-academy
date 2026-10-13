@@ -51,7 +51,10 @@ class AdminTransactionController extends Controller
             return back()->with('success', 'DP terverifikasi. Jadwal konsultasi sekarang berstatus terkonfirmasi.');
         }
 
-        $response = back()->with('success', 'Pembayaran terverifikasi dan akses produk telah diaktifkan.');
+        $successMessage = $transaction->purpose === Transaction::PURPOSE_DONATION
+            ? 'Donasi terverifikasi. Terima kasih atas dukungannya — akses pelanggan tetap aktif.'
+            : 'Pembayaran terverifikasi dan akses produk telah diaktifkan.';
+        $response = back()->with('success', $successMessage);
         return $result['email_sent']
             ? $response
             : $response->with('email_warning', 'Akses sudah aktif, tetapi email gagal dikirim. Gunakan tombol kirim ulang email.');
@@ -93,7 +96,9 @@ class AdminTransactionController extends Controller
 
         try {
             Mail::to($rejectedTransaction->user->email)->send(new PaymentRejectedMail($rejectedTransaction));
-            return back()->with('success', 'Bukti ditolak. Alasan telah dikirim kepada pelanggan.');
+            return back()->with('success', $rejectedTransaction->purpose === Transaction::PURPOSE_DONATION
+                ? 'Bukti donasi ditolak dan alasan telah dikirim. Akses pelanggan tetap aktif.'
+                : 'Bukti ditolak. Alasan telah dikirim kepada pelanggan.');
         } catch (\Throwable $exception) {
             Log::error('Payment Rejected Email Error: ' . $exception->getMessage());
             return back()
@@ -104,7 +109,8 @@ class AdminTransactionController extends Controller
 
     public function resendAccessEmail(Transaction $transaction)
     {
-        if ($transaction->purpose !== Transaction::PURPOSE_PRODUCT || $transaction->status !== 'success') {
+        $allowedPurpose = in_array($transaction->purpose, [Transaction::PURPOSE_PRODUCT, Transaction::PURPOSE_DONATION], true);
+        if (!$allowedPurpose || $transaction->status !== 'success') {
             throw ValidationException::withMessages(['transaction' => 'Email akses hanya dapat dikirim untuk transaksi terverifikasi.']);
         }
 
@@ -142,7 +148,7 @@ class AdminTransactionController extends Controller
             "Expires"             => "0"
         ];
 
-        $columns = ['ID Transaksi', 'Tanggal', 'Pelanggan', 'Email', 'Produk', 'Total', 'Status', 'Metode Pembayaran'];
+        $columns = ['ID Transaksi', 'Tanggal', 'Pelanggan', 'Email', 'Produk', 'Total', 'Status', 'Metode Pembayaran', 'Jenis'];
 
         $callback = function() use($transactions, $columns) {
             $file = fopen('php://output', 'w');
@@ -153,12 +159,18 @@ class AdminTransactionController extends Controller
                 $row['Tanggal'] = $t->created_at->format('Y-m-d H:i');
                 $row['Pelanggan'] = $t->user->name ?? $t->consultationAppointment?->customer_name ?? 'N/A';
                 $row['Email'] = $t->user->email ?? 'N/A';
-                $row['Produk'] = $t->purpose === Transaction::PURPOSE_PRODUCT
+                $row['Produk'] = in_array($t->purpose, [Transaction::PURPOSE_PRODUCT, Transaction::PURPOSE_DONATION], true)
                     ? $t->items->map(fn($i) => $i->product?->name ?? 'Produk dihapus')->join(', ')
                     : trim(($t->consultationAppointment?->package_name ?? 'Konsultasi').' · '.($t->purpose === Transaction::PURPOSE_CONSULTATION_DEPOSIT ? 'DP' : 'Pelunasan'));
                 $row['Total'] = $t->total_amount;
                 $row['Status'] = $t->status;
                 $row['Metode'] = $t->payment?->paymentMethod?->bank_name ?? $t->payment_type ?? 'Gateway/Lainnya';
+                $row['Jenis'] = match ($t->purpose) {
+                    Transaction::PURPOSE_DONATION => 'Donasi',
+                    Transaction::PURPOSE_CONSULTATION_DEPOSIT => 'Konsultasi · DP',
+                    Transaction::PURPOSE_CONSULTATION_BALANCE => 'Konsultasi · Pelunasan',
+                    default => 'Penjualan',
+                };
 
                 fputcsv($file, array_values($row));
             }

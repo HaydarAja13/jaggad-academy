@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2, Clock, Play, ShieldCheck } from 'lucide-react
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import MainLayout from '../../Layouts/MainLayout';
-import { formatCurrency, formatPriceOrFree, isFreePrice, getStorageUrl } from '../../Utils/helpers';
+import { formatCurrency, formatPriceOrFree, isFreePrice, isDonationProduct, getStorageUrl } from '../../Utils/helpers';
 import { getYoutubeId, normalizePromoContent } from '../../Utils/promoContent';
 import './Ads.css';
 
@@ -182,7 +182,7 @@ export default function Ads({ previewMode = false, customData = null, dbAds, dbP
                                             <div className="promo-card__purchase">
                                                 <div className="promo-card__price-block">
                                                     {!isFreePrice(price) && normalPrice > price && <del className="promo-card__old-price">{formatCurrency(normalPrice)}</del>}
-                                                    <strong>{formatPriceOrFree(price)}</strong>
+                                                    <strong>{isDonationProduct(product) ? 'Donasi' : formatPriceOrFree(price)}</strong>
                                                     {!isFreePrice(price) && discount > 0 && <span>Hemat {formatCurrency(normalPrice - price)}</span>}
                                                 </div>
                                                 <button id={`preview-ads-product-${product.id}-cta`} type="button" onClick={event => handleBuy(event, product)} className="promo-button promo-button--primary">

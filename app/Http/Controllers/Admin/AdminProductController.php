@@ -47,6 +47,7 @@ class AdminProductController extends Controller
             'category' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'originalPrice' => 'nullable|numeric|min:0',
+            'pricingType' => 'nullable|in:fixed,donation',
             'status' => 'nullable|in:draft,published',
             'description' => 'nullable|string',
             'longDescription' => 'nullable|string',
@@ -67,6 +68,11 @@ class AdminProductController extends Controller
             'landingBlocks' => 'nullable|string|max:50000',
             'landingBlockImages.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
         ]);
+
+        $pricingType = $data['pricingType'] ?? Product::PRICING_FIXED;
+        // Produk donasi menyimpan harga 0; nominal diisi pembeli saat checkout.
+        $price = $pricingType === Product::PRICING_DONATION ? 0 : $data['price'];
+        $normalPrice = $pricingType === Product::PRICING_DONATION ? null : ($data['originalPrice'] ?? null);
 
         $imagePath = $data['imageUrl'] ?? null;
         if ($request->hasFile('imageFile')) {
@@ -98,8 +104,9 @@ class AdminProductController extends Controller
         Product::create([
             'name' => $data['title'],
             'category_id' => $data['category'] ?? null,
-            'price' => $data['price'],
-            'normal_price' => $data['originalPrice'] ?? null,
+            'price' => $price,
+            'pricing_type' => $pricingType,
+            'normal_price' => $normalPrice,
             'status' => $data['status'] ?? Product::STATUS_DRAFT,
             'image' => $imagePath,
             'badge' => $data['badge'] ?? null,
@@ -133,6 +140,7 @@ class AdminProductController extends Controller
             'category' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'originalPrice' => 'nullable|numeric|min:0',
+            'pricingType' => 'nullable|in:fixed,donation',
             'status' => 'nullable|in:draft,published',
             'description' => 'nullable|string',
             'longDescription' => 'nullable|string',
@@ -153,6 +161,11 @@ class AdminProductController extends Controller
             'landingBlocks' => 'nullable|string|max:50000',
             'landingBlockImages.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
         ]);
+
+        $pricingType = $data['pricingType'] ?? Product::PRICING_FIXED;
+        // Produk donasi menyimpan harga 0; nominal diisi pembeli saat checkout.
+        $price = $pricingType === Product::PRICING_DONATION ? 0 : $data['price'];
+        $normalPrice = $pricingType === Product::PRICING_DONATION ? null : ($data['originalPrice'] ?? null);
 
         $imagePath = $product->image;
         if ($request->hasFile('imageFile')) {
@@ -187,8 +200,9 @@ class AdminProductController extends Controller
         $product->update([
             'name' => $data['title'],
             'category_id' => $data['category'] ?? null,
-            'price' => $data['price'],
-            'normal_price' => $data['originalPrice'] ?? null,
+            'price' => $price,
+            'pricing_type' => $pricingType,
+            'normal_price' => $normalPrice,
             'status' => $data['status'] ?? $product->status ?? Product::STATUS_DRAFT,
             'image' => $imagePath,
             'badge' => $data['badge'] ?? null,

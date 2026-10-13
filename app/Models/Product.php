@@ -10,11 +10,15 @@ class Product extends Model
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PUBLISHED = 'published';
 
+    public const PRICING_FIXED = 'fixed';
+    public const PRICING_DONATION = 'donation';
+
     protected $fillable = [
         'name',
         'slug',
         'category_id',
         'price',
+        'pricing_type',
         'normal_price',
         'rating',
         'total_ratings',
@@ -99,6 +103,15 @@ class Product extends Model
     public function isDraft(): bool
     {
         return ! $this->isPublished();
+    }
+
+    /**
+     * Produk donasi (pay-what-you-want): nominal bebas diisi pembeli,
+     * harga DB selalu disimpan 0 dan tidak dipakai untuk penagihan.
+     */
+    public function isDonation(): bool
+    {
+        return ($this->pricing_type ?? self::PRICING_FIXED) === self::PRICING_DONATION;
     }
 
     public function users()

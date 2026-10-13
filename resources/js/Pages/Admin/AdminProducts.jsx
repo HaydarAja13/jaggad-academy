@@ -18,6 +18,7 @@ export default function AdminProducts({ dbProducts = [] }) {
         title: dbP.name,
         category: dbP.category?.name || 'Tidak Ada',
         price: dbP.price,
+        pricing_type: dbP.pricing_type,
         status: dbP.status || 'draft',
         sold: Number(dbP.sold_count || 0),
         thumbnail: getStorageUrl(dbP.image)
@@ -167,7 +168,7 @@ export default function AdminProducts({ dbProducts = [] }) {
                                                 {p.status === 'published' ? 'Publish' : 'Draft'}
                                             </span>
                                         </td>
-                                        <td data-label="Harga"><strong className="product-price">{formatPriceOrFree(p.price)}</strong></td>
+                                        <td data-label="Harga"><strong className="product-price">{p.pricing_type === 'donation' ? 'Donasi' : formatPriceOrFree(p.price)}</strong></td>
                                         <td data-label="Terjual"><span className="product-sold">{p.sold.toLocaleString('id-ID')}</span></td>
                                         <td data-label="Aksi">
                                             <div className="product-actions">

@@ -68,6 +68,10 @@ class TransactionFinalizer
                 return $locked->fresh()->load(['payment.paymentMethod', 'consultationAppointment']);
             }
 
+            // Donasi tidak dihitung sebagai penjualan produk: jangan sentuh
+            // sold_count produk maupun purchase_count/total_spent pelanggan.
+            $isDonation = $locked->purpose === Transaction::PURPOSE_DONATION;
+
             foreach ($locked->items as $item) {
                 if (! $item->product_id) {
                     continue;
@@ -76,11 +80,16 @@ class TransactionFinalizer
                 $locked->user->products()->syncWithoutDetaching([
                     $item->product_id => ['purchased_at' => now()],
                 ]);
-                $item->product?->increment('sold_count');
+
+                if (! $isDonation) {
+                    $item->product?->increment('sold_count');
+                }
             }
 
-            $locked->user->increment('purchase_count', $locked->items->count());
-            $locked->user->increment('total_spent', $locked->total_amount);
+            if (! $isDonation) {
+                $locked->user->increment('purchase_count', $locked->items->count());
+                $locked->user->increment('total_spent', $locked->total_amount);
+            }
 
             return $locked->fresh()->load(['user', 'items.product.category', 'payment.paymentMethod']);
         });
@@ -89,17 +98,18 @@ class TransactionFinalizer
             return ['changed' => false, 'email_sent' => true];
         }
 
-        if ($finalized->purpose !== Transaction::PURPOSE_PRODUCT) {
+        if (! in_array($finalized->purpose, [Transaction::PURPOSE_PRODUCT, Transaction::PURPOSE_DONATION], true)) {
             return ['changed' => true, 'email_sent' => true];
         }
 
         return [
             'changed' => true,
-            'email_sent' => $this->sendReceipt($finalized),
+            // Meta CAPI Purchase hanya untuk penjualan produk, bukan donasi.
+            'email_sent' => $this->sendReceipt($finalized, $finalized->purpose === Transaction::PURPOSE_PRODUCT),
         ];
     }
 
-    private function sendReceipt(Transaction $transaction): bool
+    private function sendReceipt(Transaction $transaction, bool $trackMeta = true): bool
     {
         $emailSent = true;
 
@@ -110,7 +120,9 @@ class TransactionFinalizer
             Log::error('Purchase receipt email error: '.$exception->getMessage());
         }
 
-        $this->trackMetaPurchase($transaction);
+        if ($trackMeta) {
+            $this->trackMetaPurchase($transaction);
+        }
 
         return $emailSent;
     }

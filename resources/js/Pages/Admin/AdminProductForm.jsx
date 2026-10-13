@@ -36,6 +36,7 @@ export default function AdminProductForm({ dbCategories = [], product }) {
         title: product?.name || '', 
         category: product?.category_id || (dbCategories[0]?.id || ''), 
         status: product?.status || 'draft',
+        pricingType: product?.pricing_type || 'fixed',
         price: product?.price !== undefined && product?.price !== null && product?.price !== '' ? Math.round(parseFloat(product.price)) : '',
 
         originalPrice: product?.normal_price ? Math.round(parseFloat(product.normal_price)) : '',
@@ -62,8 +63,10 @@ export default function AdminProductForm({ dbCategories = [], product }) {
     const [editingMaterialIndex, setEditingMaterialIndex] = useState(null);
 
     const fileInputRef = useRef(null);
-    const discountPercent = Number(form.originalPrice) > Number(form.price) && Number(form.price) > 0
-        ? Math.round(((Number(form.originalPrice) - Number(form.price)) / Number(form.originalPrice)) * 100)
+    const isDonationPricing = form.pricingType === 'donation';
+    const effectivePrice = isDonationPricing ? 0 : Number(form.price || 0);
+    const discountPercent = Number(form.originalPrice) > effectivePrice && effectivePrice > 0
+        ? Math.round(((Number(form.originalPrice) - effectivePrice) / Number(form.originalPrice)) * 100)
         : 0;
 
     const handleImageFile = (file) => {
@@ -138,7 +141,7 @@ export default function AdminProductForm({ dbCategories = [], product }) {
 
 
     const handleSave = () => {
-        if (!form.title || form.price === '' || form.price === null || form.price === undefined) return toast.error('Lengkapi data wajib produk (Judul & Harga)');
+        if (!form.title || (!isDonationPricing && (form.price === '' || form.price === null || form.price === undefined))) return toast.error('Lengkapi data wajib produk (Judul & Harga)');
         if (form.startAt && form.endAt && new Date(form.endAt) < new Date(form.startAt)) {
             return toast.error('Waktu selesai tidak boleh mendahului waktu mulai');
         }
@@ -148,8 +151,9 @@ export default function AdminProductForm({ dbCategories = [], product }) {
         fd.append('title', form.title);
         fd.append('category', form.category || '');
         fd.append('status', form.status || 'draft');
-        fd.append('price', form.price);
-        fd.append('originalPrice', form.originalPrice || '');
+        fd.append('pricingType', form.pricingType || 'fixed');
+        fd.append('price', isDonationPricing ? '0' : form.price);
+        fd.append('originalPrice', isDonationPricing ? '' : (form.originalPrice || ''));
         fd.append('description', form.description || '');
         fd.append('longDescription', form.longDescription || '');
         fd.append('badge', form.badge || '');
@@ -293,6 +297,21 @@ export default function AdminProductForm({ dbCategories = [], product }) {
 
                             <div className="product-form-grid product-form-grid--two">
                                 <div className="form-group">
+                                    <label>Tipe harga</label>
+                                    <select value={form.pricingType} onChange={e => setForm({ ...form, pricingType: e.target.value })}>
+                                        <option value="fixed">Harga tetap (berbayar / gratis)</option>
+                                        <option value="donation">Donasi — pay what you want</option>
+                                    </select>
+                                    <p className="form-hint">{isDonationPricing ? 'Pembeli mengisi nominal sendiri saat checkout — boleh mulai Rp0. Akses langsung terbuka.' : 'Produk dengan harga pasti, atau isi 0 untuk produk gratis.'}</p>
+                                </div>
+                                {isDonationPricing ? (
+                                    <div className="form-group">
+                                        <label>Harga di katalog</label>
+                                        <div className="product-money-input"><span>Rp</span><input type="text" value="0" readOnly disabled /></div>
+                                        <p className="form-hint">Tersimpan Rp0 — nominal donasi ditentukan pembeli, bukan harga produk.</p>
+                                    </div>
+                                ) : (
+                                <div className="form-group">
                                     <label>Harga Jual *</label>
                                     <div className="product-money-input">
                                         <span>Rp</span>
@@ -300,6 +319,8 @@ export default function AdminProductForm({ dbCategories = [], product }) {
                                     </div>
                                     <p className="form-hint">Isi 0 untuk produk GRATIS — otomatis berlabel FREE dan bisa diklaim tanpa pembayaran.</p>
                                 </div>
+                                )}
+                                {!isDonationPricing && (
                                 <div className="form-group">
                                     <div className="product-form-label-row">
                                         <label>Harga Normal (Membentuk diskon coret)</label>
@@ -310,6 +331,7 @@ export default function AdminProductForm({ dbCategories = [], product }) {
                                         <input type="text" inputMode="numeric" value={formatNumberWithDots(form.originalPrice)} onChange={e => setForm({ ...form, originalPrice: parseNumberFromDots(e.target.value) })} placeholder="0" />
                                     </div>
                                 </div>
+                                )}
                             </div>
 
                             <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>

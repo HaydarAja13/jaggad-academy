@@ -22,6 +22,7 @@ Sumber hak akses materi adalah pasangan unik `user_id + product_id` pada `user_p
 - Keranjang UI disimpan pada `localStorage` dengan key `jaggad_cart`.
 - Request dibatasi maksimal 50 item.
 - Produk biasa dikirim sebagai ID, lalu backend membaca ulang produk dan `price` dari database.
+- Produk donasi dikirim sebagai ID + `donation_amount`; backend memakai nominal hasil validasi tersebut (bukan harga DB yang selalu 0) hanya untuk produk ber-`pricing_type=donation`.
 - Paket dikirim sebagai `package_slug`, lalu backend membaca `config/packages.php`, memastikan seluruh produk anggota ada, dan memakai harga package dari config.
 - Halaman paket juga menerima nama/harga server agar angka yang ditampilkan sama dengan checkout.
 - Paket yang salah satu produknya tidak tersedia menghasilkan 404 dan tidak ditawarkan untuk dibeli.
@@ -114,7 +115,22 @@ Admin dapat:
 
 Approve berulang tidak menggandakan akses atau statistik.
 
-## 6. Konsultasi offline
+## 6. Donasi (pay-what-you-want)
+
+Produk donasi memiliki `pricing_type = 'donation'` dengan harga DB disimpan 0; nominal ditentukan pembeli saat checkout.
+
+- Nominal divalidasi server: `cart.*.donation_amount` bersifat `numeric`, `min:0`, `maks 100.000.000` (bebas, bukan whitelist). Angka browser untuk produk harga tetap selalu diabaikan — harga database tetap menang.
+- Keranjang campuran (produk donasi + produk/paket harga tetap) ditolak server-side; donasi harus di-checkout terpisah.
+- Transaksi donasi memakai `purpose = 'donation'` sehingga terpisah untuk pelaporan (filter jenis di halaman admin dan kolom `Jenis` di ekspor CSV).
+- **Model A — akses langsung:** akses materi diberikan saat checkout dibuat (`syncWithoutDetaching`), tidak menunggu Midtrans atau approve admin. Verifikasi uang berjalan paralel untuk akuntansi.
+  - Rp0: mengikuti jalur klaim gratis (`free_claim`), transaksi langsung `success`, tanpa metode bayar/bukti.
+  - >Rp0 manual: transaksi dan payment tetap `pending` sampai admin approve/reject; akses tetap sudah aktif.
+  - >Rp0 Midtrans: transaksi `pending` sampai webhook/verify; akses tetap sudah aktif meski pembayaran dibatalkan.
+- Penolakan verifikasi uang (reject) **tidak pernah mencabut akses** donasi.
+- Donasi berbayar boleh diulang meski produk sudah dimiliki; klaim Rp0 ulang tetap diblokir aturan kepemilikan.
+- `TransactionFinalizer` tidak menaikkan `sold_count` produk maupun `purchase_count`/`total_spent` user untuk donasi, sehingga statistik penjualan produk tidak terpollusi. Donasi tetap tercatat di `transactions` (pendapatan platform).
+
+## 7. Konsultasi offline
 
 Konsultasi adalah domain appointment terpisah dari katalog produk. Customer tidak perlu login dan status disampaikan manual melalui WhatsApp.
 
@@ -135,7 +151,7 @@ Aturan perubahan:
 - Pembatalan oleh JAGGAD/mentor dapat dijadwal ulang atau dicatat sebagai refund DP penuh; transfer refund tetap manual.
 - Scheduler melepas hold yang belum dibayar setelah batas DP lewat.
 
-## 7. TransactionFinalizer
+## 8. TransactionFinalizer
 
 Semua jalur sukses—verify browser, webhook, dan approve admin—melewati `TransactionFinalizer`.
 
@@ -145,25 +161,26 @@ Di dalam database transaction finalizer:
 2. Berhenti tanpa efek jika sudah sukses.
 3. Menetapkan `status=success` dan `paid_at`.
 4. Menambah kepemilikan dengan `syncWithoutDetaching`.
-5. Menambah `sold_count` setiap produk sekali.
-6. Menambah `purchase_count` dan `total_spent` user sekali.
+5. Menambah `sold_count` setiap produk sekali — kecuali transaksi donasi.
+6. Menambah `purchase_count` dan `total_spent` user sekali — kecuali transaksi donasi.
 
 Setelah commit:
 
-- receipt dikirim;
-- Meta CAPI Purchase dikirim;
+- receipt dikirim (produk dan donasi);
+- Meta CAPI Purchase dikirim untuk penjualan produk saja, bukan donasi;
 - kegagalan salah satu integrasi dicatat tetapi tidak mencabut akses.
 
-## 8. Email dan Meta
+## 9. Email dan Meta
 
-- Receipt dikirim untuk transaksi sukses dan dapat dikirim ulang admin.
+- Receipt dikirim untuk transaksi sukses (termasuk donasi) dan dapat dikirim ulang admin untuk produk maupun donasi.
 - Email penolakan dikirim pada penolakan bukti manual.
+- Meta Pixel browser maupun CAPI server tidak mengirim event Purchase untuk donasi agar optimasi iklan tidak terkontaminasi nominal kecil.
 - SMTP memiliki timeout agar request tidak menggantung.
 - Meta Pixel browser dan CAPI server memakai `transaction_code` sebagai `event_id` yang sama untuk deduplikasi Purchase.
 - Email dan telepon di-hash SHA-256 sebelum dikirim ke Meta.
 - Graph API version dapat dikonfigurasi dan default saat audit adalah v26.0.
 
-## 9. Materi dan progress
+## 10. Materi dan progress
 
 - Endpoint publik menghapus `materials[*].link` dari payload produk.
 - Halaman learning memeriksa kepemilikan `user_products`.
@@ -172,11 +189,14 @@ Setelah commit:
 - Materi kosong/tanpa link tidak dapat ditandai selesai.
 - Admin hanya boleh menyimpan link materi HTTP/HTTPS.
 
-## 10. Invariant keamanan
+## 11. Invariant keamanan
 
 Perubahan transaksi harus mempertahankan semua aturan berikut:
 
 - Harga selalu dihitung ulang server-side.
+- Nominal donasi divalidasi server (`>=0`, batas atas) dan hanya dipakai untuk produk `pricing_type=donation`; keranjang campuran donasi+produk ditolak.
+- Akses donasi diberikan sekali saat checkout dan tidak pernah dicabut oleh penolakan verifikasi uang.
+- Donasi tidak mengubah `sold_count`, `purchase_count`, maupun `total_spent`.
 - Pembuatan transaksi dan item atomic.
 - Metode pembayaran harus aktif.
 - Hanya satu jalur finalisasi.
@@ -190,11 +210,13 @@ Perubahan transaksi harus mempertahankan semua aturan berikut:
 - Kegagalan provider eksternal tidak boleh merusak data yang sudah committed.
 - User inactive tidak boleh melanjutkan session.
 
-## 11. Matriks pengujian sebelum live
+## 12. Matriks pengujian sebelum live
 
 | Skenario | Otomatis | Wajib sandbox/live |
 |---|---:|---:|
 | Harga browser dimanipulasi | Ya | Opsional |
+| Nominal donasi tidak valid / keranjang campuran | Ya | Opsional |
+| Akses donasi langsung + reject tanpa pencabutan akses | Ya | Opsional |
 | Metode nonaktif | Ya | Opsional |
 | Snap token gagal | Ya | Ya |
 | Webhook signature/nominal salah | Ya | Ya |
@@ -211,7 +233,7 @@ Perubahan transaksi harus mempertahankan semua aturan berikut:
 | Link DP tanpa signature / kedaluwarsa | Ya | Ya |
 | Reschedule, pelunasan, pembatalan, refund | Ya | Ya |
 
-## 12. Batasan yang disengaja
+## 13. Batasan yang disengaja
 
 - Package belum memiliki CRUD admin; perubahan dilakukan melalui config dan deploy.
 - Tidak ada quantity; satu transaksi mempunyai paling banyak satu unit tiap produk.

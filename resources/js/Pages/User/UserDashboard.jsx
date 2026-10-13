@@ -79,7 +79,7 @@ export default function UserDashboard({ auth, purchasedProducts = [], transactio
         const payload = {
             phone: user.phone || '080000000000',
             payment_method_id: selectedMethod,
-            cart: changingPaymentTrx.rawItems.map(item => ({ id: item.product_id })),
+            cart: changingPaymentTrx.rawItems.map(item => ({ id: item.product_id, donation_amount: Math.round(Number(item.price) || 0) })),
             active_trx: changingPaymentTrx.id,
             _method: 'post',
         };

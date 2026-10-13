@@ -250,6 +250,56 @@
 
 .checkout-notice { padding: 18px; border-radius: 10px; background: #f7f3f4; color: #67555c; font-size: 16px; line-height: 1.55; }
 
+/* Donasi (pay-what-you-want) */
+.checkout-donation {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid #ded4d7;
+    border-radius: 14px;
+    background: #fbfcff;
+}
+
+.checkout-donation__item { display: grid; gap: 14px; }
+
+.checkout-donation__intro { display: flex; align-items: flex-start; gap: 12px; }
+
+.checkout-donation__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: rgba(102, 8, 16, .1);
+    color: #660810;
+}
+
+.checkout-donation__intro h3 { margin: 0 0 4px; color: #171316; font-size: 16px; font-weight: 700; }
+.checkout-donation__intro p { margin: 0; color: #67555c; font-size: 16px; line-height: 1.6; }
+
+.checkout-donation__chips { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.checkout-donation__chips button {
+    min-height: 44px;
+    padding: 8px 18px;
+    border: 1px solid #ded4d7;
+    border-radius: 999px;
+    background: #fff;
+    color: #171316;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+
+.checkout-donation__chips button:hover { border-color: #660810; color: #660810; }
+
+.checkout-donation__chips button.active { border-color: #660810; background: #660810; color: #fff; }
+
+.checkout-donation .checkout-field { max-width: 380px; }
+
 .proof-upload-section { margin-top: 30px; padding-top: 26px; border-top: 1px solid #ded4d7; }
 .proof-upload-section h3 { margin: 0 0 14px; font-size: 18px; font-weight: 800; }
 .proof-upload-label {
