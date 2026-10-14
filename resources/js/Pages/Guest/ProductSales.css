@@ -719,6 +719,17 @@
     letter-spacing: -0.03em;
 }
 
+/* Produk dukungan (pay-what-you-want): total bukan angka, tampilkan sebagai catatan kecil agar tidak menumpuk. */
+.sales-confirm__total strong.sales-confirm__total-note {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: var(--font-semibold);
+    letter-spacing: 0;
+    line-height: 1.4;
+    text-align: right;
+    opacity: 0.9;
+}
+
 .sales-confirm__order button {
     width: 100%;
     margin-top: 24px;

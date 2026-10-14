@@ -64,7 +64,7 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
     const isDonation = isDonationProduct(product);
     const action = isDraft
         ? <div className="pd-draft-notice"><strong>Segera hadir</strong><span>Produk ini masih dalam tahap persiapan dan belum tersedia untuk dibeli.</span></div>
-        : isPurchased ? <button className="pd-button pd-button--primary" onClick={() => router.get(route('dashboard.learning', product.slug || product.id))}>Buka materi <ArrowRight size={18} /></button> : <><button className="pd-button pd-button--primary" onClick={buy}>{isDonation ? 'Donasi sekarang' : isFree ? 'Dapatkan Gratis' : 'Beli sekarang'} <ArrowRight size={18} /></button><button className="pd-cart" onClick={add} disabled={inCart}><ShoppingCart size={18} />{inCart ? 'Sudah di keranjang' : 'Tambah ke keranjang'}</button></>;
+        : isPurchased ? <button className="pd-button pd-button--primary" onClick={() => router.get(route('dashboard.learning', product.slug || product.id))}>Buka materi <ArrowRight size={18} /></button> : <><button className="pd-button pd-button--primary" onClick={buy}>{isDonation ? 'Dukung Kami' : isFree ? 'Dapatkan Gratis' : 'Beli sekarang'} <ArrowRight size={18} /></button><button className="pd-cart" onClick={add} disabled={inCart}><ShoppingCart size={18} />{inCart ? 'Sudah di keranjang' : 'Tambah ke keranjang'}</button></>;
 
     return <MainLayout>
         <Head title={`${title} - JAGGAD ACADEMY`} />
@@ -81,7 +81,7 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
                         <h1 id="product-title">{title}</h1>
                         <p className="pd-intro">{product.short_description || description}</p>
                         <div className="pd-facts" aria-label="Ringkasan produk"><span><BookOpen size={18} /> {materials.length || '—'} bagian{pageCount ? ` · ${pageCount} halaman` : ''}</span><span><Check size={18} /> Materi digital</span></div>
-                        <div className="pd-price"><span>Harga</span>{isDonation ? <strong>Donasi</strong> : isFreePrice(price) ? <strong>FREE</strong> : originalPrice > price ? <><del>{formatCurrency(originalPrice)}</del><div><strong>{formatCurrency(price)}</strong><b>Hemat {discount}%</b></div></> : <strong>{formatCurrency(price)}</strong>}</div>
+                        <div className="pd-price">{isDonation ? <strong>Dukung Kami</strong> : <><span>Harga</span>{isFreePrice(price) ? <strong>FREE</strong> : originalPrice > price ? <><del>{formatCurrency(originalPrice)}</del><div><strong>{formatCurrency(price)}</strong><b>Hemat {discount}%</b></div></> : <strong>{formatCurrency(price)}</strong>}</>}</div>
                         <div className="pd-actions">{action}</div>
                         <p className="pd-purchase__note">Detail pembayaran ditampilkan sebelum checkout.</p>
                     </aside>
@@ -91,7 +91,7 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
                 {materials.length > 0 && <section className="pd-materials" aria-labelledby="materials-title"><div className="pd-section-heading"><h2 id="materials-title">Isi materi</h2><p>Susunan materi yang akan Anda pelajari.</p></div><ol>{materials.map((material, index) => <li key={`${material.title}-${index}`}><span>{String(index + 1).padStart(2, '0')}</span><strong>{material.title}</strong><em>{material.pages ? `${material.pages} halaman` : material.videos ? `${material.videos} video` : material.duration || ''}</em></li>)}</ol></section>}
             </div>
             {similarProducts.length > 0 && <section className="pd-related"><div className="container pd-related__layout"><div className="pd-section-heading"><h2>Produk terkait</h2><p>Materi lain dalam kategori yang sama.</p><Link href={route('products')} className="pd-related__link">Lihat semua produk <ArrowRight size={18} /></Link></div><div className="pd-related__grid">{similarProducts.map(item => <ProductCard key={item.id} product={item} className="product-card--related" />)}</div></div></section>}
-            {!isPurchased && !isDraft && <div className="pd-mobile-buy"><span>{isDonation ? 'Donasi' : formatPriceOrFree(price)}</span><button onClick={buy}>{isDonation ? 'Donasi sekarang' : isFreePrice(price) ? 'Dapatkan Gratis' : 'Beli sekarang'} <ArrowRight size={17} /></button></div>}
+            {!isPurchased && !isDraft && <div className="pd-mobile-buy"><span>{isDonation ? 'Dukung Kami' : formatPriceOrFree(price)}</span><button onClick={buy}>{isDonation ? 'Dukung Kami' : isFreePrice(price) ? 'Dapatkan Gratis' : 'Beli sekarang'} <ArrowRight size={17} /></button></div>}
         </main>
     </MainLayout>;
 }

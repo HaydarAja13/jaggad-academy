@@ -16,7 +16,7 @@ export const isFreeProduct = (product) => isFreePrice(product?.price);
 export const isDonationProduct = (product) => product?.pricing_type === 'donation';
 
 // Label harga untuk ditampilkan di katalog/landing.
-export const productPriceLabel = (product) => (isDonationProduct(product) ? 'Donasi' : formatPriceOrFree(product?.price));
+export const productPriceLabel = (product) => (isDonationProduct(product) ? 'Dukung Kami' : formatPriceOrFree(product?.price));
 
 export const formatPriceOrFree = (amount) => (isFreePrice(amount) ? 'FREE' : formatCurrency(amount));
 

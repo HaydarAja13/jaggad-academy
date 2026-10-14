@@ -129,9 +129,9 @@ function PurchaseConfirmation({ product, purchased, onBack, onContinue }) {
             </section>
             <aside className="sales-confirm__order" aria-label="Ringkasan pesanan">
                 <h2 id="sales-confirm-order-title">{copy.orderTitle}</h2>
-                <div><span>Harga produk</span><span>{isDonationProduct(product) ? 'Donasi' : formatPriceOrFree(product.originalPrice > product.price ? product.originalPrice : product.price)}</span></div>
+                <div><span>Harga produk</span><span>{isDonationProduct(product) ? 'Dukung Kami' : formatPriceOrFree(product.originalPrice > product.price ? product.originalPrice : product.price)}</span></div>
                 {!isFreePrice(product.price) && product.originalPrice > product.price && <div className="sales-confirm__discount"><span>Potongan harga</span><span>−{formatCurrency(product.originalPrice - product.price)}</span></div>}
-                <div className="sales-confirm__total"><span>Total</span><strong>{priceLabel(product)}</strong></div>
+                <div className="sales-confirm__total"><span>Total</span><strong className={isDonationProduct(product) ? 'sales-confirm__total-note' : undefined}>{isDonationProduct(product) ? 'Dipilih saat checkout' : priceLabel(product)}</strong></div>
                 <button id="sales-confirm-cta" type="button" onClick={onContinue}>{purchased ? copy.ownedCta : copy.payCta} <ArrowRight size={19} /></button>
                 <p id="sales-confirm-trust"><LockKeyhole size={16} /> {copy.trustNote}</p>
             </aside>
@@ -139,7 +139,7 @@ function PurchaseConfirmation({ product, purchased, onBack, onContinue }) {
     </main>;
 }
 
-const priceLabel = product => (isDonationProduct(product) ? 'Donasi' : formatPriceOrFree(product?.price));
+const priceLabel = product => (isDonationProduct(product) ? 'Dukung Kami' : formatPriceOrFree(product?.price));
 
 export default function ProductSales({ product: dbProduct, previewMode = false, activeStep = 0 }) {
     const { auth } = usePage().props;

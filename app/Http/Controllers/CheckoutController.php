@@ -99,7 +99,7 @@ class CheckoutController extends Controller
 
             return back()->with([
                 'success' => $isDonation
-                    ? 'Akses berhasil dibuka! Terima kasih sudah ikut berdonasi Rp 0.'
+                    ? 'Akses berhasil dibuka! Materi sudah tersedia di dashboard.'
                     : 'Produk gratis berhasil dibuka! Materi sudah tersedia di dashboard.',
                 'trx_code' => $transaction->transaction_code,
                 'free_claim' => true,
@@ -197,7 +197,7 @@ class CheckoutController extends Controller
         if ($isManual) {
             return back()->with([
                 'success' => $isDonation
-                    ? 'Terima kasih! Donasi tercatat dan akses materi sudah aktif. Verifikasi bukti hanya untuk konfirmasi nominal.'
+                    ? 'Terima kasih! Pembayaran tercatat dan akses materi sudah aktif. Verifikasi bukti hanya untuk konfirmasi nominal.'
                     : 'Pesanan berhasil dibuat, silakan tunggu konfirmasi admin!',
                 'trx_code' => $transaction->transaction_code,
             ]);
@@ -227,7 +227,7 @@ class CheckoutController extends Controller
 
             return back()->with([
                 'success' => $isDonation
-                    ? 'Silakan selesaikan pembayaran donasi — akses materi sudah aktif.'
+                    ? 'Silakan selesaikan pembayaran — akses materi sudah aktif.'
                     : 'Silakan selesaikan pembayaran!',
                 'snap_token' => $snapToken,
                 'trx_code' => $transaction->transaction_code,
@@ -487,7 +487,7 @@ class CheckoutController extends Controller
 
         if ($hasDonation && $hasRegular) {
             throw ValidationException::withMessages([
-                'cart' => 'Produk donasi harus di-checkout terpisah dari produk lain. Selesaikan donasi terlebih dahulu.',
+                'cart' => 'Produk dengan nominal bebas harus di-checkout terpisah dari produk lain. Selesaikan terlebih dahulu.',
             ]);
         }
 

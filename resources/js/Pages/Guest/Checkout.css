@@ -254,6 +254,7 @@
 .checkout-donation {
     display: grid;
     gap: 16px;
+    margin-top: 20px; /* jarak dari form field terakhir, selaras gap .checkout-fields */
     padding: 20px;
     border: 1px solid #ded4d7;
     border-radius: 14px;

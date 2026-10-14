@@ -11,13 +11,28 @@ use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
 {
+    /**
+     * Fitur login/daftar Google disembunyikan sementara (belum dikonfigurasi).
+     * Ubah ke true untuk mengaktifkan kembali, lalu tampilkan tombol Google
+     * di halaman Login dan Register (flag GOOGLE_LOGIN_ENABLED).
+     */
+    public static bool $enabled = false;
+
     public function redirectToGoogle()
     {
+        if (!self::$enabled) {
+            return $this->disabledResponse();
+        }
+
         return Socialite::driver('google')->redirect();
     }
 
     public function handleGoogleCallback(Request $request)
     {
+        if (!self::$enabled) {
+            return $this->disabledResponse();
+        }
+
         try {
             $user = Socialite::driver('google')->user();
             $findUser = User::where('email', $user->email)->first();
@@ -62,5 +77,15 @@ class GoogleController extends Controller
         } catch (Exception $e) {
             return redirect(route('login'))->withErrors(['email' => 'Gagal masuk menggunakan Google.']);
         }
+    }
+
+    /**
+     * Respons saat fitur Google dinonaktifkan — kembali ke login tanpa autentikasi.
+     */
+    private function disabledResponse()
+    {
+        return redirect()->route('login')->withErrors([
+            'email' => 'Login Google sedang tidak tersedia. Silakan gunakan email dan password.',
+        ]);
     }
 }

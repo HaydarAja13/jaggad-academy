@@ -92,7 +92,7 @@ export default function ProductCard({ product, className = '', previewIdPrefix }
                     {isPurchased ? <strong className="product-card__access"><CheckCircle2 size={18} aria-hidden="true" /> Akses aktif</strong> : (
                         <div className="product-card__price">
                             {isDonationProduct(product)
-                                ? <strong className="price-current">Donasi</strong>
+                                ? <strong className="price-current">Dukung Kami</strong>
                                 : isFreeProduct(product)
                                     ? <strong className="price-current">FREE</strong>
                                     : <>

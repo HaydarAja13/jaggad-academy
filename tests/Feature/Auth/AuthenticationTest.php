@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Http\Controllers\Auth\GoogleController;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Facades\Socialite;
@@ -55,19 +56,37 @@ class AuthenticationTest extends TestCase
 
     public function test_inactive_user_cannot_authenticate_with_google(): void
     {
-        $user = User::factory()->create(['email' => 'inactive@example.com', 'status' => 'inactive']);
-        $provider = \Mockery::mock();
-        $provider->shouldReceive('user')->once()->andReturn((object) [
-            'id' => 'google-123',
-            'name' => $user->name,
-            'email' => $user->email,
-            'avatar' => null,
-        ]);
-        Socialite::shouldReceive('driver')->once()->with('google')->andReturn($provider);
+        // Fitur Google dinonaktifkan secara default; aktifkan sementara untuk menguji alur callback.
+        GoogleController::$enabled = true;
+
+        try {
+            $user = User::factory()->create(['email' => 'inactive@example.com', 'status' => 'inactive']);
+            $provider = \Mockery::mock();
+            $provider->shouldReceive('user')->once()->andReturn((object) [
+                'id' => 'google-123',
+                'name' => $user->name,
+                'email' => $user->email,
+                'avatar' => null,
+            ]);
+            Socialite::shouldReceive('driver')->once()->with('google')->andReturn($provider);
+
+            $this->get('/auth/google/callback')->assertRedirect(route('login'))
+                ->assertSessionHasErrors('email');
+
+            $this->assertGuest();
+        } finally {
+            GoogleController::$enabled = false;
+        }
+    }
+
+    public function test_google_login_is_disabled(): void
+    {
+        $this->get('/auth/google')->assertRedirect(route('login'))
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
 
         $this->get('/auth/google/callback')->assertRedirect(route('login'))
             ->assertSessionHasErrors('email');
-
         $this->assertGuest();
     }
 }
