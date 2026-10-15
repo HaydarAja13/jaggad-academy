@@ -8,6 +8,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -44,6 +45,7 @@ class AdminProductController extends Controller
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
+            'slug' => 'nullable|string|min:3|max:100|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/|unique:products,slug',
             'category' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'originalPrice' => 'nullable|numeric|min:0',
@@ -103,6 +105,7 @@ class AdminProductController extends Controller
 
         Product::create([
             'name' => $data['title'],
+            'slug' => $data['slug'] ?? null,
             'category_id' => $data['category'] ?? null,
             'price' => $price,
             'pricing_type' => $pricingType,
@@ -137,6 +140,7 @@ class AdminProductController extends Controller
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
+            'slug' => 'sometimes|nullable|string|min:3|max:100|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/|'.Rule::unique('products', 'slug')->ignore($product->id),
             'category' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'originalPrice' => 'nullable|numeric|min:0',
@@ -199,6 +203,8 @@ class AdminProductController extends Controller
 
         $product->update([
             'name' => $data['title'],
+            // Slug kosong dipertahankan (tidak di-reset); slug lama dicatat model untuk redirect 301.
+            'slug' => filled($data['slug'] ?? null) ? $data['slug'] : $product->slug,
             'category_id' => $data['category'] ?? null,
             'price' => $price,
             'pricing_type' => $pricingType,

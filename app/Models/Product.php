@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Str;
 
 class Product extends Model
@@ -16,6 +17,7 @@ class Product extends Model
     protected $fillable = [
         'name',
         'slug',
+        'previous_slugs',
         'category_id',
         'price',
         'pricing_type',
@@ -47,6 +49,7 @@ class Product extends Model
         'landing_blocks' => 'array',
         'landing_faq' => 'array',
         'sales_content' => 'array',
+        'previous_slugs' => 'array',
         'price' => 'decimal:2',
         'normal_price' => 'decimal:2',
         'rating' => 'decimal:1',
@@ -77,7 +80,39 @@ class Product extends Model
             if (empty($product->slug)) {
                 $product->slug = Str::slug($product->name).'-'.$product->getKey();
             }
+
+            // Catat slug lama agar URL lama tetap hidup via redirect 301.
+            if ($product->isDirty('slug') && $product->getOriginal('slug')) {
+                $history = $product->previous_slugs ?? [];
+                $history[] = $product->getOriginal('slug');
+                // Simpan maksimal 20 slug lama, tanpa duplikat, terbaru di depan.
+                $product->previous_slugs = array_slice(array_values(array_unique($history)), 0, 20);
+            }
         });
+    }
+
+    /**
+     * Jika slug lama tidak ditemukan, cari di riwayat previous_slugs
+     * lalu redirect permanen (301) ke URL slug yang baru — link lama
+     * yang sudah dibagikan tetap hidup dan SEO tidak rusak.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $product = parent::resolveRouteBinding($value, $field);
+
+        if ($product || $field !== null) {
+            return $product;
+        }
+
+        foreach (static::whereNotNull('previous_slugs')->get() as $candidate) {
+            if (in_array($value, $candidate->previous_slugs ?? [], true)) {
+                throw new HttpResponseException(
+                    redirect(str_replace("/{$value}", "/{$candidate->slug}", url()->current()), 301)
+                );
+            }
+        }
+
+        return null;
     }
 
     public function category()

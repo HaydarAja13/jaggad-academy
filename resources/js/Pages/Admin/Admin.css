@@ -5532,6 +5532,31 @@
     background: rgba(180, 35, 24, 0.08);
 }
 
+.settings-test-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(102, 8, 16, 0.4);
+    background: transparent;
+    color: #660810;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.settings-test-btn:hover:not(:disabled) {
+    background: rgba(102, 8, 16, 0.08);
+}
+
+.settings-test-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .settings-reset-confirm-field {
     display: flex;
     flex-direction: column;

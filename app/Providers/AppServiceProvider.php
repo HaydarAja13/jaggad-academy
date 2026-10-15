@@ -55,6 +55,9 @@ class AppServiceProvider extends ServiceProvider
                     // Dynamically set Mail config from database
                     if (! empty($json['mail_host'])) {
                         config(['mail.mailers.smtp.host' => $json['mail_host']]);
+                        // Server mail kadang lambat saat handshake TLS (Exim), beri
+                        // timeout lebih longgar dari default 10 detik.
+                        config(['mail.mailers.smtp.timeout' => (int) ($json['mail_timeout'] ?? 30)]);
                     }
                     if (! empty($json['mail_port'])) {
                         config(['mail.mailers.smtp.port' => $json['mail_port']]);

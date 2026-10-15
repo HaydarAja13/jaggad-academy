@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Save, Loader2, ShieldCheck, CreditCard, Activity, Mail, Info, TriangleAlert, RefreshCcw, Trash2 } from 'lucide-react';
+import { Save, Loader2, ShieldCheck, CreditCard, Activity, Mail, Send, Info, TriangleAlert, RefreshCcw, Trash2 } from 'lucide-react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import toast from 'react-hot-toast';
 import './Admin.css';
@@ -23,11 +23,14 @@ export default function AdminSettings({ dbSettings }) {
         mail_username: dbSettings?.mail_username || '',
         mail_password: dbSettings?.mail_password || '',
         mail_encryption: dbSettings?.mail_encryption || 'tls',
+        mail_timeout: dbSettings?.mail_timeout || '30',
         mail_from_address: dbSettings?.mail_from_address || '',
         mail_from_name: dbSettings?.mail_from_name || 'JAGGAD ACADEMY',
     });
 
     const [isSaving, setIsSaving] = useState(false);
+    const [testEmailTo, setTestEmailTo] = useState('');
+    const [isTestingEmail, setIsTestingEmail] = useState(false);
     const [resetModal, setResetModal] = useState(null); // 'data' | 'stats' | null
     const [confirmText, setConfirmText] = useState('');
     const [isResetting, setIsResetting] = useState(false);
@@ -55,6 +58,24 @@ export default function AdminSettings({ dbSettings }) {
             onError: () => {
                 setIsResetting(false);
                 toast.error('Gagal memproses reset.');
+            },
+        });
+    };
+
+    const handleTestEmail = () => {
+        if (!testEmailTo) return toast.error('Isi alamat email tujuan test terlebih dahulu.');
+        if (!data.mail_host) return toast.error('Isi dan simpan pengaturan SMTP terlebih dahulu.');
+        setIsTestingEmail(true);
+        router.post(route('admin.settings.test-email'), { to: testEmailTo }, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                setIsTestingEmail(false);
+                const { success } = page.props.flash || {};
+                toast.success(success || 'Email test terkirim. Cek inbox dan folder spam.');
+            },
+            onError: (errors) => {
+                setIsTestingEmail(false);
+                Object.values(errors).forEach(error => toast.error(error));
             },
         });
     };
@@ -321,16 +342,51 @@ export default function AdminSettings({ dbSettings }) {
                                     />
                                 </div>
                             </div>
-                            <div className="form-group">
-                                <label htmlFor="mail_from_address">Alamat Email Pengirim (From)</label>
-                                <input
-                                    id="mail_from_address"
-                                    type="email"
-                                    value={data.mail_from_address}
-                                    onChange={e => setData({...data, mail_from_address: e.target.value})}
-                                    placeholder="no-reply@jaggadacademy.com"
-                                />
-                                <p className="settings-field-hint">Alamat ini akan tampil sebagai pengirim di inbox penerima.</p>
+                            <div className="settings-form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="mail_timeout">Timeout SMTP (detik)</label>
+                                    <input
+                                        id="mail_timeout"
+                                        type="number"
+                                        min="5"
+                                        max="120"
+                                        value={data.mail_timeout}
+                                        onChange={e => setData({...data, mail_timeout: e.target.value})}
+                                        placeholder="30"
+                                    />
+                                    <p className="settings-field-hint">Berapa lama menunggu server email merespons sebelum dianggap gagal. Naikkan jika sering timeout.</p>
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="mail_from_address">Alamat Email Pengirim (From)</label>
+                                    <input
+                                        id="mail_from_address"
+                                        type="email"
+                                        value={data.mail_from_address}
+                                        onChange={e => setData({...data, mail_from_address: e.target.value})}
+                                        placeholder="admin@jaggadacademy.com"
+                                    />
+                                    <p className="settings-field-hint">Alamat ini akan tampil sebagai pengirim di inbox penerima.</p>
+                                </div>
+                            </div>
+                            <div className="settings-form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="smtp_test_to">Kirim Test Ke</label>
+                                    <input
+                                        id="smtp_test_to"
+                                        type="email"
+                                        value={testEmailTo}
+                                        onChange={e => setTestEmailTo(e.target.value)}
+                                        placeholder="email-anda@contoh.com"
+                                    />
+                                    <p className="settings-field-hint">Simpan pengaturan dulu, lalu kirim email percobaan ke alamat ini.</p>
+                                </div>
+                                <div className="form-group">
+                                    <label aria-hidden="true">&nbsp;</label>
+                                    <button type="button" className="settings-test-btn" onClick={handleTestEmail} disabled={isTestingEmail}>
+                                        {isTestingEmail ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                        <span>{isTestingEmail ? 'Mengirim...' : 'Kirim Test Email'}</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </section>

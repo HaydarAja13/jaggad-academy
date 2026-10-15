@@ -48,12 +48,19 @@ Route::get('/packages/{slug}', function ($slug) {
     ]);
 })->name('packages.landing');
 
+// Checkout publik: keranjang murni produk donasi bisa tanpa login
+// (guard di controller — produk non-donasi tetap wajib login).
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+Route::post('/checkout', [CheckoutController::class, 'process'])->middleware('throttle:10,1')->name('checkout.process');
+Route::post('/checkout/verify/{transaction}', [CheckoutController::class, 'verify'])->middleware('throttle:10,1')->name('checkout.verify');
+
+// Magic link akses: login otomatis untuk akun tanpa password (checkout tamu).
+Route::get('/access/magic/{user}', [CheckoutController::class, 'magicAccess'])
+    ->middleware(['signed', 'throttle:10,1'])->name('access.magic');
+
 Route::middleware(['auth'])->group(function () {
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
-    Route::post('/checkout', [CheckoutController::class, 'process'])->middleware('throttle:10,1')->name('checkout.process');
     Route::post('/dashboard/transactions/{transaction}/proof', [CheckoutController::class, 'uploadProof'])->middleware('throttle:5,1')->name('transactions.proof');
     Route::get('/payments/{payment}/proof', [CheckoutController::class, 'proof'])->name('payments.proof');
-    Route::post('/checkout/verify/{transaction}', [CheckoutController::class, 'verify'])->middleware('throttle:10,1')->name('checkout.verify');
 });
 
 Route::get('/promo', [PublicController::class, 'promo'])->name('ads');
@@ -123,6 +130,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
         Route::get('/settings', [AdminSettingController::class, 'index'])->name('settings.index');
         Route::post('/settings', [AdminSettingController::class, 'saveSettings'])->name('settings.store');
+        Route::post('/settings/test-email', [AdminSettingController::class, 'testEmail'])->middleware('throttle:5,1')->name('settings.test-email');
         Route::post('/settings/reset-data', [AdminSettingController::class, 'resetData'])->name('settings.reset-data');
         Route::post('/settings/reset-stats', [AdminSettingController::class, 'resetStats'])->name('settings.reset-stats');
 

@@ -31,9 +31,15 @@ export default function AdminProductForm({ dbCategories = [], product }) {
         return val.toString().replace(/\D/g, '');
     };
 
+    const slugify = (text) => (text || '').toString().toLowerCase().trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
     const [form, setForm] = useState({
         _method: isEdit ? 'PUT' : 'POST',
         title: product?.name || '', 
+        slug: product?.slug || '',
         category: product?.category_id || (dbCategories[0]?.id || ''), 
         status: product?.status || 'draft',
         pricingType: product?.pricing_type || 'fixed',
@@ -55,6 +61,8 @@ export default function AdminProductForm({ dbCategories = [], product }) {
 
     const [dragOver, setDragOver] = useState(false);
     const [processing, setProcessing] = useState(false);
+    // Slug otomatis mengikuti nama sampai admin mengedit field slug secara manual.
+    const [slugTouched, setSlugTouched] = useState(Boolean(product?.slug));
     const [newBenefit, setNewBenefit] = useState('');
     const [editingBenefitIndex, setEditingBenefitIndex] = useState(null);
     const [newMaterialTitle, setNewMaterialTitle] = useState('');
@@ -149,6 +157,7 @@ export default function AdminProductForm({ dbCategories = [], product }) {
         const fd = new FormData();
         fd.append('_method', isEdit ? 'PUT' : 'POST');
         fd.append('title', form.title);
+        fd.append('slug', form.slug || '');
         fd.append('category', form.category || '');
         fd.append('status', form.status || 'draft');
         fd.append('pricingType', form.pricingType || 'fixed');
@@ -249,7 +258,18 @@ export default function AdminProductForm({ dbCategories = [], product }) {
                         <div className="modal-form product-info-form">
                             <div className="form-group">
                                 <label>Judul Produk *</label>
-                                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Masukkan nama produk" />
+                                <input value={form.title} onChange={e => setForm(prev => ({ ...prev, title: e.target.value, ...(slugTouched ? {} : { slug: slugify(e.target.value) }) }))} placeholder="Masukkan nama produk" />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Slug URL {isEdit ? '' : '(Opsional)'}</label>
+                                <input value={form.slug} onChange={e => { setSlugTouched(true); setForm(prev => ({ ...prev, slug: slugify(e.target.value) })); }} placeholder={slugify(form.title) || 'otomatis-dari-nama-produk'} />
+                                <p className="form-hint">
+                                    Dipakai di URL: /products/{form.slug || slugify(form.title) || '…'}. Huruf kecil, angka, dan tanda minus (-).
+                                    {isEdit
+                                        ? ' Slug lama otomatis di-redirect 301 ke slug baru, jadi link lama yang sudah dibagikan tetap hidup.'
+                                        : ' Kosongkan untuk membuatnya otomatis dari nama produk.'}
+                                </p>
                             </div>
 
                             <div className="product-form-grid product-form-grid--two">

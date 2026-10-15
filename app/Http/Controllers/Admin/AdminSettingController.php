@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SmtpTestMail;
 use App\Models\Category;
 use App\Models\Payment;
 use App\Models\Product;
@@ -12,6 +13,8 @@ use App\Models\TransactionItem;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -54,6 +57,7 @@ class AdminSettingController extends Controller
             'mail_username' => 'nullable|string|max:255',
             'mail_password' => 'nullable|string|max:512',
             'mail_encryption' => 'nullable|in:tls,ssl',
+            'mail_timeout' => 'nullable|integer|min:5|max:120',
             'mail_from_address' => 'nullable|email',
             'mail_from_name' => 'nullable|string|max:255',
         ]);
@@ -73,6 +77,43 @@ class AdminSettingController extends Controller
         );
 
         return back()->with('success', 'Pengaturan kredensial berhasil disimpan!');
+    }
+
+    /**
+     * Kirim email percobaan untuk memverifikasi konfigurasi SMTP
+     * yang tersimpan di Admin → Pengaturan.
+     */
+    public function testEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'to' => 'required|email|max:255',
+        ]);
+
+        $settingsData = SiteContent::where('key', 'site_settings')->first();
+        $settings = $settingsData ? (json_decode($settingsData->value, true) ?: []) : [];
+        if (empty($settings['mail_host'])) {
+            throw ValidationException::withMessages([
+                'to' => 'Isi dan simpan pengaturan SMTP terlebih dahulu sebelum mengirim test.',
+            ]);
+        }
+
+        $started = microtime(true);
+        try {
+            Mail::to($validated['to'])->send(new SmtpTestMail(
+                smtpHost: (string) config('mail.mailers.smtp.host'),
+                smtpPort: config('mail.mailers.smtp.port'),
+                fromAddress: (string) config('mail.from.address'),
+            ));
+        } catch (\Throwable $exception) {
+            Log::error('SMTP test email error: '.$exception->getMessage());
+
+            throw ValidationException::withMessages([
+                'to' => 'Gagal mengirim: '.$exception->getMessage(),
+            ]);
+        }
+        $seconds = round(microtime(true) - $started, 1);
+
+        return back()->with('success', "Email test terkirim ke {$validated['to']} dalam {$seconds} detik. Cek inbox dan folder spam.");
     }
 
     // Ads page

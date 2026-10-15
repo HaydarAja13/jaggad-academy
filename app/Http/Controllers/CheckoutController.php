@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\PurchaseReceiptMail;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ConsultationAppointment;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
+use App\Models\User;
 use App\Services\TransactionFinalizer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -40,6 +44,8 @@ class CheckoutController extends Controller
 
     public function process(Request $request, TransactionFinalizer $finalizer)
     {
+        $isGuest = $request->user() === null;
+
         $validated = $request->validate([
             'phone' => 'required|string|max:32',
             'payment_method_id' => 'nullable|exists:payment_methods,id',
@@ -52,9 +58,26 @@ class CheckoutController extends Controller
             'proof' => 'nullable|image|mimes:jpg,jpeg,png|max:5120|dimensions:max_width=8000,max_height=8000',
         ]);
 
+        if ($isGuest) {
+            // Tamu wajib isi nama & email — dipakai untuk akun diam-diam & pengiriman link akses.
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|max:255',
+            ]);
+            $validated['name'] = $request->string('name')->toString();
+            $validated['email'] = $request->string('email')->toString();
+        }
+
         [$products, $linePrices, $itemDetails, $grandTotal, $isDonation] = $this->resolveCart($validated['cart']);
 
-        $user = $request->user();
+        // Tamu hanya boleh checkout keranjang murni produk donasi — produk lain wajib login.
+        if ($isGuest && ! $isDonation) {
+            return redirect()->route('login')->withErrors([
+                'cart' => 'Silakan login atau daftar terlebih dahulu untuk membeli produk selain donasi.',
+            ]);
+        }
+
+        $user = $request->user() ?? $this->resolveGuestUser($validated);
         $ownedProducts = $user->products()
             ->whereIn('products.id', $products->keys())
             ->pluck('products.name');
@@ -95,7 +118,7 @@ class CheckoutController extends Controller
                 return $transaction;
             });
 
-            $finalizer->apply($transaction, 'success', 'free_claim', ['source' => 'free_claim']);
+            $result = $finalizer->apply($transaction, 'success', 'free_claim', ['source' => 'free_claim']);
 
             return back()->with([
                 'success' => $isDonation
@@ -103,6 +126,7 @@ class CheckoutController extends Controller
                     : 'Produk gratis berhasil dibuka! Materi sudah tersedia di dashboard.',
                 'trx_code' => $transaction->transaction_code,
                 'free_claim' => true,
+                'access_email' => $result['email_sent'] ?? true,
             ]);
         }
 
@@ -194,12 +218,22 @@ class CheckoutController extends Controller
             throw $exception;
         }
 
+        $accessEmailSent = true;
+        if ($isManual && $isDonation) {
+            // Donasi manual: akses sudah aktif (Model A) — email berisi magic link
+            // akses dikirim SEGERA tanpa menunggu approve. Marker di payment_payload
+            // mencegah email ganda saat admin approve.
+            $transaction->update(['payment_payload' => json_encode(['access_email_sent' => true])]);
+            $accessEmailSent = $this->sendAccessEmailQuietly($transaction);
+        }
+
         if ($isManual) {
             return back()->with([
                 'success' => $isDonation
                     ? 'Terima kasih! Pembayaran tercatat dan akses materi sudah aktif. Verifikasi bukti hanya untuk konfirmasi nominal.'
                     : 'Pesanan berhasil dibuat, silakan tunggu konfirmasi admin!',
                 'trx_code' => $transaction->transaction_code,
+                'access_email' => $accessEmailSent,
             ]);
         }
 
@@ -224,6 +258,11 @@ class CheckoutController extends Controller
 
             $snapToken = Snap::getSnapToken($params);
             $transaction->update(['snap_token' => $snapToken]);
+
+            if ($isGuest) {
+                // Penanda sesi: verify() tamu hanya boleh untuk transaksi Snap ini.
+                $request->session()->put('guest_trx', $transaction->transaction_code);
+            }
 
             return back()->with([
                 'success' => $isDonation
@@ -371,7 +410,13 @@ class CheckoutController extends Controller
     public function verify(Request $request, Transaction $transaction, TransactionFinalizer $finalizer)
     {
         // For security, only the owner can verify or admin
-        if ($request->user()->id !== $transaction->user_id && $request->user()->role !== 'admin') {
+        $authUser = $request->user();
+        if ($authUser) {
+            if ($authUser->id !== $transaction->user_id && $authUser->role !== 'admin') {
+                abort(403);
+            }
+        } elseif ($request->session()->get('guest_trx') !== $transaction->transaction_code) {
+            // Tamu: hanya transaksi Snap milik sesi checkout ini yang boleh diverifikasi.
             abort(403);
         }
 
@@ -394,9 +439,12 @@ class CheckoutController extends Controller
             }
 
             if ($trStatus === 'settlement' || ($trStatus === 'capture' && $fraudStatus === 'accept')) {
-                $finalizer->apply($transaction, 'success', $type, $payload);
+                $result = $finalizer->apply($transaction, 'success', $type, $payload);
 
-                return back()->with('success', 'Pembayaran berhasil dikonfirmasi secara otomatis!');
+                return back()->with([
+                    'success' => 'Pembayaran berhasil dikonfirmasi secara otomatis!',
+                    'access_email' => $result['email_sent'] ?? true,
+                ]);
             }
 
             throw ValidationException::withMessages(['payment' => 'Pembayaran belum berhasil dikonfirmasi oleh Midtrans.']);
@@ -406,6 +454,69 @@ class CheckoutController extends Controller
             Log::error('Midtrans verification error: '.$exception->getMessage());
 
             throw ValidationException::withMessages(['payment' => 'Status pembayaran belum dapat diverifikasi. Silakan coba lagi.']);
+        }
+    }
+
+    /**
+     * Magic link akses untuk akun tanpa password (dibuat otomatis saat checkout
+     * tamu). URL ditandatangani (HMAC) & hanya dikirim lewat email — buka halaman
+     * ini langsung login dan membuka dashboard.
+     */
+    public function magicAccess(Request $request, User $user)
+    {
+        // Akun dengan password (register biasa) masuk lewat login seperti biasa.
+        if (! empty($user->password)) {
+            return redirect()->route('login');
+        }
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return redirect()->route('dashboard')->with('success', 'Selamat datang kembali! Materi Anda sudah tersedia di dashboard.');
+    }
+
+    /**
+     * Tamu checkout donasi: pakai akun existing per email (tanpa login) atau
+     * buat akun diam-diam (tanpa password) — akses via magic link / Lupa Password.
+     */
+    private function resolveGuestUser(array $validated): User
+    {
+        $user = User::where('email', $validated['email'])->first();
+
+        if ($user) {
+            if (empty($user->phone) && ! empty($validated['phone'])) {
+                $user->update(['phone' => $validated['phone']]);
+            }
+
+            return $user;
+        }
+
+        return User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'password' => null,
+            'status' => 'Aktif',
+            'role' => 'customer',
+        ]);
+    }
+
+    /**
+     * Kirim email akses (berisi magic link untuk akun tanpa password).
+     * Kegagalan email tidak membatalkan transaksi — dicatat saja.
+     */
+    private function sendAccessEmailQuietly(Transaction $transaction): bool
+    {
+        try {
+            Mail::to($transaction->user->email)->send(
+                new PurchaseReceiptMail($transaction->fresh()->load(['user', 'items.product.category', 'payment.paymentMethod']))
+            );
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::error('Donation access email error: '.$exception->getMessage());
+
+            return false;
         }
     }
 

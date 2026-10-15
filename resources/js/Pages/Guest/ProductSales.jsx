@@ -31,7 +31,7 @@ function SalesHeader({ product, onCheckout, actionLabel }) {
     return <header className="sales-header">
         <div className="sales-header__inner">
             <Link href={route('products.detail', product.slug || product.id)} className="sales-header__back" aria-label="Kembali ke detail produk"><ArrowLeft size={19} aria-hidden="true" /><span>JAGGAD</span></Link>
-            <div className="sales-header__product"><strong>{product.title}</strong><span>{priceLabel(product)}</span></div>
+            <div className="sales-header__product"><strong>{product.title}</strong>{!isDonationProduct(product) && <span>{priceLabel(product)}</span>}</div>
             <div className="sales-header__actions">
                 {seconds > 0 && <div id="sales-header-timer" className="sales-header__timer" aria-label={`Penawaran berakhir dalam ${time}`}><span>Sisa waktu</span><strong>{time}</strong></div>}
                 <button id="sales-header-cta" type="button" onClick={onCheckout}>{actionLabel} <ArrowRight size={18} aria-hidden="true" /></button>
@@ -96,7 +96,7 @@ function ProductStory({ product, onCheckout, openFaq, setOpenFaq }) {
                     <div id="sales-hero-image" className="sales-offer__media">{product.thumbnail ? <img src={product.thumbnail} alt={product.title} /> : <BookOpen size={64} aria-hidden="true" />}{product.badge && <span>{product.badge}</span>}</div>
                     <div className="sales-offer__body">
                         <p id="sales-offer-label">{product.sales.offer.label}</p>
-                        <div className="sales-offer__price">{!isFreePrice(product.price) && product.originalPrice > product.price && <del>{formatCurrency(product.originalPrice)}</del>}<strong>{priceLabel(product)}</strong></div>
+                        {!isDonationProduct(product) && <div className="sales-offer__price">{!isFreePrice(product.price) && product.originalPrice > product.price && <del>{formatCurrency(product.originalPrice)}</del>}<strong>{priceLabel(product)}</strong></div>}
                         {!isFreePrice(product.price) && product.originalPrice > product.price && <span className="sales-offer__saving">Hemat {formatCurrency(product.originalPrice - product.price)}</span>}
                         {product.quotaText && <p id="sales-offer-quota" className="sales-offer__note">{product.quotaText}</p>}
                         <button id="sales-offer-cta" type="button" onClick={onCheckout}>{product.sales.offer.cta} <ArrowRight size={19} /></button>
@@ -113,7 +113,7 @@ function ProductStory({ product, onCheckout, openFaq, setOpenFaq }) {
             {product.blocks.length > 0 && <div className="sales-managed-content">{product.blocks.map((block, index) => <LandingBlock key={index} block={block} index={index} title={product.title} onCheckout={onCheckout} openFaq={openFaq} setOpenFaq={setOpenFaq} faqCopy={product.sales.faq} />)}</div>}
         </main>
 
-        <section className="sales-close" aria-labelledby="sales-close-title"><div><h2 id="sales-close-title">{product.sales.closing.title}</h2><p id="sales-close-description">{product.sales.closing.description}</p></div><button id="sales-close-cta" type="button" onClick={onCheckout}>{product.sales.closing.cta} · {priceLabel(product)} <ArrowRight size={19} /></button></section>
+        <section className="sales-close" aria-labelledby="sales-close-title"><div><h2 id="sales-close-title">{product.sales.closing.title}</h2><p id="sales-close-description">{product.sales.closing.description}</p></div><button id="sales-close-cta" type="button" onClick={onCheckout}>{product.sales.closing.cta}{!isDonationProduct(product) && ` · ${priceLabel(product)}`} <ArrowRight size={19} /></button></section>
     </>;
 }
 
@@ -129,7 +129,7 @@ function PurchaseConfirmation({ product, purchased, onBack, onContinue }) {
             </section>
             <aside className="sales-confirm__order" aria-label="Ringkasan pesanan">
                 <h2 id="sales-confirm-order-title">{copy.orderTitle}</h2>
-                <div><span>Harga produk</span><span>{isDonationProduct(product) ? 'Dukung Kami' : formatPriceOrFree(product.originalPrice > product.price ? product.originalPrice : product.price)}</span></div>
+                {!isDonationProduct(product) && <div><span>Harga produk</span><span>{formatPriceOrFree(product.originalPrice > product.price ? product.originalPrice : product.price)}</span></div>}
                 {!isFreePrice(product.price) && product.originalPrice > product.price && <div className="sales-confirm__discount"><span>Potongan harga</span><span>−{formatCurrency(product.originalPrice - product.price)}</span></div>}
                 <div className="sales-confirm__total"><span>Total</span><strong className={isDonationProduct(product) ? 'sales-confirm__total-note' : undefined}>{isDonationProduct(product) ? 'Dipilih saat checkout' : priceLabel(product)}</strong></div>
                 <button id="sales-confirm-cta" type="button" onClick={onContinue}>{purchased ? copy.ownedCta : copy.payCta} <ArrowRight size={19} /></button>
@@ -192,9 +192,9 @@ export default function ProductSales({ product: dbProduct, previewMode = false, 
             thumbnail: getStorageUrl(dbProduct.image || dbProduct.thumbnail),
             benefits: toArray(dbProduct.benefits),
         });
-        if (!auth?.user) {
+        if (!auth?.user && !isDonationProduct(product)) {
             toast.error('Masuk terlebih dahulu agar pembelian tersimpan di akun Anda.');
-            return router.get(route('checkout'));
+            return router.get(route('login'));
         }
         router.get(route('checkout'));
     };

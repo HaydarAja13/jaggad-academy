@@ -182,7 +182,12 @@ export default function Ads({ previewMode = false, customData = null, dbAds, dbP
                                             <div className="promo-card__purchase">
                                                 <div className="promo-card__price-block">
                                                     {!isFreePrice(price) && normalPrice > price && <del className="promo-card__old-price">{formatCurrency(normalPrice)}</del>}
-                                                    <strong>{isDonationProduct(product) ? 'Dukung Kami' : formatPriceOrFree(price)}</strong>
+                                                    {isDonationProduct(product)
+                                                        ? <div className="promo-card__price-donation">
+                                                            <strong>Bayar sesukamu</strong>
+                                                            <span>Mulai dari {formatCurrency(0)}</span>
+                                                        </div>
+                                                        : <strong>{formatPriceOrFree(price)}</strong>}
                                                     {!isFreePrice(price) && discount > 0 && <span>Hemat {formatCurrency(normalPrice - price)}</span>}
                                                 </div>
                                                 <button id={`preview-ads-product-${product.id}-cta`} type="button" onClick={event => handleBuy(event, product)} className="promo-button promo-button--primary">

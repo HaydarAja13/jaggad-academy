@@ -75,32 +75,41 @@
             line-height: 1.6;
             margin-bottom: 28px;
         }
-        /* Info Box */
+        /* Info Box — layout tabel (fleksibel & didukung semua client email) */
         .info-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 24px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
         }
-        .info-item {
-            flex: 1;
-            min-width: 140px;
+        .info-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 0;
+            table-layout: fixed;
         }
+        .info-cell {
+            width: 33.33%;
+            padding: 0 18px 0 0;
+            vertical-align: top;
+        }
+        .info-cell:last-child { padding-right: 0; }
         .info-label {
             font-size: 16px;
             color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.06em;
+            line-height: 1.4;
             margin-bottom: 4px;
         }
         .info-value {
             font-size: 16px;
             font-weight: 600;
             color: #660810;
+            line-height: 1.5;
+            word-break: break-word;
         }
         /* Section Title */
         .section-title {
@@ -156,26 +165,35 @@
             color: #64748b;
             margin-top: 3px;
         }
-        /* Total Row */
+        /* Total Row — tabel agar tetap rapi di semua client email */
         .total-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 16px 20px;
             margin-bottom: 28px;
         }
+        .total-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 0;
+        }
         .total-label {
             font-size: 16px;
             font-weight: 700;
             color: #660810;
+            text-align: left;
+            vertical-align: middle;
         }
         .total-amount {
             font-size: 20px;
             font-weight: 800;
             color: #660810;
+            text-align: right;
+            vertical-align: middle;
+            white-space: nowrap;
+            padding-left: 16px;
         }
         /* CTA Button */
         .cta {
@@ -210,9 +228,15 @@
         }
         .footer a { color: #660810; text-decoration: none; }
 
-        @media (max-width: 480px) {
-            .body, .header, .footer { padding: 24px 16px; }
-            .info-box { flex-direction: column; gap: 12px; }
+        /* Mobile — tumpuk satu kolom di layar sempit (Gmail/iOS/Outlook app) */
+        @media only screen and (max-width: 480px) {
+            body { padding: 16px 10px; }
+            .body, .header, .footer { padding: 20px 14px; }
+            .info-table, .info-table tbody, .info-table tr, .info-cell { display: block; width: 100%; }
+            .info-cell { padding: 0 0 12px 0; }
+            .info-cell:last-child { padding-bottom: 0; }
+            .total-label, .total-amount { display: block; width: 100%; text-align: left; padding-left: 0; }
+            .total-amount { margin-top: 4px; }
         }
     </style>
 </head>
@@ -239,28 +263,32 @@
         <!-- Order Info -->
         <p class="section-title">Detail Transaksi</p>
         <div class="info-box">
-            <div class="info-item">
-                <div class="info-label">No. Transaksi</div>
-                <div class="info-value">{{ $transaction->transaction_code }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Tanggal Bayar</div>
-                <div class="info-value">
-                    {{ $transaction->paid_at 
-                        ? \Carbon\Carbon::parse($transaction->paid_at)->locale('id')->isoFormat('D MMMM YYYY, HH:mm') 
-                        : now()->locale('id')->isoFormat('D MMMM YYYY, HH:mm') }}
-                </div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Metode Pembayaran</div>
-                <div class="info-value">
-                    @if($transaction->payment && $transaction->payment->paymentMethod)
-                        {{ strtoupper($transaction->payment->paymentMethod->bank_name) }}
-                    @else
-                        {{ strtoupper(str_replace('_', ' ', $transaction->payment_type ?? 'Midtrans')) }}
-                    @endif
-                </div>
-            </div>
+            <table class="info-table" role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td class="info-cell">
+                        <div class="info-label">No. Transaksi</div>
+                        <div class="info-value">{{ $transaction->transaction_code }}</div>
+                    </td>
+                    <td class="info-cell">
+                        <div class="info-label">Tanggal Bayar</div>
+                        <div class="info-value">
+                            {{ $transaction->paid_at 
+                                ? \Carbon\Carbon::parse($transaction->paid_at)->locale('id')->isoFormat('D MMMM YYYY, HH:mm') 
+                                : now()->locale('id')->isoFormat('D MMMM YYYY, HH:mm') }}
+                        </div>
+                    </td>
+                    <td class="info-cell">
+                        <div class="info-label">Metode Pembayaran</div>
+                        <div class="info-value">
+                            @if($transaction->payment && $transaction->payment->paymentMethod)
+                                {{ strtoupper($transaction->payment->paymentMethod->bank_name) }}
+                            @else
+                                {{ strtoupper(str_replace('_', ' ', $transaction->payment_type ?? 'Midtrans')) }}
+                            @endif
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <!-- Products -->
@@ -289,13 +317,30 @@
 
         <!-- Total -->
         <div class="total-row">
-            <span class="total-label">{{ (float) $transaction->total_amount <= 0 ? 'Total (Gratis)' : 'Total Pembayaran' }}</span>
-            <span class="total-amount">{{ (float) $transaction->total_amount <= 0 ? 'FREE' : 'Rp '.number_format($transaction->total_amount, 0, ',', '.') }}</span>
+            <table class="total-table" role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td class="total-label">{{ (float) $transaction->total_amount <= 0 ? 'Total (Gratis)' : 'Total Pembayaran' }}</td>
+                    <td class="total-amount">{{ (float) $transaction->total_amount <= 0 ? 'FREE' : 'Rp '.number_format($transaction->total_amount, 0, ',', '.') }}</td>
+                </tr>
+            </table>
         </div>
 
         <!-- CTA -->
+        @php
+            $isPasswordless = empty($transaction->user->password);
+            // Akun tanpa password (checkout tamu): link akses langsung login via magic link.
+            $accessUrl = $isPasswordless
+                ? \Illuminate\Support\Facades\URL::signedRoute('access.magic', ['user' => $transaction->user->slug])
+                : url('/dashboard');
+        @endphp
         <div class="cta">
-            <a href="{{ url('/dashboard') }}">Akses Materi Saya →</a>
+            <a href="{{ $accessUrl }}">Akses Materi Saya →</a>
+            @if($isPasswordless)
+                <p style="font-size:16px;color:#64748b;margin-top:14px;line-height:1.7;">
+                    Akun Anda dibuat otomatis tanpa password — cukup klik tombol di atas untuk langsung membuka materi.
+                    Ingin mengatur password sendiri? Buka halaman login lalu pilih <strong>Lupa Password</strong>.
+                </p>
+            @endif
         </div>
     </div>
 

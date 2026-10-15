@@ -107,6 +107,10 @@
 .promo-card__price-block:has(.promo-card__old-price) { gap: 6px; }
 .promo-card__price-block:has(.promo-card__old-price) .promo-card__old-price { color: var(--promo-ink); font-family: var(--font-display); font-size: 2rem; font-weight: var(--font-semibold); font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -.03em; text-decoration-color: var(--color-accent); text-decoration-thickness: 4px; white-space: nowrap; }
 .promo-card__price-block:has(.promo-card__old-price) strong { color: var(--color-accent); font-size: var(--text-xl); font-weight: var(--font-medium); font-variant-numeric: tabular-nums; line-height: 1.2; white-space: nowrap; }
+/* Produk donasi: label "Bayar sesukamu" + catatan nominal bebas */
+.promo-card__price-donation { display: flex; flex-direction: column; gap: 4px; }
+.promo-card__price-block .promo-card__price-donation strong { color: var(--color-accent); font-size: var(--text-xl); line-height: 1.2; }
+.promo-card__price-donation span { color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; }
 .promo-card__note { margin: 13px 0 0; color: var(--color-accent-light); font-weight: 650; line-height: 1.45; text-align: center; }
 
 .promo-empty { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: clamp(28px, 5vw, 48px); border: 1px dashed #d8cdd1; border-radius: 16px; background: var(--promo-field); }

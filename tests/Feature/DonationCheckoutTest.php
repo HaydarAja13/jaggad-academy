@@ -130,7 +130,9 @@ class DonationCheckoutTest extends TestCase
         $this->assertTrue($customer->fresh()->products()->whereKey($product->id)->exists());
 
         Mail::assertSent(PaymentRejectedMail::class, 1);
-        Mail::assertNotSent(PurchaseReceiptMail::class);
+        // Email akses donasi dikirim saat checkout (1x); reject menolak uang,
+        // bukan akses — jadi tidak ada email struk tambahan sama sekali.
+        Mail::assertSent(PurchaseReceiptMail::class, 1);
     }
 
     public function test_mixed_cart_of_donation_and_regular_product_is_rejected(): void
