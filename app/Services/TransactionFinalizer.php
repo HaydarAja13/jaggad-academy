@@ -102,17 +102,17 @@ class TransactionFinalizer
             return ['changed' => true, 'email_sent' => true];
         }
 
-        // Donasi manual: email akses (berisi magic link) sudah dikirim saat checkout.
-        $payload = json_decode($finalized->payment_payload ?? '', true);
-        $alreadyEmailed = $finalized->purpose === Transaction::PURPOSE_DONATION
-            && is_array($payload) && ($payload['access_email_sent'] ?? false);
+        // Donasi: tanpa email otomatis — akses langsung terbuka di checkout dan
+        // login bisa cukup dengan email. Email hanya dikirim manual dari admin
+        // (tombol kirim ulang) bila diperlukan.
+        if ($finalized->purpose === Transaction::PURPOSE_DONATION) {
+            return ['changed' => true, 'email_sent' => true];
+        }
 
         return [
             'changed' => true,
             // Meta CAPI Purchase hanya untuk penjualan produk, bukan donasi.
-            'email_sent' => $alreadyEmailed
-                ? true
-                : $this->sendReceipt($finalized, $finalized->purpose === Transaction::PURPOSE_PRODUCT),
+            'email_sent' => $this->sendReceipt($finalized),
         ];
     }
 

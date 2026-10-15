@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\PurchaseReceiptMail;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Product;
@@ -15,7 +14,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -118,7 +116,11 @@ class CheckoutController extends Controller
                 return $transaction;
             });
 
-            $result = $finalizer->apply($transaction, 'success', 'free_claim', ['source' => 'free_claim']);
+            $finalizer->apply($transaction, 'success', 'free_claim', ['source' => 'free_claim']);
+
+            // Tamu dengan akun tanpa password langsung masuk — modal checkout
+            // menawarkan tombol "Lihat Halaman Produk" yang membuka materi.
+            $this->loginPasswordless($request, $user);
 
             return back()->with([
                 'success' => $isDonation
@@ -126,7 +128,8 @@ class CheckoutController extends Controller
                     : 'Produk gratis berhasil dibuka! Materi sudah tersedia di dashboard.',
                 'trx_code' => $transaction->transaction_code,
                 'free_claim' => true,
-                'access_email' => $result['email_sent'] ?? true,
+                'direct_access' => $isGuest,
+                'product_slug' => $products->count() === 1 ? $products->first()->slug : null,
             ]);
         }
 
@@ -218,22 +221,19 @@ class CheckoutController extends Controller
             throw $exception;
         }
 
-        $accessEmailSent = true;
-        if ($isManual && $isDonation) {
-            // Donasi manual: akses sudah aktif (Model A) — email berisi magic link
-            // akses dikirim SEGERA tanpa menunggu approve. Marker di payment_payload
-            // mencegah email ganda saat admin approve.
-            $transaction->update(['payment_payload' => json_encode(['access_email_sent' => true])]);
-            $accessEmailSent = $this->sendAccessEmailQuietly($transaction);
-        }
-
         if ($isManual) {
+            // Donasi: tanpa email otomatis saat checkout — akses langsung aktif
+            // (Model A) dan tamu tanpa password langsung masuk, sehingga modal
+            // menawarkan "Lihat Halaman Produk".
+            $this->loginPasswordless($request, $user);
+
             return back()->with([
                 'success' => $isDonation
                     ? 'Terima kasih! Pembayaran tercatat dan akses materi sudah aktif. Verifikasi bukti hanya untuk konfirmasi nominal.'
                     : 'Pesanan berhasil dibuat, silakan tunggu konfirmasi admin!',
                 'trx_code' => $transaction->transaction_code,
-                'access_email' => $accessEmailSent,
+                'direct_access' => $isGuest,
+                'product_slug' => $products->count() === 1 ? $products->first()->slug : null,
             ]);
         }
 
@@ -264,12 +264,18 @@ class CheckoutController extends Controller
                 $request->session()->put('guest_trx', $transaction->transaction_code);
             }
 
+            // Akses donasi sudah aktif sejak checkout (Model A) — masuk sekarang
+            // juga supaya setelah bayar modal menawarkan "Lihat Halaman Produk".
+            $this->loginPasswordless($request, $user);
+
             return back()->with([
                 'success' => $isDonation
                     ? 'Silakan selesaikan pembayaran — akses materi sudah aktif.'
                     : 'Silakan selesaikan pembayaran!',
                 'snap_token' => $snapToken,
                 'trx_code' => $transaction->transaction_code,
+                'direct_access' => $isGuest,
+                'product_slug' => $products->count() === 1 ? $products->first()->slug : null,
             ]);
 
         } catch (\Exception $e) {
@@ -439,11 +445,10 @@ class CheckoutController extends Controller
             }
 
             if ($trStatus === 'settlement' || ($trStatus === 'capture' && $fraudStatus === 'accept')) {
-                $result = $finalizer->apply($transaction, 'success', $type, $payload);
+                $finalizer->apply($transaction, 'success', $type, $payload);
 
                 return back()->with([
                     'success' => 'Pembayaran berhasil dikonfirmasi secara otomatis!',
-                    'access_email' => $result['email_sent'] ?? true,
                 ]);
             }
 
@@ -502,22 +507,20 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Kirim email akses (berisi magic link untuk akun tanpa password).
-     * Kegagalan email tidak membatalkan transaksi — dicatat saja.
+     * Login otomatis hanya untuk tamu checkout donasi dengan akun tanpa
+     * password (dibuat diam-diam saat checkout). Akun ber-password TIDAK pernah
+     * di-login di sini — mereka wajib lewat halaman masuk dengan password.
      */
-    private function sendAccessEmailQuietly(Transaction $transaction): bool
+    private function loginPasswordless(Request $request, User $user): bool
     {
-        try {
-            Mail::to($transaction->user->email)->send(
-                new PurchaseReceiptMail($transaction->fresh()->load(['user', 'items.product.category', 'payment.paymentMethod']))
-            );
-
-            return true;
-        } catch (\Throwable $exception) {
-            Log::error('Donation access email error: '.$exception->getMessage());
-
+        if ($request->user() !== null || ! empty($user->password)) {
             return false;
         }
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return true;
     }
 
     private function saveImageAsWebp($file, $directory)

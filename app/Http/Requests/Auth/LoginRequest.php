@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +30,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
+            'password' => ['nullable', 'string'],
         ];
     }
 
@@ -41,6 +43,14 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
+        if ($this->string('password')->toString() === '') {
+            $this->authenticatePasswordless();
+
+            RateLimiter::clear($this->throttleKey());
+
+            return;
+        }
+
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
@@ -50,15 +60,51 @@ class LoginRequest extends FormRequest
         }
 
         // Check if user is active
-        if (in_array(Auth::user()->status, ['inactive', 'Nonaktif'], true)) {
+        $this->ensureIsActive();
+
+        RateLimiter::clear($this->throttleKey());
+    }
+
+    /**
+     * Login tanpa password — hanya untuk akun donasi (dibuat otomatis saat
+     * checkout donasi tanpa login, password null). Akun dengan password wajib
+     * mengisi password seperti biasa.
+     */
+    private function authenticatePasswordless(): void
+    {
+        $user = User::query()
+            ->where('email', $this->input('email'))
+            ->whereNull('password')
+            ->whereHas('transactions', fn ($query) => $query->where('purpose', Transaction::PURPOSE_DONATION))
+            ->first();
+
+        if (! $user) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'password' => 'Masukkan password Anda.',
+            ]);
+        }
+
+        $this->ensureIsActive($user);
+
+        Auth::login($user, $this->boolean('remember'));
+    }
+
+    /**
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    private function ensureIsActive(?User $user = null): void
+    {
+        $user ??= Auth::user();
+
+        if (in_array($user->status, ['inactive', 'Nonaktif'], true)) {
             Auth::logout();
-            
+
             throw ValidationException::withMessages([
                 'email' => 'Akun Anda sedang dinonaktifkan. Silakan hubungi admin untuk bantuan.',
             ]);
         }
-
-        RateLimiter::clear($this->throttleKey());
     }
 
     /**

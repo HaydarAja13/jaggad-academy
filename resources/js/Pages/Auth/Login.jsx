@@ -71,7 +71,6 @@ export default function Login({ status, canResetPassword }) {
                                 placeholder="••••••••" 
                                 value={data.password} 
                                 onChange={e => setData('password', e.target.value)} 
-                                required 
                                 autoComplete="current-password"
                             />
                             <button 
@@ -87,6 +86,7 @@ export default function Login({ status, canResetPassword }) {
                             </button>
                         </div>
                         {errors.password && <span className="text-xs text-red-500 mt-1">{errors.password}</span>}
+                        <span className="text-xs text-zinc-500 mt-1">Pernah berdonasi tanpa daftar? Cukup isi email lalu tekan Masuk — password dikosongkan saja.</span>
                     </div>
 
                     <div className="flex items-center justify-between mt-1">

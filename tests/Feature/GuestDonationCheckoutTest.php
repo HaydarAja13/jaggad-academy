@@ -21,7 +21,7 @@ class GuestDonationCheckoutTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guest_can_claim_zero_donation_without_login(): void
+    public function test_guest_can_claim_zero_donation_and_is_logged_in_immediately(): void
     {
         Mail::fake();
         $product = $this->donationProduct();
@@ -31,12 +31,14 @@ class GuestDonationCheckoutTest extends TestCase
             'email' => 'tamu-donasi@example.com',
             'phone' => '081111111111',
             'cart' => [['id' => $product->id, 'donation_amount' => 0]],
-        ])->assertSessionHasNoErrors()->assertSessionHas('success');
+        ])->assertSessionHasNoErrors()->assertSessionHas('success')
+            ->assertSessionHas('direct_access', true)
+            ->assertSessionHas('product_slug', $product->slug);
 
-        // Tetap tamu — tidak ada login paksa (akun lain tidak bisa diambil alih lewat email).
-        $this->assertGuest();
-
+        // Akun diam-diam (tanpa password) langsung masuk — modal checkout bisa
+        // langsung menawarkan tombol "Lihat Halaman Produk".
         $user = User::where('email', 'tamu-donasi@example.com')->firstOrFail();
+        $this->assertAuthenticatedAs($user);
         $this->assertNull($user->password);
         $this->assertSame('customer', $user->role);
         $this->assertTrue($user->products()->whereKey($product->id)->exists());
@@ -46,11 +48,11 @@ class GuestDonationCheckoutTest extends TestCase
         $this->assertSame(Transaction::PURPOSE_DONATION, $transaction->purpose);
         $this->assertSame('success', $transaction->status);
 
-        // Email akses (magic link) dikirim begitu akses dibuka.
-        Mail::assertSent(PurchaseReceiptMail::class, 1);
+        // Donasi: tanpa email otomatis — akses dibuka langsung.
+        Mail::assertNotSent(PurchaseReceiptMail::class);
     }
 
-    public function test_guest_paid_donation_grants_access_and_emails_access_link_immediately(): void
+    public function test_guest_paid_donation_grants_access_and_logs_in_without_email(): void
     {
         Storage::fake('local');
         Mail::fake();
@@ -64,23 +66,24 @@ class GuestDonationCheckoutTest extends TestCase
             'payment_method_id' => $method->id,
             'cart' => [['id' => $product->id, 'donation_amount' => 50000]],
             'proof' => UploadedFile::fake()->image('bukti.png', 900, 600),
-        ])->assertSessionHasNoErrors()->assertSessionHas('success');
-
-        $this->assertGuest();
+        ])->assertSessionHasNoErrors()->assertSessionHas('success')
+            ->assertSessionHas('direct_access', true)
+            ->assertSessionHas('product_slug', $product->slug);
 
         $user = User::where('email', 'tamu-bayar@example.com')->firstOrFail();
-        // Akses langsung terbuka walau verifikasi uang masih pending (Model A).
+        // Sudah masuk + akses langsung terbuka walau verifikasi uang masih pending (Model A).
+        $this->assertAuthenticatedAs($user);
         $this->assertTrue($user->products()->whereKey($product->id)->exists());
 
         $transaction = Transaction::with('payment')->firstOrFail();
         $this->assertSame('pending', $transaction->status);
         $this->assertSame('pending', $transaction->payment->status);
 
-        // Email akses tidak menunggu approve admin.
-        Mail::assertSent(PurchaseReceiptMail::class, 1);
+        // Checkout donasi tidak mengirim email sama sekali.
+        Mail::assertNotSent(PurchaseReceiptMail::class);
     }
 
-    public function test_admin_approval_of_manual_donation_does_not_send_duplicate_access_email(): void
+    public function test_manual_donation_checkout_and_admin_approval_send_no_email(): void
     {
         Storage::fake('local');
         Mail::fake();
@@ -97,7 +100,7 @@ class GuestDonationCheckoutTest extends TestCase
             'proof' => UploadedFile::fake()->image('bukti.png', 900, 600),
         ])->assertSessionHasNoErrors();
 
-        Mail::assertSent(PurchaseReceiptMail::class, 1);
+        Mail::assertNotSent(PurchaseReceiptMail::class);
 
         $transaction = Transaction::firstOrFail();
         $this->actingAs($admin)
@@ -105,8 +108,8 @@ class GuestDonationCheckoutTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertSame('success', $transaction->fresh()->status);
-        // Tidak ada email ganda saat approve.
-        Mail::assertSent(PurchaseReceiptMail::class, 1);
+        // Donasi: approve tidak mengirim email otomatis (akses sudah aktif sejak checkout).
+        Mail::assertNotSent(PurchaseReceiptMail::class);
     }
 
     public function test_guest_is_rejected_for_non_donation_cart(): void

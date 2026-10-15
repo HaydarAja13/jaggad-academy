@@ -73,6 +73,8 @@ class HandleInertiaRequests extends Middleware
                 'trx_code' => $request->session()->get('trx_code'),
                 'free_claim' => $request->session()->get('free_claim'),
                 'booking_code' => $request->session()->get('booking_code'),
+                'direct_access' => $request->session()->get('direct_access'),
+                'product_slug' => $request->session()->get('product_slug'),
             ],
         ];
     }

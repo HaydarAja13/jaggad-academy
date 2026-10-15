@@ -42,7 +42,8 @@ class DonationCheckoutTest extends TestCase
         $this->assertSame(0, $customer->fresh()->purchase_count);
         $this->assertEquals(0, $customer->fresh()->total_spent);
 
-        Mail::assertSent(PurchaseReceiptMail::class, 1);
+        // Donasi: tanpa email otomatis — akses dibuka langsung di dashboard.
+        Mail::assertNotSent(PurchaseReceiptMail::class);
     }
 
     public function test_paid_donation_grants_access_immediately_and_keeps_money_verification_pending(): void
@@ -99,7 +100,8 @@ class DonationCheckoutTest extends TestCase
         $this->assertSame(0, $customer->fresh()->purchase_count);
         $this->assertEquals(0, $customer->fresh()->total_spent);
 
-        Mail::assertSent(PurchaseReceiptMail::class, 1);
+        // Donasi: tidak ada email otomatis saat checkout maupun saat approve.
+        Mail::assertNotSent(PurchaseReceiptMail::class);
     }
 
     public function test_admin_reject_keeps_donation_access_and_transaction_pending(): void
@@ -130,9 +132,9 @@ class DonationCheckoutTest extends TestCase
         $this->assertTrue($customer->fresh()->products()->whereKey($product->id)->exists());
 
         Mail::assertSent(PaymentRejectedMail::class, 1);
-        // Email akses donasi dikirim saat checkout (1x); reject menolak uang,
-        // bukan akses — jadi tidak ada email struk tambahan sama sekali.
-        Mail::assertSent(PurchaseReceiptMail::class, 1);
+        // Donasi tidak pernah mengirim email struk otomatis — reject menolak
+        // uang, bukan akses (Model A).
+        Mail::assertNotSent(PurchaseReceiptMail::class);
     }
 
     public function test_mixed_cart_of_donation_and_regular_product_is_rejected(): void
