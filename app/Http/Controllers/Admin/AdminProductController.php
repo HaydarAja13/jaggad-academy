@@ -138,6 +138,16 @@ class AdminProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
+        // Bundle JS lama bisa mengirim path lokal (/storage/...) lewat field
+        // "URL gambar" — itu bukan URL eksternal. Samakan dengan gambar saat
+        // ini supaya dianggap "tanpa perubahan", bukan gagal validasi URL.
+        if ($request->filled('imageUrl') && is_string($request->input('imageUrl'))) {
+            $candidate = preg_replace('#^/storage/#', '', (string) $request->input('imageUrl'));
+            if ($candidate === $product->image || '/storage/'.$candidate === $request->input('imageUrl')) {
+                $request->merge(['imageUrl' => '']);
+            }
+        }
+
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'slug' => 'sometimes|nullable|string|min:3|max:100|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/|'.Rule::unique('products', 'slug')->ignore($product->id),

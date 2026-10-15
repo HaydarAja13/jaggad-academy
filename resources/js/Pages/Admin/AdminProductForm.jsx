@@ -3,7 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Link as LinkIcon, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import toast from 'react-hot-toast';
-import { getStorageUrl } from '../../Utils/helpers';
+import { friendlyError, getStorageUrl } from '../../Utils/helpers';
 import './Admin.css';
 
 
@@ -52,7 +52,9 @@ export default function AdminProductForm({ dbCategories = [], product }) {
         startAt: toLocalISO(product?.start_at),
         endAt: toLocalISO(product?.end_at),
         location: product?.location || '',
-        imageUrl: getStorageUrl(product?.image), 
+        // Hanya URL eksternal (http) yang dikirim lewat field ini; path lokal
+        // hasil upload biarkan kosong agar tidak divalidasi sebagai URL.
+        imageUrl: product?.image?.startsWith('http') ? product.image : '', 
         imageFile: null, 
         imagePreview: getStorageUrl(product?.image),
         benefits: product?.benefits ? (Array.isArray(product.benefits) ? product.benefits : JSON.parse(product.benefits)) : [],
@@ -186,7 +188,7 @@ export default function AdminProductForm({ dbCategories = [], product }) {
                 preserveScroll: true,
                 onStart: () => setProcessing(true),
                 onSuccess: () => toast.success(isEdit ? 'Produk berhasil diperbarui' : 'Produk baru berhasil ditambahkan'),
-                onError: (e) => toast.error(Object.values(e)[0] || 'Gagal menyimpan produk'),
+                onError: (e) => toast.error(friendlyError(Object.values(e)[0]) || 'Gagal menyimpan produk'),
                 onFinish: () => setProcessing(false)
             }
         );
