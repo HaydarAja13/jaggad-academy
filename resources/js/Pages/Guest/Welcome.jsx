@@ -6,6 +6,7 @@ import {
     ShoppingBag, Download
 } from 'lucide-react';
 import ProductCard from '../../Components/ProductCard';
+import RichText from '../../Components/RichText';
 import ConsultationPackages from '../../Components/ConsultationPackages';
 import promoActivities from '../../Data/promoActivities.json';
 import MainLayout from '../../Layouts/MainLayout';
@@ -315,9 +316,13 @@ export default function Welcome({ products = [], toastProducts = [], categories 
                                                     <span>{category.products_count || 0} <span id={`preview-home-format-${index}-product-count-label`}>{home.catProductCountLabel}</span></span>
                                                 </div>
                                                 <h3 id={`preview-home-format-${index}-name`}>{category.name}</h3>
-                                                <p id={`preview-home-format-${index}-description`} className="format-panel__description">
-                                                    {category.description || <><span id={`preview-home-format-${index}-description-prefix`}>{home.catDescriptionPrefix}</span> {category.name} <span id={`preview-home-format-${index}-description-suffix`}>{home.catDescriptionSuffix}</span> {brandName}.</>}
-                                                </p>
+                                                {category.description ? (
+                                                    <RichText as="p" inline id={`preview-home-format-${index}-description`} className="format-panel__description" html={category.description} />
+                                                ) : (
+                                                    <p id={`preview-home-format-${index}-description`} className="format-panel__description">
+                                                        <span id={`preview-home-format-${index}-description-prefix`}>{home.catDescriptionPrefix}</span> {category.name} <span id={`preview-home-format-${index}-description-suffix`}>{home.catDescriptionSuffix}</span> {brandName}.
+                                                    </p>
+                                                )}
                                                 <span id={`preview-home-format-${index}-cta`} className="format-panel__cta">
                                                     {home.catCtaLabel || 'Jelajahi Semua Produk'} <ArrowRight size={18} aria-hidden="true" />
                                                 </span>
@@ -436,7 +441,7 @@ export default function Welcome({ products = [], toastProducts = [], categories 
                                         <span id={`preview-home-faq-${index}-question`}>{faq.q}</span>
                                         <i aria-hidden="true" />
                                     </summary>
-                                    <div className="home-faq__answer"><p id={`preview-home-faq-${index}-answer`}>{faq.a}</p></div>
+                                    <div className="home-faq__answer"><RichText id={`preview-home-faq-${index}-answer`} html={faq.a} /></div>
                                 </details>
                             ))}
                         </div>

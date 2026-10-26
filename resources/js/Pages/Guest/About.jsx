@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowRight, Check, MessageCircle } from 'lucide-react';
 import { useContent } from '../../Contexts/ContentContext';
+import RichText from '../../Components/RichText';
 import MainLayout from '../../Layouts/MainLayout';
 import { getStorageUrl } from '../../Utils/helpers';
 import './About.css';
@@ -22,7 +23,7 @@ export default function About({ previewMode = false, heroImagePreview = null }) 
                             <span id="preview-about-hero-prefix">{about.heroTitlePrefix}</span>{' '}
                             <strong>{about.heroTitle}</strong>
                         </h1>
-                        <p id="preview-about-hero-desc" className="about-hero__desc">{about.heroDesc}</p>
+                        <RichText as="p" inline id="preview-about-hero-desc" className="about-hero__desc" html={about.heroDesc} />
                         <div className="about-hero__actions">
                             <Link id="preview-about-hero-primary-cta" href={route('products')} className="about-button about-button--primary">
                                 {about.heroPrimaryCta} <ArrowRight size={18} aria-hidden="true" />
@@ -49,8 +50,8 @@ export default function About({ previewMode = false, heroImagePreview = null }) 
                         <header className="about-story__intro">
                             <h2 id="preview-about-story-title">{about.storyTitle}</h2>
                             <div className="about-story__copy">
-                                <p id="preview-about-story-p1">{about.storyP1}</p>
-                                <p id="preview-about-story-p2">{about.storyP2}</p>
+                                <RichText as="p" inline id="preview-about-story-p1" html={about.storyP1} />
+                                <RichText as="p" inline id="preview-about-story-p2" html={about.storyP2} />
                             </div>
                         </header>
 
@@ -58,7 +59,7 @@ export default function About({ previewMode = false, heroImagePreview = null }) 
                             {(about.milestones || []).map((milestone, index) => (
                                 <li key={`${milestone.year}-${index}`}>
                                     <time id={`preview-about-milestone-${index}-year`}>{milestone.year}</time>
-                                    <p id={`preview-about-milestone-${index}-text`}>{milestone.text}</p>
+                                    <RichText as="p" inline id={`preview-about-milestone-${index}-text`} html={milestone.text} />
                                 </li>
                             ))}
                         </ol>
@@ -70,7 +71,7 @@ export default function About({ previewMode = false, heroImagePreview = null }) 
                         <div className="about-purpose__shell">
                             <article className="about-vision">
                                 <h2 id="preview-about-vision-title">{about.visionTitle}</h2>
-                                <p id="preview-about-vision-desc">{about.visionDesc}</p>
+                                <RichText as="p" inline id="preview-about-vision-desc" html={about.visionDesc} />
                             </article>
 
                             <article className="about-mission">
@@ -92,7 +93,7 @@ export default function About({ previewMode = false, heroImagePreview = null }) 
                     <div className="container about-proof__layout">
                         <header>
                             <h2 id="preview-about-proof-title">{about.proofTitle}</h2>
-                            <p id="preview-about-proof-desc">{about.proofDesc}</p>
+                            <RichText as="p" inline id="preview-about-proof-desc" html={about.proofDesc} />
                         </header>
 
                         <dl className="about-proof__stats">
@@ -111,7 +112,7 @@ export default function About({ previewMode = false, heroImagePreview = null }) 
                         <div className="about-cta__shell">
                             <div>
                                 <h2 id="preview-about-cta-title">{about.ctaTitle}</h2>
-                                <p id="preview-about-cta-desc">{about.ctaDesc}</p>
+                                <RichText as="p" inline id="preview-about-cta-desc" html={about.ctaDesc} />
                             </div>
                             <div className="about-cta__actions">
                                 <Link id="preview-about-cta-primary" href={route('products')} className="about-button about-button--light">

@@ -364,7 +364,9 @@
 }
 
 .sales-details > div > p,
-.landing-faq > div:first-child > p {
+.sales-details > div > .rich-text,
+.landing-faq > div:first-child > p,
+.landing-faq > div:first-child > .rich-text {
     max-width: 52ch;
     margin-top: 14px;
     color: #67555c;
@@ -535,7 +537,8 @@
     text-align: left;
 }
 
-.landing-faq__item p {
+.landing-faq__item p,
+.landing-faq__item .rich-text {
     padding: 0 36px 20px 0;
     color: #67555c;
     font-size: 1rem;
@@ -557,7 +560,8 @@
 
 .sales-close h2 { color: #ffffff; }
 
-.sales-close p {
+.sales-close p,
+.sales-close .rich-text {
     max-width: 58ch;
     margin-top: 12px;
     color: #ffffff;
@@ -599,7 +603,8 @@
     text-wrap: balance;
 }
 
-.sales-confirm__intro > p {
+.sales-confirm__intro > p,
+.sales-confirm__intro > .rich-text {
     max-width: 62ch;
     margin-top: 20px;
     color: #67555c;
@@ -840,3 +845,10 @@
         transition-duration: 0.01ms !important;
     }
 }
+
+/* Jarak antar paragraf/list di dalam deskripsi kaya. */
+.sales-hero__lead > * + *,
+.sales-details .rich-text > * + *,
+.landing-faq__item .rich-text > * + *,
+.sales-close .rich-text > * + *,
+.sales-confirm__intro > .rich-text > * + * { margin-top: 10px; }

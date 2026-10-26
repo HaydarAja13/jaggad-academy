@@ -99,7 +99,14 @@
 
 .pd-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, .8fr); gap: clamp(48px, 7vw, 96px); padding-top: clamp(64px, 8vw, 96px); }
 .pd-reading h2, .pd-benefits h2, .pd-section-heading h2 { margin: 0 0 14px; font-family: var(--font-display); font-size: clamp(1.2rem, 1.6vw, 1.45rem); font-weight: 800; line-height: 1.2; letter-spacing: -.02em; }
-.pd-reading p { max-width: 68ch; margin: 0; color: #67555c; font-size: 16px; line-height: 1.75; white-space: pre-wrap; }
+.pd-reading__body { max-width: 68ch; color: #67555c; font-size: 16px; line-height: 1.75; }
+.pd-reading__body p,
+.pd-reading__body div { margin: 0 0 12px; }
+.pd-reading__body p:last-child,
+.pd-reading__body div:last-child { margin-bottom: 0; }
+.pd-reading__body ul,
+.pd-reading__body ol { margin: 0 0 12px; padding-left: 22px; }
+.pd-reading__body li { margin-bottom: 6px; }
 .pd-benefits ul { margin: 0; padding: 0; border-top: 1px solid #ded4d7; list-style: none; }
 .pd-benefits li { display: flex; align-items: flex-start; gap: 11px; padding: 14px 0; border-bottom: 1px solid #ded4d7; font-size: 16px; line-height: 1.55; }
 .pd-benefits svg { flex: 0 0 auto; margin-top: 3px; color: #660810; }

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Link as LinkIcon, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react';
 import AdminLayout from '../../Layouts/AdminLayout';
+import RichTextEditor from '../../Components/RichTextEditor';
 import toast from 'react-hot-toast';
 import { friendlyError, getStorageUrl } from '../../Utils/helpers';
 import './Admin.css';
@@ -357,13 +358,29 @@ export default function AdminProductForm({ dbCategories = [], product }) {
                             </div>
 
                             <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-                                <label>Deskripsi Singkat (Tampil di Katalog/Card)</label>
-                                <textarea rows="2" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Ringkasan produk..." />
+                                <label htmlFor="product-short-description">Deskripsi Singkat (Tampil di Katalog/Card)</label>
+                                <RichTextEditor
+                                    id="product-short-description"
+                                    label="Deskripsi singkat produk"
+                                    value={form.description}
+                                    onChange={value => setForm(previous => ({ ...previous, description: value }))}
+                                    placeholder="Ringkasan produk..."
+                                    hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor. Format tampil di kartu katalog."
+                                    minHeight={110}
+                                />
                             </div>
 
                             <div className="form-group">
-                                <label>Deskripsi Lengkap (Tampil di Halaman Penjualan)</label>
-                                <textarea rows="5" value={form.longDescription} onChange={e => setForm({ ...form, longDescription: e.target.value })} placeholder="Penjelasan detail tentang produk yang meyakinkan pembeli..." />
+                                <label htmlFor="product-long-description">Deskripsi Lengkap (Tampil di Halaman Penjualan)</label>
+                                <RichTextEditor
+                                    id="product-long-description"
+                                    label="Deskripsi lengkap produk"
+                                    value={form.longDescription}
+                                    onChange={value => setForm(previous => ({ ...previous, longDescription: value }))}
+                                    placeholder="Penjelasan detail tentang produk yang meyakinkan pembeli..."
+                                    hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                    minHeight={200}
+                                />
                             </div>
                         </div>
 

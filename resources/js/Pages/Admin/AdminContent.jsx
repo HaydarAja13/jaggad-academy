@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useContent } from '../../Contexts/ContentContext';
 import AdminLayout from '../../Layouts/AdminLayout';
+import RichTextEditor from '../../Components/RichTextEditor';
 import toast from 'react-hot-toast';
 import { getStorageUrl } from '../../Utils/helpers';
 import { normalizeSalesContent } from '../../Utils/salesContent';
@@ -42,7 +43,7 @@ const joinFields = (...values) => values.filter(Boolean).join(' ').replace(/\s+/
 const DASHBOARD_FIELDS = [
     ['Sambutan & Aksi', [
         ['welcomeTitle', 'Judul sambutan'],
-        ['welcomeDescription', 'Penjelasan dashboard', 'textarea'],
+        ['welcomeDescription', 'Penjelasan dashboard', 'richtext'],
         ['continueLabel', 'Teks tombol lanjut belajar'],
         ['exploreLabel', 'Teks tombol jelajahi program'],
         ['profileLabel', 'Teks tombol profil'],
@@ -55,16 +56,16 @@ const DASHBOARD_FIELDS = [
     ]],
     ['Koleksi Belajar', [
         ['libraryTitle', 'Judul koleksi'],
-        ['libraryDescription', 'Penjelasan koleksi', 'textarea'],
+        ['libraryDescription', 'Penjelasan koleksi', 'richtext'],
         ['emptyLibraryTitle', 'Judul saat koleksi kosong'],
-        ['emptyLibraryDescription', 'Penjelasan saat koleksi kosong', 'textarea'],
+        ['emptyLibraryDescription', 'Penjelasan saat koleksi kosong', 'richtext'],
         ['openMaterialLabel', 'Teks tombol buka materi'],
     ]],
     ['Transaksi', [
         ['transactionsTitle', 'Judul transaksi'],
-        ['transactionsDescription', 'Penjelasan transaksi', 'textarea'],
+        ['transactionsDescription', 'Penjelasan transaksi', 'richtext'],
         ['emptyTransactionTitle', 'Judul saat transaksi kosong'],
-        ['emptyTransactionDescription', 'Penjelasan saat transaksi kosong', 'textarea'],
+        ['emptyTransactionDescription', 'Penjelasan saat transaksi kosong', 'richtext'],
         ['detailLabel', 'Teks tombol detail'],
         ['repayLabel', 'Teks tombol bayar ulang'],
         ['changePaymentLabel', 'Teks tombol ubah metode'],
@@ -723,7 +724,16 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                                 <label htmlFor={`learning-format-name-${format.id}`}>Nama Format</label>
                                                 <input data-preview-id={`preview-home-format-${index}-name`} id={`learning-format-name-${format.id}`} value={format.name || ''} onChange={(e) => updateLearningFormat(index, 'name', e.target.value)} />
                                                 <label htmlFor={`learning-format-description-${format.id}`}>Deskripsi</label>
-                                                <textarea data-preview-id={`preview-home-format-${index}-description`} id={`learning-format-description-${format.id}`} value={format.description || ''} onChange={(e) => updateLearningFormat(index, 'description', e.target.value)} rows="3" />
+                                                <RichTextEditor
+                                                    id={`learning-format-description-${format.id}`}
+                                                    label={`Deskripsi format ${format.name || index + 1}`}
+                                                    data-preview-id={`preview-home-format-${index}-description`}
+                                                    value={format.description || ''}
+                                                    maxLength={1000}
+                                                    minHeight={110}
+                                                    hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                                    onChange={value => updateLearningFormat(index, 'description', value)}
+                                                />
                                                 <small>{format.products_count || 0} produk memakai format ini.</small>
                                             </section>
                                         ))}
@@ -930,7 +940,16 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                                 <label htmlFor={`home-faq-question-${index}`}>Pertanyaan</label>
                                                 <input id={`home-faq-question-${index}`} data-preview-id={`preview-home-faq-${index}-question`} value={faq.q || ''} onChange={(e) => updateHomeFaq(index, 'q', e.target.value)} maxLength={180} />
                                                 <label htmlFor={`home-faq-answer-${index}`}>Jawaban</label>
-                                                <textarea id={`home-faq-answer-${index}`} data-preview-id={`preview-home-faq-${index}-answer`} value={faq.a || ''} onChange={(e) => updateHomeFaq(index, 'a', e.target.value)} rows="3" maxLength={1000} />
+                                                <RichTextEditor
+                                                    id={`home-faq-answer-${index}`}
+                                                    label={`Jawaban pertanyaan ${index + 1}`}
+                                                    data-preview-id={`preview-home-faq-${index}-answer`}
+                                                    value={faq.a || ''}
+                                                    maxLength={1000}
+                                                    minHeight={120}
+                                                    hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                                    onChange={value => updateHomeFaq(index, 'a', value)}
+                                                />
                                             </div>
                                         ))}
                                     </div>
@@ -1009,7 +1028,14 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <label>Judul Fokus</label>
                                     <input data-preview-id="preview-about-hero-title" value={content.about.heroTitle} onChange={(e) => handleInputChange('about', 'heroTitle', e.target.value)} />
                                     <label>Deskripsi Hero</label>
-                                    <textarea data-preview-id="preview-about-hero-desc" value={content.about.heroDesc} onChange={(e) => handleInputChange('about', 'heroDesc', e.target.value)} rows="3" />
+                                    <RichTextEditor
+                                        label="Deskripsi hero halaman tentang"
+                                        data-preview-id="preview-about-hero-desc"
+                                        value={content.about.heroDesc}
+                                        minHeight={110}
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                        onChange={value => handleInputChange('about', 'heroDesc', value)}
+                                    />
                                     <label>Tombol Utama</label>
                                     <input data-preview-id="preview-about-hero-primary-cta" value={content.about.heroPrimaryCta || ''} onChange={(e) => handleInputChange('about', 'heroPrimaryCta', e.target.value)} />
                                     <label>Tombol Sekunder</label>
@@ -1037,9 +1063,23 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <label>Judul Section</label>
                                     <input data-preview-id="preview-about-story-title" value={content.about.storyTitle} onChange={(e) => handleInputChange('about', 'storyTitle', e.target.value)} />
                                     <label>Paragraf 1</label>
-                                    <textarea data-preview-id="preview-about-story-p1" value={content.about.storyP1} onChange={(e) => handleInputChange('about', 'storyP1', e.target.value)} rows="4" />
+                                    <RichTextEditor
+                                        label="Paragraf pertama cerita kami"
+                                        data-preview-id="preview-about-story-p1"
+                                        value={content.about.storyP1}
+                                        minHeight={140}
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                        onChange={value => handleInputChange('about', 'storyP1', value)}
+                                    />
                                     <label>Paragraf 2</label>
-                                    <textarea data-preview-id="preview-about-story-p2" value={content.about.storyP2} onChange={(e) => handleInputChange('about', 'storyP2', e.target.value)} rows="4" />
+                                    <RichTextEditor
+                                        label="Paragraf kedua cerita kami"
+                                        data-preview-id="preview-about-story-p2"
+                                        value={content.about.storyP2}
+                                        minHeight={140}
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                        onChange={value => handleInputChange('about', 'storyP2', value)}
+                                    />
                                 </div>
 
                                 <div className="cms-form-group">
@@ -1047,7 +1087,14 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <label>Judul Visi</label>
                                     <input data-preview-id="preview-about-vision-title" value={content.about.visionTitle} onChange={(e) => handleInputChange('about', 'visionTitle', e.target.value)} />
                                     <label>Deskripsi Visi</label>
-                                    <textarea data-preview-id="preview-about-vision-desc" value={content.about.visionDesc} onChange={(e) => handleInputChange('about', 'visionDesc', e.target.value)} rows="3" />
+                                    <RichTextEditor
+                                        label="Deskripsi visi"
+                                        data-preview-id="preview-about-vision-desc"
+                                        value={content.about.visionDesc}
+                                        minHeight={120}
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                        onChange={value => handleInputChange('about', 'visionDesc', value)}
+                                    />
                                     <label>Judul Misi</label>
                                     <input data-preview-id="preview-about-mission-title" value={content.about.missionTitle || ''} onChange={(e) => handleInputChange('about', 'missionTitle', e.target.value)} />
                                 </div>
@@ -1191,11 +1238,25 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <label>Judul Statistik</label>
                                     <input data-preview-id="preview-about-proof-title" value={content.about.proofTitle || ''} onChange={(e) => handleInputChange('about', 'proofTitle', e.target.value)} />
                                     <label>Deskripsi Statistik</label>
-                                    <textarea data-preview-id="preview-about-proof-desc" value={content.about.proofDesc || ''} onChange={(e) => handleInputChange('about', 'proofDesc', e.target.value)} rows="3" />
+                                    <RichTextEditor
+                                        label="Deskripsi statistik"
+                                        data-preview-id="preview-about-proof-desc"
+                                        value={content.about.proofDesc || ''}
+                                        minHeight={110}
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                        onChange={value => handleInputChange('about', 'proofDesc', value)}
+                                    />
                                     <label>Judul CTA</label>
                                     <input data-preview-id="preview-about-cta-title" value={content.about.ctaTitle || ''} onChange={(e) => handleInputChange('about', 'ctaTitle', e.target.value)} />
                                     <label>Deskripsi CTA</label>
-                                    <textarea data-preview-id="preview-about-cta-desc" value={content.about.ctaDesc || ''} onChange={(e) => handleInputChange('about', 'ctaDesc', e.target.value)} rows="3" />
+                                    <RichTextEditor
+                                        label="Deskripsi ajakan halaman tentang"
+                                        data-preview-id="preview-about-cta-desc"
+                                        value={content.about.ctaDesc || ''}
+                                        minHeight={110}
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                        onChange={value => handleInputChange('about', 'ctaDesc', value)}
+                                    />
                                     <label>Tombol CTA Utama</label>
                                     <input data-preview-id="preview-about-cta-primary" value={content.about.ctaPrimary || ''} onChange={(e) => handleInputChange('about', 'ctaPrimary', e.target.value)} />
                                     <label>Tombol CTA Sekunder</label>
@@ -1231,11 +1292,17 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                                     </div>
                                                     <div>
                                                         <label style={{ fontSize: 16, marginBottom: 6, display: 'block', fontWeight: 600 }}>Pencapaian</label>
-                                                        <textarea data-preview-id={`preview-about-milestone-${idx}-text`} style={{ width: '100%', fontSize: 16, minHeight: '80px', padding: '10px 12px', resize: 'vertical' }} value={ms.text} onChange={e => {
-                                                            const newMS = [...content.about.milestones];
-                                                            newMS[idx].text = e.target.value;
-                                                            handleInputChange('about', 'milestones', newMS);
-                                                        }} />
+                                                        <RichTextEditor
+                                                            label={`Pencapaian milestone ${idx + 1}`}
+                                                            data-preview-id={`preview-about-milestone-${idx}-text`}
+                                                            value={ms.text}
+                                                            minHeight={90}
+                                                            onChange={value => {
+                                                                const newMS = [...content.about.milestones];
+                                                                newMS[idx].text = value;
+                                                                handleInputChange('about', 'milestones', newMS);
+                                                            }}
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
@@ -1254,11 +1321,26 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <label>Judul Utama</label>
                                     <textarea data-preview-id="preview-contact-title" value={content.contact.title || ''} onChange={(e) => handleInputChange('contact', 'title', e.target.value)} rows="3" maxLength={160} />
                                     <label>Sub-judul</label>
-                                    <textarea data-preview-id="preview-contact-subtitle" value={content.contact.subtitle || ''} onChange={(e) => handleInputChange('contact', 'subtitle', e.target.value)} rows="3" maxLength={500} />
+                                    <RichTextEditor
+                                        label="Sub-judul halaman kontak"
+                                        data-preview-id="preview-contact-subtitle"
+                                        value={content.contact.subtitle || ''}
+                                        maxLength={500}
+                                        minHeight={110}
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                        onChange={value => handleInputChange('contact', 'subtitle', value)}
+                                    />
                                     <label>Teks Tombol WhatsApp</label>
                                     <input data-preview-id="preview-contact-whatsapp-cta" value={content.contact.whatsappCta || ''} onChange={(e) => handleInputChange('contact', 'whatsappCta', e.target.value)} maxLength={80} />
                                     <label>Catatan di Samping Tombol</label>
-                                    <textarea data-preview-id="preview-contact-whatsapp-note" value={content.contact.whatsappNote || ''} onChange={(e) => handleInputChange('contact', 'whatsappNote', e.target.value)} rows="2" maxLength={240} />
+                                    <RichTextEditor
+                                        label="Catatan di samping tombol WhatsApp"
+                                        data-preview-id="preview-contact-whatsapp-note"
+                                        value={content.contact.whatsappNote || ''}
+                                        maxLength={240}
+                                        minHeight={90}
+                                        onChange={value => handleInputChange('contact', 'whatsappNote', value)}
+                                    />
                                 </div>
 
                                 <div className="cms-form-group">
@@ -1268,7 +1350,15 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <label>Judul Bagian Kebutuhan</label>
                                     <input data-preview-id="preview-contact-guide-title" value={content.contact.guideTitle || ''} onChange={(e) => handleInputChange('contact', 'guideTitle', e.target.value)} maxLength={140} />
                                     <label>Penjelasan Bagian Kebutuhan</label>
-                                    <textarea data-preview-id="preview-contact-guide-subtitle" value={content.contact.guideSubtitle || ''} onChange={(e) => handleInputChange('contact', 'guideSubtitle', e.target.value)} rows="3" maxLength={400} />
+                                    <RichTextEditor
+                                        label="Penjelasan bagian kebutuhan"
+                                        data-preview-id="preview-contact-guide-subtitle"
+                                        value={content.contact.guideSubtitle || ''}
+                                        maxLength={400}
+                                        minHeight={110}
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                        onChange={value => handleInputChange('contact', 'guideSubtitle', value)}
+                                    />
 
                                     {(content.contact.topics || []).map((topic, index) => (
                                         <div className="cms-list-item" key={index}>
@@ -1284,16 +1374,17 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                                 maxLength={100}
                                             />
                                             <label>Deskripsi Topik {index + 1}</label>
-                                            <textarea
+                                            <RichTextEditor
+                                                label={`Deskripsi topik ${index + 1}`}
                                                 data-preview-id={`preview-contact-topic-${index}-desc`}
                                                 value={topic.desc || ''}
-                                                onChange={(e) => {
+                                                maxLength={360}
+                                                minHeight={100}
+                                                onChange={value => {
                                                     const topics = [...content.contact.topics];
-                                                    topics[index] = { ...topics[index], desc: e.target.value };
+                                                    topics[index] = { ...topics[index], desc: value };
                                                     handleInputChange('contact', 'topics', topics);
                                                 }}
-                                                rows="3"
-                                                maxLength={360}
                                             />
                                         </div>
                                     ))}
@@ -1304,7 +1395,15 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <label>Judul Form</label>
                                     <input data-preview-id="preview-contact-form-title" value={content.contact.formTitle || ''} onChange={(e) => handleInputChange('contact', 'formTitle', e.target.value)} maxLength={140} />
                                     <label>Penjelasan Form</label>
-                                    <textarea data-preview-id="preview-contact-form-subtitle" value={content.contact.formSubtitle || ''} onChange={(e) => handleInputChange('contact', 'formSubtitle', e.target.value)} rows="3" maxLength={400} />
+                                    <RichTextEditor
+                                        label="Penjelasan form pesan"
+                                        data-preview-id="preview-contact-form-subtitle"
+                                        value={content.contact.formSubtitle || ''}
+                                        maxLength={400}
+                                        minHeight={110}
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                        onChange={value => handleInputChange('contact', 'formSubtitle', value)}
+                                    />
                                     <label>Label Nama</label>
                                     <input value={content.contact.formNameLabel || ''} onChange={(e) => handleInputChange('contact', 'formNameLabel', e.target.value)} maxLength={60} />
                                     <label>Placeholder Nama</label>
@@ -1324,7 +1423,14 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <label>Teks Tombol Kirim</label>
                                     <input value={content.contact.formSubmitLabel || ''} onChange={(e) => handleInputChange('contact', 'formSubmitLabel', e.target.value)} maxLength={80} />
                                     <label>Catatan Form</label>
-                                    <textarea data-preview-id="preview-contact-form-note" value={content.contact.formNote || ''} onChange={(e) => handleInputChange('contact', 'formNote', e.target.value)} rows="2" maxLength={240} />
+                                    <RichTextEditor
+                                        label="Catatan form kontak"
+                                        data-preview-id="preview-contact-form-note"
+                                        value={content.contact.formNote || ''}
+                                        maxLength={240}
+                                        minHeight={90}
+                                        onChange={value => handleInputChange('contact', 'formNote', value)}
+                                    />
                                     <label>Salam Pembuka Email</label>
                                     <input value={content.contact.formEmailIntro || ''} onChange={(e) => handleInputChange('contact', 'formEmailIntro', e.target.value)} maxLength={120} />
                                     <label>Notifikasi Saat Email Dibuka</label>
@@ -1369,7 +1475,16 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                         {fields.map(([field, label, type]) => (
                                             <div key={field}>
                                                 <label>{label}</label>
-                                                {type === 'textarea' ? (
+                                                {type === 'richtext' ? (
+                                                    <RichTextEditor
+                                                        label={label}
+                                                        value={content.dashboard[field] || ''}
+                                                        maxLength={500}
+                                                        minHeight={110}
+                                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                                        onChange={value => handleInputChange('dashboard', field, value)}
+                                                    />
+                                                ) : type === 'textarea' ? (
                                                     <textarea
                                                         value={content.dashboard[field] || ''}
                                                         onChange={event => handleInputChange('dashboard', field, event.target.value)}
@@ -1416,7 +1531,15 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                         <label>Judul khusus halaman sales</label>
                                         <input data-preview-id="sales-title" value={salesDraft.hero.title} maxLength={255} onChange={event => updateSalesSection('hero', 'title', event.target.value)} />
                                         <label>Deskripsi penawaran</label>
-                                        <textarea data-preview-id="sales-hero-description" rows="4" value={salesDraft.hero.description} maxLength={3000} onChange={event => updateSalesSection('hero', 'description', event.target.value)} />
+                                        <RichTextEditor
+                                            label="Deskripsi penawaran"
+                                            data-preview-id="sales-hero-description"
+                                            value={salesDraft.hero.description}
+                                            maxLength={3000}
+                                            minHeight={180}
+                                            hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                            onChange={value => updateSalesSection('hero', 'description', value)}
+                                        />
                                         <label>Gambar hero khusus sales</label>
                                         <label className="sales-cms-image-upload">
                                             {(salesHeroPreview || salesDraft.hero.image || dbAllProducts.find(product => product.id == selectedPreviewProductId)?.image) ? <img src={salesHeroPreview || getStorageUrl(salesDraft.hero.image || dbAllProducts.find(product => product.id == selectedPreviewProductId)?.image)} alt="Preview hero halaman sales" /> : <ImageIcon size={28} />}
@@ -1441,8 +1564,8 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     </section>
 
                                     <section className="sales-cms-section sales-cms-grid">
-                                        <div><header><h3>Bagian manfaat</h3></header><label>Judul</label><input data-preview-id="sales-outcomes-title" value={salesDraft.outcomes.title} maxLength={160} onChange={event => updateSalesSection('outcomes', 'title', event.target.value)} /><label>Deskripsi</label><textarea data-preview-id="sales-outcomes-description" rows="3" value={salesDraft.outcomes.description} maxLength={500} onChange={event => updateSalesSection('outcomes', 'description', event.target.value)} /></div>
-                                        <div><header><h3>Bagian materi</h3></header><label>Judul</label><input data-preview-id="sales-materials-title" value={salesDraft.materials.title} maxLength={160} onChange={event => updateSalesSection('materials', 'title', event.target.value)} /><label>Deskripsi</label><textarea data-preview-id="sales-materials-description" rows="3" value={salesDraft.materials.description} maxLength={500} onChange={event => updateSalesSection('materials', 'description', event.target.value)} /></div>
+                                        <div><header><h3>Bagian manfaat</h3></header><label>Judul</label><input data-preview-id="sales-outcomes-title" value={salesDraft.outcomes.title} maxLength={160} onChange={event => updateSalesSection('outcomes', 'title', event.target.value)} /><label>Deskripsi</label><RichTextEditor label="Deskripsi bagian manfaat" data-preview-id="sales-outcomes-description" value={salesDraft.outcomes.description} maxLength={500} minHeight={120} hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor." onChange={value => updateSalesSection('outcomes', 'description', value)} /></div>
+                                        <div><header><h3>Bagian materi</h3></header><label>Judul</label><input data-preview-id="sales-materials-title" value={salesDraft.materials.title} maxLength={160} onChange={event => updateSalesSection('materials', 'title', event.target.value)} /><label>Deskripsi</label><RichTextEditor label="Deskripsi bagian materi" data-preview-id="sales-materials-description" value={salesDraft.materials.description} maxLength={500} minHeight={120} hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor." onChange={value => updateSalesSection('materials', 'description', value)} /></div>
                                     </section>
 
                                     <section className="sales-cms-section">
@@ -1469,19 +1592,19 @@ export default function AdminContent({ dbCategories = [], dbFeaturedProducts = [
                                     <section className="sales-cms-section">
                                         <header><h3>FAQ</h3><p>Jawaban untuk keraguan sebelum membeli.</p></header>
                                         <label>Judul</label><input data-preview-id="sales-faq-title" value={salesDraft.faq.title} maxLength={160} onChange={event => updateSalesSection('faq', 'title', event.target.value)} />
-                                        <label>Deskripsi</label><textarea data-preview-id="sales-faq-description" rows="2" value={salesDraft.faq.description} maxLength={500} onChange={event => updateSalesSection('faq', 'description', event.target.value)} />
+                                        <label>Deskripsi</label><RichTextEditor label="Deskripsi bagian FAQ" data-preview-id="sales-faq-description" value={salesDraft.faq.description} maxLength={500} minHeight={110} hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor." onChange={value => updateSalesSection('faq', 'description', value)} />
                                         <div className="sales-cms-list-heading"><label>Pertanyaan dan jawaban</label><button type="button" onClick={() => setLandingFaq(items => [...items, { q: '', a: '' }])}><Plus size={15} /> Tambah</button></div>
-                                        <div className="sales-cms-faq-list">{landingFaq.map((item, index) => <div key={index}><input data-preview-id="sales-faq-items" value={item.q || ''} maxLength={240} placeholder="Pertanyaan" onChange={event => { const items = [...landingFaq]; items[index] = { ...items[index], q: event.target.value }; setLandingFaq(items); }} /><textarea data-preview-id="sales-faq-items" rows="3" value={item.a || ''} maxLength={2000} placeholder="Jawaban" onChange={event => { const items = [...landingFaq]; items[index] = { ...items[index], a: event.target.value }; setLandingFaq(items); }} /><button type="button" onClick={() => setLandingFaq(landingFaq.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={17} /> Hapus FAQ</button></div>)}</div>
+                                        <div className="sales-cms-faq-list">{landingFaq.map((item, index) => <div key={index}><input data-preview-id="sales-faq-items" value={item.q || ''} maxLength={240} placeholder="Pertanyaan" onChange={event => { const items = [...landingFaq]; items[index] = { ...items[index], q: event.target.value }; setLandingFaq(items); }} /><RichTextEditor label={`Jawaban FAQ ${index + 1}`} data-preview-id="sales-faq-items" value={item.a || ''} maxLength={2000} minHeight={100} onChange={value => { const items = [...landingFaq]; items[index] = { ...items[index], a: value }; setLandingFaq(items); }} /><button type="button" onClick={() => setLandingFaq(landingFaq.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={17} /> Hapus FAQ</button></div>)}</div>
                                     </section>
 
                                     <section className="sales-cms-section sales-cms-grid">
                                         <div><header><h3>Urgensi</h3></header><label>Hitung mundur (jam)</label><input data-preview-id="sales-header-timer" type="number" min="0" max="8760" value={countdownHours} onChange={event => setCountdownHours(event.target.value)} /><label>Teks kuota</label><input data-preview-id="sales-offer-quota" value={landingQuotaText} maxLength={255} onChange={event => setLandingQuotaText(event.target.value)} /></div>
-                                        <div><header><h3>Penutup</h3></header><label>Judul</label><input data-preview-id="sales-close-title" value={salesDraft.closing.title} maxLength={200} onChange={event => updateSalesSection('closing', 'title', event.target.value)} /><label>Deskripsi</label><textarea data-preview-id="sales-close-description" rows="3" value={salesDraft.closing.description} maxLength={600} onChange={event => updateSalesSection('closing', 'description', event.target.value)} /><label>Teks tombol</label><input data-preview-id="sales-close-cta" value={salesDraft.closing.cta} maxLength={80} onChange={event => updateSalesSection('closing', 'cta', event.target.value)} /></div>
+                                        <div><header><h3>Penutup</h3></header><label>Judul</label><input data-preview-id="sales-close-title" value={salesDraft.closing.title} maxLength={200} onChange={event => updateSalesSection('closing', 'title', event.target.value)} /><label>Deskripsi</label><RichTextEditor label="Deskripsi penutup halaman sales" data-preview-id="sales-close-description" value={salesDraft.closing.description} maxLength={600} minHeight={120} hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor." onChange={value => updateSalesSection('closing', 'description', value)} /><label>Teks tombol</label><input data-preview-id="sales-close-cta" value={salesDraft.closing.cta} maxLength={80} onChange={event => updateSalesSection('closing', 'cta', event.target.value)} /></div>
                                     </section>
                                 </> : <section className="sales-cms-section">
                                     <header><h3>Konfirmasi sebelum checkout</h3><p>Pastikan tahap keputusan terakhir singkat dan jelas.</p></header>
                                     <label>Judul halaman</label><input data-preview-id="sales-confirm-heading" value={salesDraft.confirmation.heading} maxLength={200} onChange={event => updateSalesSection('confirmation', 'heading', event.target.value)} />
-                                    <label>Deskripsi</label><textarea data-preview-id="sales-confirm-description" rows="3" value={salesDraft.confirmation.description} maxLength={600} onChange={event => updateSalesSection('confirmation', 'description', event.target.value)} />
+                                    <label>Deskripsi</label><RichTextEditor label="Deskripsi konfirmasi pembelian" data-preview-id="sales-confirm-description" value={salesDraft.confirmation.description} maxLength={600} minHeight={120} hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor." onChange={value => updateSalesSection('confirmation', 'description', value)} />
                                     <label>Teks kembali</label><input data-preview-id="sales-confirm-back" value={salesDraft.confirmation.backLabel} maxLength={80} onChange={event => updateSalesSection('confirmation', 'backLabel', event.target.value)} />
                                     <label>Judul ringkasan</label><input data-preview-id="sales-confirm-order-title" value={salesDraft.confirmation.orderTitle} maxLength={120} onChange={event => updateSalesSection('confirmation', 'orderTitle', event.target.value)} />
                                     <label>Tombol pembayaran</label><input data-preview-id="sales-confirm-cta" value={salesDraft.confirmation.payCta} maxLength={80} onChange={event => updateSalesSection('confirmation', 'payCta', event.target.value)} />

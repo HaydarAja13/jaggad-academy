@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import MainLayout from '../../Layouts/MainLayout';
+import RichText from '../../Components/RichText';
 import { products } from '../../Data/products';
 import { getCategoryLabel, getStorageUrl } from '../../Utils/helpers';
 import { classifyMaterialLink } from '../../Utils/materialLinks';
@@ -72,7 +73,7 @@ export default function UserLearning({ id, product: dbProduct, completedMaterial
                             <div className="learning-intro">
                                 <div className="learning-access"><CheckCircle2 size={20} aria-hidden="true" /> Akses produk aktif</div>
                                 <h1 id="learning-title">{product.title}</h1>
-                                <p>{product.description || 'Materi pembelajaran Anda siap diakses kapan saja.'}</p>
+                                <RichText as="p" inline html={product.description} fallback={<p>Materi pembelajaran Anda siap diakses kapan saja.</p>} />
 
                                 <dl className="learning-facts">
                                     <div><dt>Format</dt><dd>{getCategoryLabel(product.category)}</dd></div>
@@ -150,7 +151,7 @@ export default function UserLearning({ id, product: dbProduct, completedMaterial
                     <aside className="learning-details" aria-label="Informasi produk">
                         <section>
                             <h2>Tentang materi ini</h2>
-                            <p>{product.longDescription || product.description || 'Informasi materi belum tersedia.'}</p>
+                            <RichText html={product.longDescription || product.description} fallback={<p>Informasi materi belum tersedia.</p>} />
                         </section>
 
                         {product.benefits.length > 0 && (

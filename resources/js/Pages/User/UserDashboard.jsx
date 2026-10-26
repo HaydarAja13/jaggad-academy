@@ -5,6 +5,7 @@ import {
     CreditCard, Eye, Package, ReceiptText, Upload, UserRound, X,
 } from 'lucide-react';
 import { useContent } from '../../Contexts/ContentContext';
+import RichText from '../../Components/RichText';
 import { formatCurrency, formatPriceOrFree, getStorageUrl } from '../../Utils/helpers';
 import MainLayout from '../../Layouts/MainLayout';
 import toast from 'react-hot-toast';
@@ -179,7 +180,7 @@ export default function UserDashboard({ auth, purchasedProducts = [], transactio
                         <h1 id="preview-dashboard-welcome-title">
                             <span>{copy.welcomeTitle},</span> {user.name}.
                         </h1>
-                        <p id="preview-dashboard-welcome-description">{copy.welcomeDescription}</p>
+                        <RichText as="p" inline id="preview-dashboard-welcome-description" html={copy.welcomeDescription} />
                         <div className="learner-hero__actions">
                             <Link href={nextProduct ? route('dashboard.learning', nextProduct.slug || nextProduct.id) : route('products')} className="learner-button learner-button--light">
                                 {nextProduct ? copy.continueLabel : copy.exploreLabel}<ArrowRight size={18} aria-hidden="true" />
@@ -206,7 +207,7 @@ export default function UserDashboard({ auth, purchasedProducts = [], transactio
                     <header className="learner-section__header">
                         <div>
                             <h2 id="preview-dashboard-library-title">{copy.libraryTitle}</h2>
-                            <p id="preview-dashboard-library-description">{copy.libraryDescription}</p>
+                            <RichText as="p" inline id="preview-dashboard-library-description" html={copy.libraryDescription} />
                         </div>
                         <Link href={route('products')} className="learner-text-link">{copy.exploreLabel}<ArrowRight size={17} aria-hidden="true" /></Link>
                     </header>
@@ -229,7 +230,7 @@ export default function UserDashboard({ auth, purchasedProducts = [], transactio
                             <BookOpen size={32} aria-hidden="true" />
                             <div>
                                 <h3 id="preview-dashboard-empty-library-title">{copy.emptyLibraryTitle}</h3>
-                                <p id="preview-dashboard-empty-library-description">{copy.emptyLibraryDescription}</p>
+                                <RichText as="p" inline id="preview-dashboard-empty-library-description" html={copy.emptyLibraryDescription} />
                             </div>
                             <Link href={route('products')} className="learner-button learner-button--maroon">{copy.exploreLabel}<ArrowRight size={18} aria-hidden="true" /></Link>
                         </div>
@@ -240,7 +241,7 @@ export default function UserDashboard({ auth, purchasedProducts = [], transactio
                     <header className="learner-section__header">
                         <div>
                             <h2 id="preview-dashboard-transactions-title">{copy.transactionsTitle}</h2>
-                            <p id="preview-dashboard-transactions-description">{copy.transactionsDescription}</p>
+                            <RichText as="p" inline id="preview-dashboard-transactions-description" html={copy.transactionsDescription} />
                         </div>
                     </header>
 
@@ -265,7 +266,7 @@ export default function UserDashboard({ auth, purchasedProducts = [], transactio
                     ) : (
                         <div className="learner-empty learner-empty--compact">
                             <ReceiptText size={30} aria-hidden="true" />
-                            <div><h3 id="preview-dashboard-empty-transaction-title">{copy.emptyTransactionTitle}</h3><p id="preview-dashboard-empty-transaction-description">{copy.emptyTransactionDescription}</p></div>
+                            <div><h3 id="preview-dashboard-empty-transaction-title">{copy.emptyTransactionTitle}</h3><RichText as="p" inline id="preview-dashboard-empty-transaction-description" html={copy.emptyTransactionDescription} /></div>
                         </div>
                     )}
                 </section>

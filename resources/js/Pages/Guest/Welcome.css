@@ -1376,6 +1376,29 @@
     overflow-wrap: anywhere;
 }
 
+.home-faq__answer .rich-text {
+    max-width: 68ch;
+    color: #69575d;
+    font-size: 16px;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+}
+
+.home-faq__answer .rich-text > * + * {
+    margin-top: 10px;
+}
+
+.home-faq__answer .rich-text ul,
+.home-faq__answer .rich-text ol {
+    margin: 10px 0;
+    padding-left: 22px;
+}
+
+.home-faq__answer .rich-text ul { list-style: disc outside; }
+.home-faq__answer .rich-text ol { list-style: decimal outside; }
+
+.home-faq__answer .rich-text li { margin-bottom: 6px; }
+
 /* Closing CTA */
 .closing-cta {
     padding: 0 0 clamp(72px, 8vw, 112px);

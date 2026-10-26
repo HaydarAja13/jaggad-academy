@@ -11,6 +11,8 @@ use App\Models\SiteContent;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\User;
+use App\Rules\RichTextLength;
+use App\Support\RichText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -134,7 +136,7 @@ class AdminSettingController extends Controller
             'hero' => 'required|array',
             'hero.badge' => 'nullable|string|max:80',
             'hero.title' => 'required|string|max:200',
-            'hero.subtitle' => 'nullable|string|max:500',
+            'hero.subtitle' => ['nullable', 'string', new RichTextLength(500)],
             'hero.mediaType' => 'required|in:image,youtube',
             'hero.imageAlt' => 'nullable|string|max:200',
             'hero.videoUrl' => [
@@ -160,25 +162,27 @@ class AdminSettingController extends Controller
             'proofItems.*' => 'nullable|string|max:200',
             'offers' => 'required|array',
             'offers.title' => 'required|string|max:160',
-            'offers.description' => 'nullable|string|max:500',
+            'offers.description' => ['nullable', 'string', new RichTextLength(500)],
             'trust' => 'required|array',
             'trust.title' => 'nullable|string|max:160',
-            'trust.description' => 'nullable|string|max:500',
+            'trust.description' => ['nullable', 'string', new RichTextLength(500)],
             'trust.items' => 'required|array|size:3',
             'trust.items.*.title' => 'nullable|string|max:120',
-            'trust.items.*.description' => 'nullable|string|max:360',
+            'trust.items.*.description' => ['nullable', 'string', new RichTextLength(360)],
             'cta' => 'required|array',
             'cta.primary' => 'required|string|max:80',
             'closing' => 'required|array',
             'closing.title' => 'required|string|max:200',
-            'closing.description' => 'nullable|string|max:600',
+            'closing.description' => ['nullable', 'string', new RichTextLength(600)],
             'closing.primary' => 'required|string|max:80',
             'closing.secondary' => 'nullable|string|max:80',
             'closing.asideTitle' => 'nullable|string|max:120',
-            'closing.asideDescription' => 'nullable|string|max:360',
+            'closing.asideDescription' => ['nullable', 'string', new RichTextLength(360)],
             'selectedProductIds' => 'required|array',
             'selectedProductIds.*' => 'integer|distinct|exists:products,id',
         ]);
+
+        $validated = $this->sanitizeAdsContent($validated);
 
         $draftCount = Product::whereIn('id', $validated['selectedProductIds'] ?? [])->draft()->count();
         if ($draftCount > 0) {
@@ -208,6 +212,36 @@ class AdminSettingController extends Controller
         }
 
         return back()->with('success', 'Landing Page Ads berhasil dipublikasikan!');
+    }
+
+    /**
+     * Bersihkan field deskripsi kaya pada konten halaman promo.
+     */
+    private function sanitizeAdsContent(array $content): array
+    {
+        if (isset($content['hero']['subtitle'])) {
+            $content['hero']['subtitle'] = RichText::sanitize($content['hero']['subtitle']);
+        }
+
+        foreach (['offers', 'trust', 'closing'] as $section) {
+            if (isset($content[$section]['description'])) {
+                $content[$section]['description'] = RichText::sanitize($content[$section]['description']);
+            }
+        }
+
+        if (isset($content['closing']['asideDescription'])) {
+            $content['closing']['asideDescription'] = RichText::sanitize($content['closing']['asideDescription']);
+        }
+
+        if (isset($content['trust']['items']) && is_array($content['trust']['items'])) {
+            foreach ($content['trust']['items'] as $index => $item) {
+                if (is_array($item) && isset($item['description'])) {
+                    $content['trust']['items'][$index]['description'] = RichText::sanitize($item['description']);
+                }
+            }
+        }
+
+        return $content;
     }
 
     // Content page
@@ -240,7 +274,7 @@ class AdminSettingController extends Controller
             'home.faqSubtitle' => 'nullable|string|max:500',
             'home.faqs' => 'nullable|array|max:8',
             'home.faqs.*.q' => 'nullable|required_with:home.faqs.*.a|string|max:180',
-            'home.faqs.*.a' => 'nullable|required_with:home.faqs.*.q|string|max:1000',
+            'home.faqs.*.a' => ['nullable', 'required_with:home.faqs.*.q', 'string', new RichTextLength(1000)],
             'home.ctaBannerTitle' => 'nullable|string|max:160',
             'home.ctaBannerDesc' => 'nullable|string|max:500',
             'home.ctaBannerBtn' => 'nullable|string|max:80',
@@ -274,17 +308,17 @@ class AdminSettingController extends Controller
             'contact' => 'required|array',
             'contact.pageTitle' => 'nullable|string|max:80',
             'contact.title' => 'required|string|max:160',
-            'contact.subtitle' => 'required|string|max:500',
+            'contact.subtitle' => ['required', 'string', new RichTextLength(500)],
             'contact.whatsappCta' => 'nullable|string|max:80',
-            'contact.whatsappNote' => 'nullable|string|max:240',
+            'contact.whatsappNote' => ['nullable', 'string', new RichTextLength(240)],
             'contact.directTitle' => 'nullable|string|max:120',
             'contact.guideTitle' => 'nullable|string|max:140',
-            'contact.guideSubtitle' => 'nullable|string|max:400',
+            'contact.guideSubtitle' => ['nullable', 'string', new RichTextLength(400)],
             'contact.topics' => 'nullable|array|max:3',
             'contact.topics.*.title' => 'required|string|max:100',
-            'contact.topics.*.desc' => 'required|string|max:360',
+            'contact.topics.*.desc' => ['required', 'string', new RichTextLength(360)],
             'contact.formTitle' => 'nullable|string|max:140',
-            'contact.formSubtitle' => 'nullable|string|max:400',
+            'contact.formSubtitle' => ['nullable', 'string', new RichTextLength(400)],
             'contact.formNameLabel' => 'nullable|string|max:60',
             'contact.formNamePlaceholder' => 'nullable|string|max:100',
             'contact.formEmailLabel' => 'nullable|string|max:60',
@@ -294,7 +328,7 @@ class AdminSettingController extends Controller
             'contact.formMessageLabel' => 'nullable|string|max:60',
             'contact.formMessagePlaceholder' => 'nullable|string|max:200',
             'contact.formSubmitLabel' => 'nullable|string|max:80',
-            'contact.formNote' => 'nullable|string|max:240',
+            'contact.formNote' => ['nullable', 'string', new RichTextLength(240)],
             'contact.formEmailIntro' => 'nullable|string|max:120',
             'contact.formOpenEmailNotice' => 'nullable|string|max:120',
             'contact.phoneLabel' => 'nullable|string|max:60',
@@ -305,7 +339,7 @@ class AdminSettingController extends Controller
             'contact.address' => 'required|string|max:500',
             'contact.mapsUrl' => 'nullable|url:http,https|max:2048',
             'dashboard' => 'required|array',
-            'dashboard.*' => 'required|string|max:500',
+            'dashboard.*' => ['required', 'string', new RichTextLength(500)],
             'social' => 'required|array',
             'social.instagram' => 'nullable|url:http,https|max:2048',
             'social.youtube' => 'nullable|url:http,https|max:2048',
@@ -321,10 +355,12 @@ class AdminSettingController extends Controller
             'learningFormats' => 'nullable|array|max:4',
             'learningFormats.*.id' => 'required|integer|exists:categories,id',
             'learningFormats.*.name' => 'required|string|max:255',
-            'learningFormats.*.description' => 'nullable|string|max:1000',
+            'learningFormats.*.description' => ['nullable', 'string', new RichTextLength(1000)],
             'learningFormatImages' => 'nullable|array|max:4',
             'learningFormatImages.*' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:5120',
         ]);
+
+        $this->sanitizeContentCopy($request);
 
         $branding = $request->input('branding');
         $home = $request->input('home');
@@ -388,7 +424,7 @@ class AdminSettingController extends Controller
 
             $updates = [
                 'name' => $formatData['name'],
-                'description' => $formatData['description'] ?? null,
+                'description' => RichText::sanitize($formatData['description'] ?? null),
             ];
             $file = $request->file("learningFormatImages.{$index}");
             $oldImage = null;
@@ -441,6 +477,81 @@ class AdminSettingController extends Controller
         );
 
         return back()->with('success', 'Konten berhasil disimpan dan dipublikasikan!');
+    }
+
+    /**
+     * Bersihkan field teks panjang pada konten CMS global (FAQ beranda, cerita
+     * Tentang, catatan Kontak, dan penjelasan Dashboard).
+     */
+    private function sanitizeContentCopy(Request $request): void
+    {
+        $home = $request->input('home');
+        if (is_array($home)) {
+            if (isset($home['faqs']) && is_array($home['faqs'])) {
+                foreach ($home['faqs'] as $index => $faq) {
+                    if (is_array($faq) && array_key_exists('a', $faq)) {
+                        $home['faqs'][$index]['a'] = RichText::sanitize($faq['a']);
+                    }
+                }
+            }
+
+            $request->merge(['home' => $home]);
+        }
+
+        $about = $request->input('about');
+        if (is_array($about)) {
+            foreach (['heroDesc', 'storyP1', 'storyP2', 'visionDesc', 'proofDesc', 'ctaDesc'] as $key) {
+                if (array_key_exists($key, $about)) {
+                    $about[$key] = RichText::sanitize($about[$key]);
+                }
+            }
+
+            if (isset($about['milestones']) && is_array($about['milestones'])) {
+                foreach ($about['milestones'] as $index => $milestone) {
+                    if (is_array($milestone) && array_key_exists('text', $milestone)) {
+                        $about['milestones'][$index]['text'] = RichText::sanitize($milestone['text']);
+                    }
+                }
+            }
+
+            $request->merge(['about' => $about]);
+        }
+
+        $contact = $request->input('contact');
+        if (is_array($contact)) {
+            foreach (['subtitle', 'whatsappNote', 'guideSubtitle', 'formSubtitle', 'formNote'] as $key) {
+                if (array_key_exists($key, $contact)) {
+                    $contact[$key] = RichText::sanitize($contact[$key]);
+                }
+            }
+
+            if (isset($contact['topics']) && is_array($contact['topics'])) {
+                foreach ($contact['topics'] as $index => $topic) {
+                    if (is_array($topic) && array_key_exists('desc', $topic)) {
+                        $contact['topics'][$index]['desc'] = RichText::sanitize($topic['desc']);
+                    }
+                }
+            }
+
+            $request->merge(['contact' => $contact]);
+        }
+
+        $dashboard = $request->input('dashboard');
+        if (is_array($dashboard)) {
+            foreach ([
+                'welcomeDescription',
+                'libraryDescription',
+                'emptyLibraryDescription',
+                'transactionsDescription',
+                'emptyTransactionDescription',
+            ] as $key) {
+                if (array_key_exists($key, $dashboard)) {
+                    $dashboard[$key] = RichText::sanitize($dashboard[$key]);
+                }
+            }
+
+            $request->merge(['dashboard' => $dashboard]);
+        }
     }
 
     // Chatbot page

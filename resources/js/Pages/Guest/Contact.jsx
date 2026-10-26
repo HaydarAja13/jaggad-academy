@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import { ArrowUpRight, BookOpen, Handshake, Mail, MapPin, MessageCircle, Send, ShoppingBag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useContent } from '../../Contexts/ContentContext';
+import RichText from '../../Components/RichText';
 import MainLayout from '../../Layouts/MainLayout';
 import './Contact.css';
 
@@ -50,7 +51,7 @@ export default function Contact({ previewMode = false }) {
                 <div className="container contact-hero__layout">
                     <div className="contact-hero__copy">
                         <h1 id="preview-contact-title">{contact.title}</h1>
-                        <p id="preview-contact-subtitle">{contact.subtitle}</p>
+                        <RichText as="p" inline id="preview-contact-subtitle" html={contact.subtitle} />
                         {whatsappUrl && (
                             <div className="contact-hero__action">
                                 <a id="preview-contact-whatsapp-cta" href={whatsappUrl} target="_blank" rel="noreferrer" className="contact-button contact-button--primary">
@@ -58,7 +59,7 @@ export default function Contact({ previewMode = false }) {
                                     {contact.whatsappCta}
                                     <ArrowUpRight size={18} aria-hidden="true" />
                                 </a>
-                                <span id="preview-contact-whatsapp-note">{contact.whatsappNote}</span>
+                                <RichText as="span" inline id="preview-contact-whatsapp-note" html={contact.whatsappNote} />
                             </div>
                         )}
                     </div>
@@ -93,7 +94,7 @@ export default function Contact({ previewMode = false }) {
                     <div className="container contact-guide__layout">
                         <header>
                             <h2 id="preview-contact-guide-title">{contact.guideTitle}</h2>
-                            <p id="preview-contact-guide-subtitle">{contact.guideSubtitle}</p>
+                            <RichText as="p" inline id="preview-contact-guide-subtitle" html={contact.guideSubtitle} />
                         </header>
 
                         <ul className="contact-topics">
@@ -104,7 +105,7 @@ export default function Contact({ previewMode = false }) {
                                         <Icon size={22} aria-hidden="true" />
                                         <div>
                                             <h3 id={`preview-contact-topic-${index}-title`}>{topic.title}</h3>
-                                            <p id={`preview-contact-topic-${index}-desc`}>{topic.desc}</p>
+                                            <RichText as="p" inline id={`preview-contact-topic-${index}-desc`} html={topic.desc} />
                                         </div>
                                     </li>
                                 );
@@ -117,7 +118,7 @@ export default function Contact({ previewMode = false }) {
                     <div className="container contact-message__layout">
                         <header>
                             <h2 id="preview-contact-form-title">{contact.formTitle}</h2>
-                            <p id="preview-contact-form-subtitle">{contact.formSubtitle}</p>
+                            <RichText as="p" inline id="preview-contact-form-subtitle" html={contact.formSubtitle} />
                             {contact.email && (
                                 <a className="contact-email-link" href={`mailto:${contact.email}`}>
                                     {contact.email}
@@ -154,7 +155,7 @@ export default function Contact({ previewMode = false }) {
                             </label>
 
                             <div className="contact-form__footer">
-                                <p id="preview-contact-form-note">{contact.formNote}</p>
+                                <RichText as="p" inline id="preview-contact-form-note" html={contact.formNote} />
                                 <button type="submit" disabled={!contact.email}>
                                     {contact.formSubmitLabel}
                                     <Send size={18} aria-hidden="true" />

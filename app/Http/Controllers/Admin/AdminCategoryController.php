@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Rules\RichTextLength;
+use App\Support\RichText;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
@@ -33,9 +35,11 @@ class AdminCategoryController extends Controller
         $data = $request->validate([
             'id' => 'required|string|max:255|unique:categories,slug',
             'label' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
+            'description' => ['nullable', 'string', new RichTextLength(1000)],
             'imageFile' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
+
+        $description = RichText::sanitize($data['description'] ?? null);
 
         $imagePath = null;
         if ($request->hasFile('imageFile')) {
@@ -45,7 +49,7 @@ class AdminCategoryController extends Controller
         Category::create([
             'name' => $data['label'],
             'slug' => Str::slug($data['id']),
-            'description' => ($data['description'] ?? null) ?: 'Kategori ' . $data['label'],
+            'description' => $description ?: 'Kategori ' . $data['label'],
             'image' => $imagePath,
             'is_active' => true,
         ]);
@@ -57,7 +61,7 @@ class AdminCategoryController extends Controller
     {
         $data = $request->validate([
             'label' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
+            'description' => ['nullable', 'string', new RichTextLength(1000)],
             'imageFile' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
@@ -71,7 +75,7 @@ class AdminCategoryController extends Controller
 
         $category->update([
             'name' => $data['label'],
-            'description' => $data['description'] ?? null,
+            'description' => RichText::sanitize($data['description'] ?? null),
             'image' => $imagePath,
         ]);
 

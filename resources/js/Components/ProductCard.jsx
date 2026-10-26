@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Star, BookOpen, Video, Mic, MapPin, CheckCircle2 } from 'lucide-react';
 import { formatCurrency, formatPriceOrFree, isFreeProduct, isDonationProduct, getCategoryLabel, getStorageUrl } from '../Utils/helpers';
 import { useContent } from '../Contexts/ContentContext';
+import RichText from './RichText';
 import './ProductCard.css';
 
 const categoryIcons = {
@@ -86,7 +87,7 @@ export default function ProductCard({ product, className = '', previewIdPrefix }
                     </div>
                 </div>
 
-                <p className="product-card__desc">{desc}</p>
+                <RichText as="p" inline className="product-card__desc" html={desc} />
 
                 <div className="product-card__footer">
                     {isPurchased ? <strong className="product-card__access"><CheckCircle2 size={18} aria-hidden="true" /> Akses aktif</strong> : (

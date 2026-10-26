@@ -42,7 +42,18 @@ class ContactContentTest extends TestCase
 
         $saved = json_decode(SiteContent::where('key', 'site_content')->firstOrFail()->value, true);
 
-        $this->assertSame($contact, $saved['contact']);
-        $this->assertSame($dashboard, $saved['dashboard']);
+        // Field teks panjang sekarang disimpan sebagai HTML paragraf yang aman.
+        $this->assertSame('<p>Tim kami siap membantu.</p>', $saved['contact']['subtitle']);
+        $this->assertSame('<p>Bantu saya memilih program yang sesuai.</p>', $saved['contact']['topics'][0]['desc']);
+        $this->assertSame('<p>Lanjutkan belajar dari dashboard.</p>', $saved['dashboard']['welcomeDescription']);
+
+        // Field lain tetap seperti dikirim.
+        $this->assertSame('Mari bicara', $saved['contact']['title']);
+        $this->assertSame('Memilih program', $saved['contact']['topics'][0]['title']);
+        $this->assertSame('halo@example.com', $saved['contact']['email']);
+        $this->assertSame('+62 812 3456 7890', $saved['contact']['phone']);
+        $this->assertSame('Jakarta', $saved['contact']['address']);
+        $this->assertSame('https://maps.google.com/', $saved['contact']['mapsUrl']);
+        $this->assertSame('Selamat datang kembali', $saved['dashboard']['welcomeTitle']);
     }
 }

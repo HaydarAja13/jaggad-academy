@@ -1,0 +1,164 @@
+/* Editor teks kaya (WYSIWYG) untuk form admin. */
+.rich-editor {
+    --rich-editor-border: var(--color-border, #ded4d7);
+    --rich-editor-accent: var(--color-accent, #660810);
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid var(--rich-editor-border);
+    border-radius: var(--radius-md, 10px);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    overflow: hidden;
+}
+
+.rich-editor:focus-within {
+    border-color: var(--rich-editor-accent);
+    box-shadow: 0 0 0 4px rgba(102, 8, 16, 0.08);
+}
+
+.rich-editor.is-over-limit {
+    border-color: #b42318;
+    box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.08);
+}
+
+.rich-editor.is-disabled {
+    background: #f7f3f4;
+    opacity: 0.75;
+}
+
+.rich-editor__toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 6px 8px;
+    background: #fbfcff;
+    border-bottom: 1px solid var(--rich-editor-border);
+}
+
+.rich-editor__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 34px;
+    border-radius: 8px;
+    color: var(--color-text-secondary, #344054);
+    background: transparent;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rich-editor__button:hover:not(:disabled) {
+    background: rgba(102, 8, 16, 0.08);
+    color: var(--rich-editor-accent);
+}
+
+.rich-editor__button.is-active {
+    background: rgba(102, 8, 16, 0.12);
+    color: var(--rich-editor-accent);
+}
+
+.rich-editor__button:focus-visible {
+    outline: 2px solid var(--rich-editor-accent);
+    outline-offset: 1px;
+}
+
+.rich-editor__button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.rich-editor__separator {
+    width: 1px;
+    height: 20px;
+    margin: 0 4px;
+    background: var(--rich-editor-border);
+}
+
+.rich-editor__area {
+    padding: 12px 16px;
+    min-height: 120px;
+    max-height: 420px;
+    overflow-y: auto;
+    color: var(--color-text-primary, #171316);
+    font-size: var(--text-sm, 1rem);
+    line-height: 1.65;
+    outline: none;
+    word-break: break-word;
+}
+
+.rich-editor__area:empty::before,
+.rich-editor__area[data-empty='true']::before {
+    content: attr(data-placeholder);
+    color: var(--color-text-muted, #67555c);
+    pointer-events: none;
+}
+
+.rich-editor__area p,
+.rich-editor__area div {
+    margin: 0 0 0.7em;
+}
+
+.rich-editor__area p:last-child,
+.rich-editor__area div:last-child {
+    margin-bottom: 0;
+}
+
+.rich-editor__area ul,
+.rich-editor__area ol {
+    margin: 0.5em 0 0.7em;
+    padding-left: 1.4em;
+}
+
+.rich-editor__area ul { list-style: disc outside; }
+.rich-editor__area ol { list-style: decimal outside; }
+
+.rich-editor__area li {
+    margin-bottom: 0.3em;
+}
+
+.rich-editor__area a {
+    color: var(--rich-editor-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.rich-editor__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 12px;
+    border-top: 1px solid var(--rich-editor-border);
+    background: #ffffff;
+    color: var(--color-text-muted, #67555c);
+    font-size: var(--text-sm, 1rem);
+}
+
+.rich-editor__hint {
+    line-height: 1.4;
+}
+
+.rich-editor__count {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.rich-editor.is-over-limit .rich-editor__count {
+    color: #b42318;
+    font-weight: 700;
+}
+
+/* Selaraskan dengan field lain di form produk & modal admin. */
+.product-info-form .rich-editor,
+.modal-form .rich-editor,
+.cms-form-group .rich-editor {
+    border-color: #d0d5dd;
+    border-radius: 10px;
+}
+
+.product-info-form .rich-editor:focus-within,
+.modal-form .rich-editor:focus-within,
+.cms-form-group .rich-editor:focus-within {
+    border-color: var(--rich-editor-accent);
+}

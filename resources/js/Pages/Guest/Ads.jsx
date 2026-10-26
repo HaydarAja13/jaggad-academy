@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, Clock, Play, ShieldCheck } from 'lucide-react
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import MainLayout from '../../Layouts/MainLayout';
+import RichText from '../../Components/RichText';
 import { formatCurrency, formatPriceOrFree, isFreePrice, isDonationProduct, getStorageUrl } from '../../Utils/helpers';
 import { getYoutubeId, normalizePromoContent } from '../../Utils/promoContent';
 import './Ads.css';
@@ -81,7 +82,7 @@ export default function Ads({ previewMode = false, customData = null, dbAds, dbP
                         </div>
 
                         <h1 id="preview-ads-hero-title">{promo.hero.title}</h1>
-                        {promo.hero.subtitle && <p id="preview-ads-hero-subtitle" className="promo-hero__lead">{promo.hero.subtitle}</p>}
+                        {promo.hero.subtitle && <RichText id="preview-ads-hero-subtitle" className="promo-hero__lead" html={promo.hero.subtitle} />}
                         {promo.urgency.quotaText && <p id="preview-ads-quota" className="promo-hero__quota">{promo.urgency.quotaText}</p>}
 
                         <div className="promo-hero__actions">
@@ -141,7 +142,7 @@ export default function Ads({ previewMode = false, customData = null, dbAds, dbP
                 <div className="container">
                     <header className="promo-section-heading">
                         <h2 id="preview-ads-offers-title">{promo.offers.title}</h2>
-                        {promo.offers.description && <p id="preview-ads-offers-description">{promo.offers.description}</p>}
+                        {promo.offers.description && <RichText id="preview-ads-offers-description" html={promo.offers.description} />}
                     </header>
 
                     {!hasProducts ? (
@@ -171,7 +172,7 @@ export default function Ads({ previewMode = false, customData = null, dbAds, dbP
                                         <div className="promo-card__body">
                                             <span className="promo-card__category">{product.category?.name || 'Program JAGGAD'}</span>
                                             <h3 id={`preview-ads-product-${product.id}-name`}>{productName}</h3>
-                                            {(product.short_description || product.description) && <p className="promo-card__description">{product.short_description || product.description}</p>}
+                                            {(product.short_description || product.description) && <RichText as="p" inline className="promo-card__description" html={product.short_description || product.description} />}
 
                                             {benefits.length > 0 && (
                                                 <ul className="promo-card__benefits" aria-label={`Manfaat ${productName}`}>
@@ -209,13 +210,13 @@ export default function Ads({ previewMode = false, customData = null, dbAds, dbP
                     <div className="container promo-trust__layout">
                         <div className="promo-trust__intro">
                             {promo.trust.title && <h2 id="preview-ads-trust-title">{promo.trust.title}</h2>}
-                            {promo.trust.description && <p id="preview-ads-trust-description">{promo.trust.description}</p>}
+                            {promo.trust.description && <RichText id="preview-ads-trust-description" html={promo.trust.description} />}
                         </div>
                         <div className="promo-trust__list">
                             {trustItems.map((item, index) => (
                                 <div id={`preview-ads-trust-${index}`} className="promo-trust__item" key={index}>
                                     <span aria-hidden="true">{index + 1}</span>
-                                    <div>{item.title && <h3>{item.title}</h3>}{item.description && <p>{item.description}</p>}</div>
+                                    <div>{item.title && <h3>{item.title}</h3>}{item.description && <RichText html={item.description} />}</div>
                                 </div>
                             ))}
                         </div>
@@ -228,7 +229,7 @@ export default function Ads({ previewMode = false, customData = null, dbAds, dbP
                     <div className="promo-closing__frame">
                         <div className="promo-closing__copy">
                             <h2 id="preview-ads-closing-title">{promo.closing.title}</h2>
-                            {promo.closing.description && <p id="preview-ads-closing-description">{promo.closing.description}</p>}
+                            {promo.closing.description && <RichText id="preview-ads-closing-description" html={promo.closing.description} />}
                             <div className="promo-closing__actions">
                                 {hasProducts ? (
                                     <a id="preview-ads-closing-primary" href="#preview-ads-offers" className="promo-closing__primary">{promo.closing.primary}<ArrowRight size={18} /></a>
@@ -241,7 +242,7 @@ export default function Ads({ previewMode = false, customData = null, dbAds, dbP
                         {(promo.closing.asideTitle || promo.closing.asideDescription) && (
                             <div id="preview-ads-closing-aside" className="promo-closing__aside">
                                 {promo.closing.asideTitle && <h3>{promo.closing.asideTitle}</h3>}
-                                {promo.closing.asideDescription && <p>{promo.closing.asideDescription}</p>}
+                                {promo.closing.asideDescription && <RichText html={promo.closing.asideDescription} />}
                             </div>
                         )}
                     </div>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import { FolderMinus, Image as ImageIcon, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { getStorageUrl } from '../../Utils/helpers';
+import { richTextLength, richTextToPlainText } from '../../Utils/richText';
+import RichTextEditor from '../../Components/RichTextEditor';
 import AdminLayout from '../../Layouts/AdminLayout';
 import toast from 'react-hot-toast';
 import './Admin.css';
@@ -163,7 +165,7 @@ export default function AdminCategories({ dbCategories = [] }) {
                                                 </div>
                                                 <div>
                                                     <strong>{category.label}</strong>
-                                                    <span>{category.description || 'Belum ada deskripsi'}</span>
+                                                    <span>{richTextToPlainText(category.description) || 'Belum ada deskripsi'}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -243,15 +245,17 @@ export default function AdminCategories({ dbCategories = [] }) {
                                 <div className="form-group">
                                     <div className="categories-label-row">
                                         <label htmlFor="category-description">Deskripsi</label>
-                                        <span>{form.description.length}/1000</span>
+                                        <span>{richTextLength(form.description)}/1000</span>
                                     </div>
-                                    <textarea
+                                    <RichTextEditor
                                         id="category-description"
+                                        label="Deskripsi kategori"
                                         value={form.description}
-                                        onChange={event => setForm('description', event.target.value)}
-                                        rows="4"
-                                        maxLength="1000"
+                                        onChange={value => setForm('description', value)}
+                                        maxLength={1000}
+                                        minHeight={140}
                                         placeholder="Jelaskan isi atau tujuan kategori ini"
+                                        hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
                                     />
                                 </div>
 

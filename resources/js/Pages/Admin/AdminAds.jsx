@@ -4,6 +4,7 @@ import { Head, router } from '@inertiajs/react';
 import { ArrowDown, ArrowUp, Copy, ExternalLink, Image as ImageIcon, Loader2, Monitor, PanelLeftClose, PanelLeftOpen, Save, Smartphone, Trash2, Video } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminLayout from '../../Layouts/AdminLayout';
+import RichTextEditor from '../../Components/RichTextEditor';
 import { formatCurrency, getStorageUrl } from '../../Utils/helpers';
 import { normalizePromoContent } from '../../Utils/promoContent';
 import Ads from '../Guest/Ads';
@@ -182,7 +183,17 @@ export default function AdminAds({ dbAds, products = [] }) {
                             <label htmlFor="promo-title">Judul utama</label>
                             <textarea id="promo-title" data-preview-id="preview-ads-hero-title" rows={3} value={promo.hero.title} maxLength={200} onChange={event => updateSection('hero', 'title', event.target.value)} />
                             <label htmlFor="promo-subtitle">Deskripsi</label>
-                            <textarea id="promo-subtitle" data-preview-id="preview-ads-hero-subtitle" rows={3} value={promo.hero.subtitle} maxLength={500} onChange={event => updateSection('hero', 'subtitle', event.target.value)} />
+                            <RichTextEditor
+                                id="promo-subtitle"
+                                label="Deskripsi hero promo"
+                                data-preview-id="preview-ads-hero-subtitle"
+                                value={promo.hero.subtitle}
+                                maxLength={500}
+                                minHeight={120}
+                                placeholder="Ringkasan penawaran yang tampil di hero"
+                                hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                onChange={value => updateSection('hero', 'subtitle', value)}
+                            />
                         </section>
 
                         <section className="cms-form-group">
@@ -238,7 +249,16 @@ export default function AdminAds({ dbAds, products = [] }) {
                             <label htmlFor="promo-offers-title">Judul section</label>
                             <input id="promo-offers-title" data-preview-id="preview-ads-offers-title" value={promo.offers.title} maxLength={160} onChange={event => updateSection('offers', 'title', event.target.value)} />
                             <label htmlFor="promo-offers-description">Deskripsi section</label>
-                            <textarea id="promo-offers-description" data-preview-id="preview-ads-offers-description" rows={3} value={promo.offers.description} maxLength={500} onChange={event => updateSection('offers', 'description', event.target.value)} />
+                            <RichTextEditor
+                                id="promo-offers-description"
+                                label="Deskripsi section penawaran"
+                                data-preview-id="preview-ads-offers-description"
+                                value={promo.offers.description}
+                                maxLength={500}
+                                minHeight={120}
+                                hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                onChange={value => updateSection('offers', 'description', value)}
+                            />
                             <label htmlFor="promo-add-product">Tambah produk</label>
                             <select id="promo-add-product" data-preview-id="preview-ads-offers" value="" onChange={event => { addProduct(event.target.value); event.target.value = ''; }}>
                                 <option value="" disabled>Pilih dari katalog</option>
@@ -264,14 +284,31 @@ export default function AdminAds({ dbAds, products = [] }) {
                             <label htmlFor="promo-trust-title">Judul section</label>
                             <input id="promo-trust-title" data-preview-id="preview-ads-trust-title" value={promo.trust.title} maxLength={160} onChange={event => updateSection('trust', 'title', event.target.value)} />
                             <label htmlFor="promo-trust-description">Deskripsi section</label>
-                            <textarea id="promo-trust-description" data-preview-id="preview-ads-trust-description" rows={3} value={promo.trust.description} maxLength={500} onChange={event => updateSection('trust', 'description', event.target.value)} />
+                            <RichTextEditor
+                                id="promo-trust-description"
+                                label="Deskripsi section kepercayaan"
+                                data-preview-id="preview-ads-trust-description"
+                                value={promo.trust.description}
+                                maxLength={500}
+                                minHeight={120}
+                                hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                onChange={value => updateSection('trust', 'description', value)}
+                            />
                             {promo.trust.items.map((item, index) => (
                                 <div className="promo-cms-nested" key={index}>
                                     <strong>Poin {index + 1}</strong>
                                     <label htmlFor={`promo-trust-title-${index}`}>Judul</label>
                                     <input id={`promo-trust-title-${index}`} data-preview-id={`preview-ads-trust-${index}`} value={item.title} maxLength={120} onChange={event => updateTrustItem(index, 'title', event.target.value)} />
                                     <label htmlFor={`promo-trust-description-${index}`}>Penjelasan</label>
-                                    <textarea id={`promo-trust-description-${index}`} data-preview-id={`preview-ads-trust-${index}`} rows={2} value={item.description} maxLength={360} onChange={event => updateTrustItem(index, 'description', event.target.value)} />
+                                    <RichTextEditor
+                                        id={`promo-trust-description-${index}`}
+                                        label={`Penjelasan poin ${index + 1}`}
+                                        data-preview-id={`preview-ads-trust-${index}`}
+                                        value={item.description}
+                                        maxLength={360}
+                                        minHeight={100}
+                                        onChange={value => updateTrustItem(index, 'description', value)}
+                                    />
                                 </div>
                             ))}
                         </section>
@@ -287,7 +324,16 @@ export default function AdminAds({ dbAds, products = [] }) {
                             <label htmlFor="promo-closing-title">Judul</label>
                             <input id="promo-closing-title" data-preview-id="preview-ads-closing-title" value={promo.closing.title} maxLength={200} onChange={event => updateSection('closing', 'title', event.target.value)} />
                             <label htmlFor="promo-closing-description">Deskripsi</label>
-                            <textarea id="promo-closing-description" data-preview-id="preview-ads-closing-description" rows={3} value={promo.closing.description} maxLength={600} onChange={event => updateSection('closing', 'description', event.target.value)} />
+                            <RichTextEditor
+                                id="promo-closing-description"
+                                label="Deskripsi penutup promo"
+                                data-preview-id="preview-ads-closing-description"
+                                value={promo.closing.description}
+                                maxLength={600}
+                                minHeight={120}
+                                hint="Bisa bold, italic, underline, daftar poin, dan daftar bernomor."
+                                onChange={value => updateSection('closing', 'description', value)}
+                            />
                             <label htmlFor="promo-closing-primary">Tombol utama</label>
                             <input id="promo-closing-primary" data-preview-id="preview-ads-closing-primary" value={promo.closing.primary} maxLength={80} onChange={event => updateSection('closing', 'primary', event.target.value)} />
                             <label htmlFor="promo-closing-secondary">Tombol konsultasi</label>
@@ -295,7 +341,15 @@ export default function AdminAds({ dbAds, products = [] }) {
                             <label htmlFor="promo-aside-title">Judul bantuan</label>
                             <input id="promo-aside-title" data-preview-id="preview-ads-closing-aside" value={promo.closing.asideTitle} maxLength={120} onChange={event => updateSection('closing', 'asideTitle', event.target.value)} />
                             <label htmlFor="promo-aside-description">Penjelasan bantuan</label>
-                            <textarea id="promo-aside-description" data-preview-id="preview-ads-closing-aside" rows={3} value={promo.closing.asideDescription} maxLength={360} onChange={event => updateSection('closing', 'asideDescription', event.target.value)} />
+                            <RichTextEditor
+                                id="promo-aside-description"
+                                label="Penjelasan bantuan promo"
+                                data-preview-id="preview-ads-closing-aside"
+                                value={promo.closing.asideDescription}
+                                maxLength={360}
+                                minHeight={120}
+                                onChange={value => updateSection('closing', 'asideDescription', value)}
+                            />
                         </section>
                     </div>
 

@@ -3,6 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, MapPin, ShoppingCart } from 'lucide-react';
 import { products } from '../../Data/products';
 import ProductCard from '../../Components/ProductCard';
+import RichText from '../../Components/RichText';
 import { formatCurrency, formatPriceOrFree, isFreePrice, isDonationProduct, getCategoryLabel, getStorageUrl } from '../../Utils/helpers';
 import { useCart } from '../../Contexts/CartContext';
 import MainLayout from '../../Layouts/MainLayout';
@@ -79,7 +80,7 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
                     <aside className="pd-summary">
                         <p className="pd-category">{getCategoryLabel(categorySlug)}</p>
                         <h1 id="product-title">{title}</h1>
-                        <p className="pd-intro">{product.short_description || description}</p>
+                        <RichText as="p" inline className="pd-intro" html={product.short_description || description} />
                         <div className="pd-facts" aria-label="Ringkasan produk"><span><BookOpen size={18} /> {materials.length || '—'} bagian{pageCount ? ` · ${pageCount} halaman` : ''}</span><span><Check size={18} /> Materi digital</span></div>
                         {!isDonation && <div className="pd-price"><span>Harga</span>{isFreePrice(price) ? <strong>FREE</strong> : originalPrice > price ? <><del>{formatCurrency(originalPrice)}</del><div><strong>{formatCurrency(price)}</strong><b>Hemat {discount}%</b></div></> : <strong>{formatCurrency(price)}</strong>}</div>}
                         <div className="pd-actions">{action}</div>
@@ -87,7 +88,7 @@ export default function ProductDetail({ product: dbProduct, similarProducts = []
                     </aside>
                 </section>
                 {product.start_at && <section className="pd-schedule" aria-label="Jadwal produk"><CalendarDays size={22} aria-hidden="true" /><div><strong>{formatDate(product.start_at)}{product.end_at && ` – ${formatDate(product.end_at)}`}</strong><span>Jadwal pelaksanaan</span></div>{product.location && <div><MapPin size={20} aria-hidden="true" /><strong>{product.location}</strong></div>}</section>}
-                <div className="pd-content"><section className="pd-reading" aria-labelledby="description-title"><h2 id="description-title">Tentang produk ini</h2><p>{description}</p></section>{benefits.length > 0 && <section className="pd-benefits" aria-labelledby="benefit-title"><h2 id="benefit-title">Yang akan Anda dapatkan</h2><ul>{benefits.map((benefit, index) => <li key={`${benefit}-${index}`}><Check size={18} aria-hidden="true" />{benefit}</li>)}</ul></section>}</div>
+                <div className="pd-content"><section className="pd-reading" aria-labelledby="description-title"><h2 id="description-title">Tentang produk ini</h2><RichText className="pd-reading__body" html={description} /></section>{benefits.length > 0 && <section className="pd-benefits" aria-labelledby="benefit-title"><h2 id="benefit-title">Yang akan Anda dapatkan</h2><ul>{benefits.map((benefit, index) => <li key={`${benefit}-${index}`}><Check size={18} aria-hidden="true" />{benefit}</li>)}</ul></section>}</div>
                 {materials.length > 0 && <section className="pd-materials" aria-labelledby="materials-title"><div className="pd-section-heading"><h2 id="materials-title">Isi materi</h2><p>Susunan materi yang akan Anda pelajari.</p></div><ol>{materials.map((material, index) => <li key={`${material.title}-${index}`}><span>{String(index + 1).padStart(2, '0')}</span><strong>{material.title}</strong><em>{material.pages ? `${material.pages} halaman` : material.videos ? `${material.videos} video` : material.duration || ''}</em></li>)}</ol></section>}
             </div>
             {similarProducts.length > 0 && <section className="pd-related"><div className="container pd-related__layout"><div className="pd-section-heading"><h2>Produk terkait</h2><p>Materi lain dalam kategori yang sama.</p><Link href={route('products')} className="pd-related__link">Lihat semua produk <ArrowRight size={18} /></Link></div><div className="pd-related__grid">{similarProducts.map(item => <ProductCard key={item.id} product={item} className="product-card--related" />)}</div></div></section>}

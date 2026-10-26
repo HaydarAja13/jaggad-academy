@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import { Search, SearchX, SlidersHorizontal } from 'lucide-react';
 import ProductCard from '../../Components/ProductCard';
+import { richTextToPlainText } from '../../Utils/richText';
 import MainLayout from '../../Layouts/MainLayout';
 import './Products.css';
 
@@ -30,7 +31,7 @@ export default function Products({ products = [], categories: categoryData = [] 
     const query = search.trim().toLowerCase();
     const filtered = products
         .filter(product => activeCategory === 'all' || product.category?.slug === activeCategory)
-        .filter(product => !query || [product.name, product.short_description].some(value => value?.toLowerCase().includes(query)))
+        .filter(product => !query || [product.name, richTextToPlainText(product.short_description)].some(value => value?.toLowerCase().includes(query)))
         .sort((a, b) => {
             if (sort === 'newest') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
             if (sort === 'popular') return Number(b.sold_count || 0) - Number(a.sold_count || 0);

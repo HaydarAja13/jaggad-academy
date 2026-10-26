@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Rules\RichTextLength;
+use App\Support\RichText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -113,8 +115,8 @@ class AdminProductController extends Controller
             'status' => $data['status'] ?? Product::STATUS_DRAFT,
             'image' => $imagePath,
             'badge' => $data['badge'] ?? null,
-            'short_description' => $data['description'] ?? null,
-            'description' => $data['longDescription'] ?? null,
+            'short_description' => RichText::sanitize($data['description'] ?? null),
+            'description' => RichText::sanitize($data['longDescription'] ?? null),
             'benefits' => $data['benefits'] ?? [],
             'materials' => $data['materials'] ?? [],
             'start_at' => $data['startAt'] ?? null,
@@ -222,8 +224,8 @@ class AdminProductController extends Controller
             'status' => $data['status'] ?? $product->status ?? Product::STATUS_DRAFT,
             'image' => $imagePath,
             'badge' => $data['badge'] ?? null,
-            'short_description' => $data['description'] ?? null,
-            'description' => $data['longDescription'] ?? null,
+            'short_description' => RichText::sanitize($data['description'] ?? null),
+            'description' => RichText::sanitize($data['longDescription'] ?? null),
             'benefits' => $data['benefits'] ?? [],
             'materials' => $data['materials'] ?? [],
             'start_at' => $data['startAt'] ?? null,
@@ -295,10 +297,13 @@ class AdminProductController extends Controller
         ]);
 
         $salesContent = json_decode($request->salesContent, true);
+        // Sanitasi konten kaya sebelum validasi agar batas karakter dihitung
+        // dari teks polos (tanpa tag format).
+        $salesContent = is_array($salesContent) ? $this->sanitizeSalesContent($salesContent) : $salesContent;
         validator($salesContent, [
             'hero' => 'required|array',
             'hero.title' => 'required|string|max:255',
-            'hero.description' => 'nullable|string|max:3000',
+            'hero.description' => ['nullable', 'string', new RichTextLength(3000)],
             'hero.benefits' => 'nullable|array|max:12',
             'hero.benefits.*' => 'nullable|string|max:300',
             'hero.image' => 'nullable|string|max:2048',
@@ -308,9 +313,9 @@ class AdminProductController extends Controller
             'offer.cta' => 'required|string|max:80',
             'offer.trustNote' => 'required|string|max:300',
             'outcomes.title' => 'required|string|max:160',
-            'outcomes.description' => 'nullable|string|max:500',
+            'outcomes.description' => ['nullable', 'string', new RichTextLength(500)],
             'materials.title' => 'required|string|max:160',
-            'materials.description' => 'nullable|string|max:500',
+            'materials.description' => ['nullable', 'string', new RichTextLength(500)],
             'blocks' => 'nullable|array|max:30',
             'blocks.*.type' => 'required|in:image,slider,youtube,button',
             'blocks.*.url' => 'nullable|string|max:2048',
@@ -318,17 +323,17 @@ class AdminProductController extends Controller
             'blocks.*.images' => 'nullable|array|max:20',
             'blocks.*.images.*' => 'nullable|string|max:2048',
             'faq.title' => 'required|string|max:160',
-            'faq.description' => 'nullable|string|max:500',
+            'faq.description' => ['nullable', 'string', new RichTextLength(500)],
             'faq.items' => 'nullable|array|max:12',
             'faq.items.*.q' => 'nullable|string|max:240',
-            'faq.items.*.a' => 'nullable|string|max:2000',
+            'faq.items.*.a' => ['nullable', 'string', new RichTextLength(2000)],
             'urgency.countdownHours' => 'nullable|integer|min:0|max:8760',
             'urgency.quotaText' => 'nullable|string|max:255',
             'closing.title' => 'required|string|max:200',
-            'closing.description' => 'nullable|string|max:600',
+            'closing.description' => ['nullable', 'string', new RichTextLength(600)],
             'closing.cta' => 'required|string|max:80',
             'confirmation.heading' => 'required|string|max:200',
-            'confirmation.description' => 'nullable|string|max:600',
+            'confirmation.description' => ['nullable', 'string', new RichTextLength(600)],
             'confirmation.backLabel' => 'required|string|max:80',
             'confirmation.orderTitle' => 'required|string|max:120',
             'confirmation.payCta' => 'required|string|max:80',
@@ -367,6 +372,37 @@ class AdminProductController extends Controller
         }
 
         return back()->with('success', 'Halaman penjualan berhasil diperbarui.');
+    }
+
+    /**
+     * Bersihkan field deskripsi kaya pada konten halaman penjualan.
+     */
+    private function sanitizeSalesContent(array $content): array
+    {
+        $paths = [
+            ['hero', 'description'],
+            ['outcomes', 'description'],
+            ['materials', 'description'],
+            ['faq', 'description'],
+            ['closing', 'description'],
+            ['confirmation', 'description'],
+        ];
+
+        foreach ($paths as [$section, $key]) {
+            if (isset($content[$section][$key]) && is_string($content[$section][$key])) {
+                $content[$section][$key] = RichText::sanitize($content[$section][$key]);
+            }
+        }
+
+        if (isset($content['faq']['items']) && is_array($content['faq']['items'])) {
+            foreach ($content['faq']['items'] as $index => $item) {
+                if (is_array($item) && isset($item['a']) && is_string($item['a'])) {
+                    $content['faq']['items'][$index]['a'] = RichText::sanitize($item['a']);
+                }
+            }
+        }
+
+        return $content;
     }
 
     private function salesImages(array $content): array

@@ -3,6 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, LockKeyhole } from 'lucide-react';
 import { formatCurrency, formatPriceOrFree, isFreePrice, isDonationProduct, getCategoryLabel, getStorageUrl } from '../../Utils/helpers';
 import { normalizeSalesContent, toArray } from '../../Utils/salesContent';
+import RichText from '../../Components/RichText';
 import { useCart } from '../../Contexts/CartContext';
 import MainLayout from '../../Layouts/MainLayout';
 import toast from 'react-hot-toast';
@@ -70,11 +71,11 @@ function LandingBlock({ block, index, title, onCheckout, openFaq, setOpenFaq, fa
     if (block.type !== 'faq' || !block.items?.some(item => item.q)) return null;
 
     return <section id="sales-faq" className="landing-faq" aria-labelledby="sales-faq-title">
-        <div><h2 id="sales-faq-title">{faqCopy.title}</h2><p id="sales-faq-description">{faqCopy.description}</p></div>
+        <div><h2 id="sales-faq-title">{faqCopy.title}</h2><RichText id="sales-faq-description" html={faqCopy.description} /></div>
         <div id="sales-faq-items" className="landing-faq__list">{block.items.filter(item => item.q).map((item, itemIndex) => {
             const key = `${index}-${itemIndex}`;
             const expanded = openFaq === key;
-            return <div className="landing-faq__item" key={key}><button type="button" onClick={() => setOpenFaq(expanded ? null : key)} aria-expanded={expanded}>{item.q}{expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</button>{expanded && <p>{item.a}</p>}</div>;
+            return <div className="landing-faq__item" key={key}><button type="button" onClick={() => setOpenFaq(expanded ? null : key)} aria-expanded={expanded}>{item.q}{expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</button>{expanded && <RichText html={item.a} />}</div>;
         })}</div>
     </section>;
 }
@@ -87,7 +88,7 @@ function ProductStory({ product, onCheckout, openFaq, setOpenFaq }) {
             <section className="sales-hero" aria-labelledby="sales-title">
                 <div className="sales-hero__copy">
                     <h1 id="sales-title">{product.title}</h1>
-                    <p id="sales-hero-description" className="sales-hero__lead">{product.description}</p>
+                    <RichText id="sales-hero-description" className="sales-hero__lead" html={product.description} />
                     {previewBenefits.length > 0 && <ul id="sales-hero-benefits" className="sales-hero__benefits">{previewBenefits.map((benefit, index) => <li key={`${benefit}-${index}`}><Check size={19} aria-hidden="true" />{benefit}</li>)}</ul>}
                     <div className="sales-hero__facts"><span><BookOpen size={19} aria-hidden="true" /> {product.materials.length || '—'} bagian materi</span><span>Format {getCategoryLabel(product.category)}</span></div>
                 </div>
@@ -106,25 +107,25 @@ function ProductStory({ product, onCheckout, openFaq, setOpenFaq }) {
             </section>
 
             {(product.benefits.length > 0 || product.materials.length > 0) && <section className="sales-details">
-                {product.benefits.length > 0 && <div className="sales-outcomes"><h2 id="sales-outcomes-title">{product.sales.outcomes.title}</h2><p id="sales-outcomes-description">{product.sales.outcomes.description}</p><ul>{product.benefits.map((benefit, index) => <li key={`${benefit}-${index}`}><Check size={18} aria-hidden="true" /><span>{benefit}</span></li>)}</ul></div>}
-                {product.materials.length > 0 && <div className="sales-materials"><h2 id="sales-materials-title">{product.sales.materials.title}</h2><p id="sales-materials-description">{product.sales.materials.description}</p><ol>{product.materials.map((material, index) => <li key={`${material.title || material}-${index}`}><span>{String(index + 1).padStart(2, '0')}</span><strong>{material.title || material}</strong><em>{material.pages ? `${material.pages} halaman` : material.videos ? `${material.videos} video` : material.duration || ''}</em></li>)}</ol></div>}
+                {product.benefits.length > 0 && <div className="sales-outcomes"><h2 id="sales-outcomes-title">{product.sales.outcomes.title}</h2><RichText id="sales-outcomes-description" html={product.sales.outcomes.description} /><ul>{product.benefits.map((benefit, index) => <li key={`${benefit}-${index}`}><Check size={18} aria-hidden="true" /><span>{benefit}</span></li>)}</ul></div>}
+                {product.materials.length > 0 && <div className="sales-materials"><h2 id="sales-materials-title">{product.sales.materials.title}</h2><RichText id="sales-materials-description" html={product.sales.materials.description} /><ol>{product.materials.map((material, index) => <li key={`${material.title || material}-${index}`}><span>{String(index + 1).padStart(2, '0')}</span><strong>{material.title || material}</strong><em>{material.pages ? `${material.pages} halaman` : material.videos ? `${material.videos} video` : material.duration || ''}</em></li>)}</ol></div>}
             </section>}
 
             {product.blocks.length > 0 && <div className="sales-managed-content">{product.blocks.map((block, index) => <LandingBlock key={index} block={block} index={index} title={product.title} onCheckout={onCheckout} openFaq={openFaq} setOpenFaq={setOpenFaq} faqCopy={product.sales.faq} />)}</div>}
         </main>
 
-        <section className="sales-close" aria-labelledby="sales-close-title"><div><h2 id="sales-close-title">{product.sales.closing.title}</h2><p id="sales-close-description">{product.sales.closing.description}</p></div><button id="sales-close-cta" type="button" onClick={onCheckout}>{product.sales.closing.cta}{!isDonationProduct(product) && ` · ${priceLabel(product)}`} <ArrowRight size={19} /></button></section>
+        <section className="sales-close" aria-labelledby="sales-close-title"><div><h2 id="sales-close-title">{product.sales.closing.title}</h2><RichText id="sales-close-description" html={product.sales.closing.description} /></div><button id="sales-close-cta" type="button" onClick={onCheckout}>{product.sales.closing.cta}{!isDonationProduct(product) && ` · ${priceLabel(product)}`} <ArrowRight size={19} /></button></section>
     </>;
 }
 
 function PurchaseConfirmation({ product, purchased, onBack, onContinue }) {
     const copy = product.sales.confirmation;
     return <main className="sales-confirm">
-        <div className="sales-confirm__intro"><button id="sales-confirm-back" type="button" onClick={onBack}><ArrowLeft size={18} /> {copy.backLabel}</button><h1 id="sales-confirm-heading">{copy.heading}</h1><p id="sales-confirm-description">{copy.description}</p></div>
+        <div className="sales-confirm__intro"><button id="sales-confirm-back" type="button" onClick={onBack}><ArrowLeft size={18} /> {copy.backLabel}</button><h1 id="sales-confirm-heading">{copy.heading}</h1><RichText id="sales-confirm-description" html={copy.description} /></div>
         <div className="sales-confirm__layout">
             <section className="sales-confirm__product" aria-labelledby="confirm-product-title">
                 <div className="sales-confirm__media">{product.thumbnail ? <img src={product.thumbnail} alt={product.title} /> : <BookOpen size={56} />}</div>
-                <div><span>{getCategoryLabel(product.category)}</span><h2 id="confirm-product-title">{product.title}</h2><p>{product.description}</p></div>
+                <div><span>{getCategoryLabel(product.category)}</span><h2 id="confirm-product-title">{product.title}</h2><RichText as="p" inline html={product.description} /></div>
                 {product.benefits.length > 0 && <ul>{product.benefits.map((benefit, index) => <li key={`${benefit}-${index}`}><Check size={18} />{benefit}</li>)}</ul>}
             </section>
             <aside className="sales-confirm__order" aria-label="Ringkasan pesanan">

@@ -293,3 +293,12 @@
 @media (prefers-reduced-motion: reduce) {
     .learning-page *, .learning-page *::before, .learning-page *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* Deskripsi kaya di panel informasi produk. */
+.learning-details .rich-text { margin-top: 13px; color: var(--learning-copy); font-size: 1rem; line-height: 1.75; }
+.learning-details .rich-text > * + * { margin-top: 10px; }
+.learning-details .rich-text ul,
+.learning-details .rich-text ol { margin: 10px 0 0; padding-left: 20px; }
+.learning-details .rich-text ul { list-style: disc outside; }
+.learning-details .rich-text ol { list-style: decimal outside; }
+.learning-details .rich-text li { padding: 0; border-top: 0; display: list-item; margin-bottom: 6px; }
