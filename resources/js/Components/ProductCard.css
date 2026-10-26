@@ -395,6 +395,35 @@
     white-space: nowrap;
 }
 
+/* Harga coret tampil di luar gambar (sebelah harga jual), bukan hanya di cover */
+.product-card--showcase .product-card__price:has(.price-original) {
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.product-card--showcase .product-card__price:has(.price-original) .price-original {
+    order: -1;
+    color: var(--color-text-muted);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: var(--font-semibold);
+    letter-spacing: 0;
+    line-height: 1.2;
+    text-decoration-color: rgba(102, 8, 16, 0.6);
+    text-decoration-thickness: 2px;
+}
+
+.product-card--showcase .product-card__price:has(.price-original) .price-current {
+    color: #171316;
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: var(--font-semibold);
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+
 .product-card--showcase .product-card__btn-detail {
     width: 100%;
     min-height: 46px;

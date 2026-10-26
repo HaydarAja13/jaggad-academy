@@ -24,11 +24,14 @@ export default function ProductCard({ product, className = '', previewIdPrefix }
     const title = product.name || product.title;
     const desc = product.short_description || product.description;
     const image = getStorageUrl(product.image || product.thumbnail);
-    const price = product.price;
-    const originalPrice = product.normal_price || product.originalPrice;
-    
+    // Harga dari database bisa berupa string desimal ("349000.00"), jadi wajib
+    // diubah ke angka agar perbandingan harga coret tidak salah (mis. 349000 > 99000).
+    const price = Number(product.price || 0);
+    const originalPrice = Number(product.normal_price || product.originalPrice || 0);
+    const hasOriginalPrice = originalPrice > price && !isFreeProduct(product) && !isDonationProduct(product);
+
     // Auto-calculate discount if DB doesn't have it natively
-    const discount = product.discount || (originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0);
+    const discount = Number(product.discount) || (hasOriginalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0);
 
     const isPurchased = auth?.purchased_products?.some(id => Number(id) === Number(product.id));
     const detailUrl = isPurchased
@@ -100,7 +103,7 @@ export default function ProductCard({ product, className = '', previewIdPrefix }
                                 : isFreeProduct(product)
                                     ? <strong className="price-current">FREE</strong>
                                     : <>
-                                        {originalPrice > price && <del className="price-original">{formatCurrency(originalPrice)}</del>}
+                                        {hasOriginalPrice && <del className="price-original">{formatCurrency(originalPrice)}</del>}
                                         <strong className="price-current">{formatCurrency(price)}</strong>
                                     </>}
                         </div>
